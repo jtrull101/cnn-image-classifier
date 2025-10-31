@@ -6,10 +6,19 @@ import tempfile
 import shutil
 import numpy as np
 
+try:
+    import tensorflow as tf
+    from src.alz_mri_cnn.models import BaseModel, CNNClassifier
+    TENSORFLOW_AVAILABLE = True
+except ImportError:
+    TENSORFLOW_AVAILABLE = False
+    BaseModel = None
+    CNNClassifier = None
+
 from src.alz_mri_cnn.config import BaseConfig
-from src.alz_mri_cnn.models import BaseModel, CNNClassifier
 
 
+@unittest.skipIf(not TENSORFLOW_AVAILABLE, "TensorFlow not available")
 class TestBaseModel(unittest.TestCase):
     """Tests for BaseModel abstract class."""
 
@@ -31,6 +40,7 @@ class TestBaseModel(unittest.TestCase):
         self.assertTrue(hasattr(BaseModel, 'load'))
 
 
+@unittest.skipIf(not TENSORFLOW_AVAILABLE, "TensorFlow not available")
 class TestCNNClassifier(unittest.TestCase):
     """Tests for CNNClassifier model."""
 
