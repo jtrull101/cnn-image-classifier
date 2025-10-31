@@ -1,3 +1,4 @@
+"""Utility functions for file operations."""
 
 import os
 import shutil

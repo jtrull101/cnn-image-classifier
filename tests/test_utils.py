@@ -4,7 +4,6 @@ import unittest
 from pathlib import Path
 import tempfile
 import shutil
-import zipfile
 
 from src.alz_mri_cnn.utils import (
     ensure_directory_exists,

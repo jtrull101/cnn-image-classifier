@@ -1,6 +1,9 @@
 """Integration tests for the rearchitected modules.
 
-These tests verify that all modules work together correctly.
+These tests verify that all modules work together correctly, including:
+- Module import validation (ensuring all public APIs are accessible)
+- Config and data loader integration (verifying components interact properly)
+- Overall package structure validation
 """
 
 import unittest
