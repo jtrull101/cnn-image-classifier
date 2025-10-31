@@ -6,14 +6,23 @@ import tempfile
 import shutil
 import numpy as np
 from unittest.mock import MagicMock, patch
-import tensorflow as tf
+
+try:
+    import tensorflow as tf
+    from src.alz_mri_cnn.training import AccuracyThresholdCallback, Trainer
+    from src.alz_mri_cnn.models import CNNClassifier
+    TENSORFLOW_AVAILABLE = True
+except ImportError:
+    TENSORFLOW_AVAILABLE = False
+    AccuracyThresholdCallback = None
+    Trainer = None
+    CNNClassifier = None
 
 from src.alz_mri_cnn.config import BaseConfig
-from src.alz_mri_cnn.training import AccuracyThresholdCallback, Trainer
-from src.alz_mri_cnn.models import CNNClassifier
 from src.alz_mri_cnn.data import BaseDataLoader
 
 
+@unittest.skipIf(not TENSORFLOW_AVAILABLE, "TensorFlow not available")
 class TestAccuracyThresholdCallback(unittest.TestCase):
     """Tests for AccuracyThresholdCallback."""
 
@@ -69,6 +78,7 @@ class TestAccuracyThresholdCallback(unittest.TestCase):
         callback.on_epoch_end(0, None)
 
 
+@unittest.skipIf(not TENSORFLOW_AVAILABLE, "TensorFlow not available")
 class TestTrainer(unittest.TestCase):
     """Tests for Trainer class."""
 
