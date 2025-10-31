@@ -528,7 +528,7 @@ def init():
 
     required_files = {
         os.path.join(required_paths[3], 'optimal_weights_98%.keras'): '1U9uywbNatIFAj6XlahT6BBrMqyLgd4qZ',
-        os.path.join(required_paths[2], 'Combined Dataset.zip'): '1SQuB_8IL3s7vZPMeGkOZo116QSTMa6BN'
+        os.path.join(required_paths[2], 'Combined_Dataset.zip'): '1SQuB_8IL3s7vZPMeGkOZo116QSTMa6BN'
     }
 
     # Download data using the Kaggle API
