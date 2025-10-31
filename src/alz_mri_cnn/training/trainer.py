@@ -345,10 +345,3 @@ class Trainer:
         K.clear_session()
         gc.collect()
         print("Cleanup completed")
-"""Training modules."""
-
-from .callbacks import AccuracyThresholdCallback
-from .trainer import Trainer
-
-__all__ = ['AccuracyThresholdCallback', 'Trainer']
-

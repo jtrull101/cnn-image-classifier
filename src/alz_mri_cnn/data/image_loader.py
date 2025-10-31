@@ -272,10 +272,3 @@ class ImageDataLoader(BaseDataLoader):
 
         print(f"Dataset setup complete. Found {len(train_categories)} categories.")
         return True
-"""Data loading modules."""
-
-from .base_loader import BaseDataLoader
-from .image_loader import ImageDataLoader
-
-__all__ = ['BaseDataLoader', 'ImageDataLoader']
-

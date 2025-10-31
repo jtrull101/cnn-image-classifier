@@ -117,10 +117,3 @@ class SimpleCNN(BaseModel):
 
         self.model = model
         return model
-"""Model modules."""
-
-from .base_model import BaseModel
-from .cnn_classifier import CNNClassifier
-
-__all__ = ['BaseModel', 'CNNClassifier']
-
