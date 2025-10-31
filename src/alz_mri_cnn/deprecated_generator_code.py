@@ -1,8 +1,8 @@
 
 
 # """
-# Deprecated code - still intereseting enough to keep
-# Data augmentation introduced by the ImageDataGenerator severly hurt the performance of the model
+# Deprecated code - still interesting enough to keep
+# Data augmentation introduced by the ImageDataGenerator severely hurt the performance of the model
 # """
 
 # def load_data_from_generator(percent_of_data: float = 0.5, batch_size=20):
