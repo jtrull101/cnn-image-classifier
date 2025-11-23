@@ -1,165 +1,432 @@
-# alz-mri-neural-network
-<a name="readme-top"></a>
+# Alzheimer's MRI Neural Network
 
-<!-- PROJECT SHIELDS -->
-<!--
-*** I'm using markdown "reference style" links for readability.
-*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-*** See the bottom of this document for the declaration of the reference variables
-*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*** https://www.markdownguide.org/basic-syntax/#reference-style-links
--->
-
-
-<br />
 <div align="center">
-  <a href="https://github.com/jtrull101/alz-mri-neural-network">
-    <img src="images/006-11.jpg" alt="Logo" width="80" height="80">
-    <br>
-    <font size="-50">
-      <a href="https://www.vecteezy.com/free-vector/brain">Brain Vectors by Vecteezy</a>
-    </font>
-  </a>
+  <img src="images/006-11.jpg" alt="Brain" width="80" height="80">
+  <br>
+  <sub><a href="https://www.vecteezy.com/free-vector/brain">Brain Vectors by Vecteezy</a></sub>
   
+  <h3>AI-Powered Alzheimer's Disease Classification</h3>
+  <p>Production-ready CNN for analyzing MRI images using NX/UV monorepo architecture</p>
   
-  <h3 align="center">Alzheimers MRI Scan Neural Network</h3>
-
-  <p align="center">
-    Simple Convolutional Neural Network intended to diagnose fictitious MRI images, labeling new inputs as one of the following classes: 
-    <br>No Impairment, Very Mild Impairment, 
-    <br>Mild Impairment, Moderate Impairment
-    <br>
-    · <a href="https://github.com/othneildrew/Best-README-Template/issues">Report Bug</a>
-    · <a href="https://github.com/othneildrew/Best-README-Template/issues">Request Feature</a>
-  </p>
+  ![Tests](https://github.com/jtrull101/alz-mri-neural-network/actions/workflows/tests.yml/badge.svg)
+  [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+  [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 </div>
 
+---
 
+## About
 
-<details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#why-make-this-project">Why Make This Project?</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-  </ol>
-</details>
+A deep learning system for classifying Alzheimer's disease progression from MRI images, built with modern Python tooling and monorepo best practices. This project was born from a personal mission to combat a disease that has affected my family for generations.
 
+**Classification Categories:**
+- No Impairment
+- Very Mild Impairment  
+- Mild Impairment
+- Moderate Impairment
 
+**⚠️ Important:** Trained on fictitious data from [Kaggle](https://www.kaggle.com/datasets/lukechugh/best-alzheimer-mri-dataset-99-accuracy) for educational purposes. Not for medical diagnosis.
 
-## Why Make This Project?
+---
 
-![Product Name Screen Shot](images/screenshot.jpg)
+## Quick Start
 
-In a deeply personal quest to combat a devastating and pervasive disease, I embarked on a journey to develop a neural network model to read fictitious MRI data and detect the early signs of Alzheimer's disease. This endeavor is motivated by a profound family history that has been haunted by Alzheimer's for generations. The emotional toll of Alzheimer's, coupled with the urgent need for early diagnosis and intervention, fueled my determination to make a difference.
+### Prerequisites
+- Python 3.13+
+- Node.js 18+ (for NX)
+- [UV](https://github.com/astral-sh/uv) package manager
 
-My journey began by delving into the world of medical imaging and artificial intelligence. I gathered fictitious MRI data, sourced from [kaggle.com](https://www.kaggle.com/datasets/lukechugh/best-alzheimer-mri-dataset-99-accuracy), which mirrors the complexities of real-world medical images, to construct a neural network model. This model has been meticulously trained to analyze subtle patterns and anomalies within the brain, with a specific focus on identifying the early indicators of Alzheimer's disease.
+### Installation
 
-My hope is that this project will serve as a beacon of hope for others facing Alzheimer's, a testament to the power of technology, and a tribute to the loved ones who have inspired it. Together, we can shine a light on this dark path and take meaningful steps toward early diagnosis, treatment, and ultimately, a cure for Alzheimer's disease.
+```powershell
+# Clone repository
+git clone https://github.com/jtrull101/alz-mri-neural-network.git
+cd alz-mri-neural-network
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+# Automated setup
+.\scripts\setup_monorepo.ps1
+```
 
-### Built With
+The setup script installs NX, UV dependencies, and builds all packages.
 
-Below are the major Python frameworks used for this project
+### Manual Setup
 
-* [Tensorflow](https://www.tensorflow.org/)
-* [Keras](https://keras.io/)
-* [Flask](https://flask.palletsprojects.com/en/3.0.x/)
-  
+```powershell
+# Install UV
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+# Install dependencies
+npm install       # NX
+uv sync          # Python packages
 
-## Getting Started
-Installing this software is as simple as the few steps below:
+# Build packages
+make build
+```
 
-First, pull this git repo to a local directory and cd into that directory.
+**Note:** All configuration is now in `pyproject.toml` files. No separate `requirements.txt`, `pytest.ini`, or `setup.cfg` files needed.
 
-Next, upgrade pip:
+---
 
-    python -m pip install --upgrade pip
-    
-Then pip install the included requirements.txt file.
+## Monorepo Architecture
 
-    pip install -r requirements.txt
+This project uses an **NX/UV managed monorepo** for better modularity and dependency management.
 
-  Now you are ready to run tests or the front-end application.
+### Structure
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+```
+apps/
+  api/              # Flask REST API
+packages/
+  config/           # Configuration (no dependencies)
+  utils/            # Common utilities
+  data/             # Data loading → config, utils
+  models/           # Neural networks → config
+  training/         # Training pipeline → config, data, models
+```
+
+### Dependency Graph
+
+```
+config (base) → utils → data → training → api
+                    ↓      ↓       ↓
+                 models ────────────
+```
+
+### Benefits
+- **Modularity**: Clear package boundaries
+- **Speed**: Parallel builds, incremental rebuilds, caching
+- **Type Safety**: Per-package type checking
+- **Reusability**: Packages work independently
+
+---
 
 ## Usage
 
-This software utility offers a simple and accessible way to predict Alzheimer's disease progression using MRI data. Here's how to use it:
+### Start the API
 
-Starting the Web User Interface (UI):
+```powershell
+make serve-api
+# or
+npx nx run api:serve
+```
 
-    ./start_front_end.sh
+Navigate to `http://127.0.0.1:5000`
 
-  Sending MRI Files:
-  <br>
-  <p>
-  To predict Alzheimer's disease progression, send MRI image files to the http://127.0.0.1:5000/predict endpoint of the Flask server. Note these MRI files should be one of the fictitious MRIs present in the data/test/ directory. This model has zero ability to predict actual MRI images.
-  </p>
-  Interpreting Predictions:
-  <br>
-  <p>
-  The utility will return a prediction for the diagnosis, categorizing it into one of four levels of impairment:
-  </p>
-  <ul>No Impairment</ul>  
-  <ul>Very Mild Impairment</ul>
-  <ul>Mild Impairment</ul>  
-  <ul>Moderate Impairment</ul>  
-  <br>
-  Using the Web UI:
-  <br>
-  <p>
-  Accessing the Web Interface:
-        Open your web browser and navigate to http://127.0.0.1:5000. This will take you to a basic Graphical User Interface (GUI).
-  </p>
-  <br>
-  Selecting Impairment Categories:
-  <br>
-  <p>
-  On the web UI, you will find four buttons, each corresponding to a different level of impairment. By clicking on one of these buttons, you can initiate a prediction for that specific impairment category.
-  </p>
-  <br>
-  Testing the Model:
-  <p>
-  The utility will randomly select an MRI image from the training set for the chosen impairment category and run it through the predictive model.
+### API Endpoints
 
-  This utility provides a convenient and user-friendly way to predict Alzheimer's disease progression, making it accessible to both professionals and non-experts. By following these simple steps, you can quickly assess the likelihood of Alzheimer's disease  in MRI images and gain insights into its progression.
-  </p>
+**GET /** - Web interface
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+**POST /predict** - Predict from MRI image
+```python
+import requests
+
+response = requests.post(
+    "http://127.0.0.1:5000/predict",
+    files={"file": open("mri.jpg", "rb")}
+)
+print(response.json())  # {"class": "No Impairment", "confidence": 0.95}
+```
+
+### Training
+
+```python
+from alz_mri_training import Trainer
+from alz_mri_models import CNNClassifier
+from alz_mri_data import ImageDataLoader
+from alz_mri_config import AlzheimerConfig
+
+config = AlzheimerConfig()
+model = CNNClassifier(config)
+loader = ImageDataLoader(config)
+trainer = Trainer(config, model, loader)
+
+accuracy, loss = trainer.run(plot=True)
+```
+
+---
+
+## Development
+
+### Commands
+
+```powershell
+make help          # Show all commands
+make build         # Build all packages
+make test          # Run all tests
+make lint          # Lint code
+make format        # Format code
+make serve-api     # Start API
+make graph         # View dependency graph
+make pre-commit    # Run all checks
+```
+
+### NX Commands
+
+```powershell
+# Build specific package
+npx nx run config:build
+npx nx run data:build
+
+# Test specific package  
+npx nx run models:test
+
+# Lint/format specific package
+npx nx run api:lint
+npx nx run training:format
+
+# Only affected by changes
+npx nx affected --target=build
+npx nx affected --target=test
+```
+
+### Adding Dependencies
+
+```powershell
+# Add to specific package
+cd packages/data
+uv add numpy
+
+# Add dev dependency (workspace)
+uv add --dev pytest
+```
+
+---
+
+## Project Structure
+
+```
+alz-mri-neural-network/
+├── apps/
+│   └── api/                    # Flask application
+│       ├── alz_mri_api/
+│       │   ├── app.py
+│       │   ├── static/         # Model weights
+│       │   └── templates/
+│       ├── pyproject.toml
+│       └── project.json
+├── packages/
+│   ├── config/                 # Configuration
+│   │   ├── alz_mri_config/
+│   │   │   ├── base_config.py
+│   │   │   └── alzheimer_config.py
+│   │   ├── pyproject.toml
+│   │   └── project.json
+│   ├── utils/                  # Utilities
+│   │   └── alz_mri_utils/
+│   ├── data/                   # Data loading
+│   │   └── alz_mri_data/
+│   ├── models/                 # Neural networks
+│   │   └── alz_mri_models/
+│   └── training/               # Training pipeline
+│       └── alz_mri_training/
+├── docs/
+│   ├── ARCHITECTURE.md         # System design
+│   └── TESTING.md              # Test strategy
+├── nx.json                     # NX config
+├── package.json                # Node/NX deps
+├── pyproject.toml              # UV workspace
+├── Makefile                    # Build commands
+└── README.md                   # This file
+```
+
+---
+
+## Technology Stack
+
+| Component | Tool | Purpose |
+|-----------|------|---------|
+| **Build System** | NX | Task orchestration, caching, parallel builds |
+| **Package Manager** | UV | 10-100x faster than pip |
+| **Linter/Formatter** | Ruff | Replaces flake8, isort, autopep8 |
+| **Type Checker** | Pyright | Fast, accurate type inference |
+| **Testing** | Pytest | With coverage reporting |
+| **Deep Learning** | TensorFlow/Keras | Neural network training |
+| **Web Framework** | Flask | REST API |
+| **Data Processing** | NumPy, OpenCV, Pandas | Image and data manipulation |
+
+---
+
+## Package Details
+
+### config (alz-mri-config)
+Configuration management using **Pydantic** for validation and settings.
+
+```python
+from alz_mri_config import AlzheimerConfig
+
+# Load from defaults
+config = AlzheimerConfig(batch_size=32, num_epochs=25)
+
+# Load from environment variables (ALZ_MRI_ prefix)
+# export ALZ_MRI_BATCH_SIZE=64
+# export ALZ_MRI_NUM_EPOCHS=50
+config = AlzheimerConfig()  # Automatically loads from env
+
+# Load from .env file
+config = AlzheimerConfig(_env_file=".env")
+
+# Validation is automatic
+config = AlzheimerConfig(batch_size=0)  # Raises ValidationError
+```
+
+**Features:**
+- Type validation with Pydantic
+- Environment variable support
+- `.env` file support
+- Validation constraints (e.g., batch_size >= 1)
+- No external dependencies beyond Pydantic
+
+### utils (alz-mri-utils)
+File operations, downloads, archive extraction.
+
+```python
+from alz_mri_utils import download_from_google_drive, extract_archive
+```
+
+### data (alz-mri-data)
+Data loading, preprocessing, caching.
+
+```python
+from alz_mri_data import ImageDataLoader
+loader = ImageDataLoader(config)
+X_train, y_train = loader.load_train_data()
+```
+
+### models (alz-mri-models)
+CNN architectures (CNNClassifier, SimpleCNN).
+
+```python
+from alz_mri_models import CNNClassifier
+model = CNNClassifier(config)
+model.compile()
+```
+
+### training (alz-mri-training)
+Training pipeline with callbacks and visualization.
+
+```python
+from alz_mri_training import Trainer
+trainer = Trainer(config, model, loader)
+trainer.run()
+```
+
+### api (alz-mri-api)
+Flask REST API with web interface.
+
+---
+
+## Testing
+
+```powershell
+# Run all tests
+make test
+
+# Test specific package
+npx nx run config:test
+npx nx run data:test
+
+# With coverage
+uv run pytest --cov
+```
+
+**Test Suite:** 73 tests covering configuration, data loading, models, training, and integration.
+
+---
+
+## Code Quality
+
+### Standards
+- PEP 8 compliance (Ruff)
+- Type hints (Pyright)
+- Line length: 100 characters
+- Automated formatting
+
+### Run Checks
+
+```powershell
+make format        # Auto-format
+make lint          # Check issues
+make pre-commit    # All checks
+```
+
+---
+
+## Troubleshooting
+
+### Module Not Found
+```powershell
+uv sync
+make build
+```
+
+### NX Commands Fail
+```powershell
+npm install
+```
+
+### Import Errors
+Ensure you're using absolute imports:
+```python
+# ✓ Correct
+from alz_mri_config import AlzheimerConfig
+
+# ✗ Wrong
+from .config import AlzheimerConfig
+```
+
+### TensorFlow Issues
+```powershell
+uv pip install tensorflow-cpu  # CPU only
+```
+
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing`)
+3. Make changes
+4. Run checks (`make pre-commit`)
+5. Commit (`git commit -m 'Add amazing feature'`)
+6. Push (`git push origin feature/amazing`)
+7. Open Pull Request
+
+**Guidelines:**
+- Follow existing code style
+- Add type hints
+- Write tests
+- Update documentation
+
+---
 
 ## License
 
-Distributed under the MIT License. See `LICENSE.txt` for more information.
+MIT License - see [LICENSE](LICENSE) file.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+---
 
 ## Contact
 
-Jonathan Trull - jttrull0@gmail.com
+**Jonathan Trull** - jttrull0@gmail.com
 
-Project Link: [https://github.com/jtrull101/alz-mri-neural-network](https://github.com/jtrull101/alz-mri-neural-network)
+**Project Link:** [https://github.com/jtrull101/alz-mri-neural-network](https://github.com/jtrull101/alz-mri-neural-network)
 
-[![LinkedIn][linkedin-shield]][linkedin-url]
+[![LinkedIn](https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555)](https://linkedin.com/in/jonathan--trull)
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+---
 
+## Acknowledgments
 
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/jonathan--trull
-![Tests](https://github.com/jtrull101/alz-mri-neural-network/actions/workflows/tests.yml/badge.svg)
+- Dataset: [Best Alzheimer MRI Dataset](https://www.kaggle.com/datasets/lukechugh/best-alzheimer-mri-dataset-99-accuracy) (Kaggle)
+- Icons: [Vecteezy Brain Vectors](https://www.vecteezy.com/free-vector/brain)
+- Tools: [Astral](https://astral.sh/) for UV and Ruff
+- Inspiration: My family and all affected by Alzheimer's
+
+---
+
+<div align="center">
+  <strong>Made with ❤️ and 🧠 for Alzheimer's research</strong>
+  <br><br>
+  ⭐ Star this repo if you find it helpful!
+</div>

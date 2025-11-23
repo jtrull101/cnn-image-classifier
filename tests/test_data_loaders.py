@@ -1,14 +1,14 @@
 """Tests for data loading modules."""
 
+import shutil
+import tempfile
 import unittest
 from pathlib import Path
-import tempfile
-import shutil
-import numpy as np
-from unittest.mock import MagicMock, patch
 
-from src.alz_mri_cnn.config import BaseConfig
-from src.alz_mri_cnn.data import BaseDataLoader, ImageDataLoader
+import numpy as np
+
+from alz_mri_config import BaseConfig
+from alz_mri_data import BaseDataLoader, ImageDataLoader
 
 
 class TestBaseDataLoader(unittest.TestCase):
@@ -47,7 +47,7 @@ class TestBaseDataLoader(unittest.TestCase):
                 pass
 
         loader = ConcreteLoader(self.config)
-        
+
         # Create test directory structure
         test_path = self.temp_dir / "categories_test"
         test_path.mkdir()
@@ -55,9 +55,9 @@ class TestBaseDataLoader(unittest.TestCase):
         (test_path / "cat2").mkdir()
         (test_path / ".hidden").mkdir()  # Should be ignored
         (test_path / "file.txt").write_text("test")  # Should be ignored
-        
+
         categories = loader.get_categories(test_path)
-        
+
         self.assertEqual(len(categories), 2)
         self.assertIn("cat1", categories)
         self.assertIn("cat2", categories)
@@ -78,7 +78,7 @@ class TestBaseDataLoader(unittest.TestCase):
         loader = ConcreteLoader(self.config)
         test_path = self.temp_dir / "empty"
         test_path.mkdir()
-        
+
         categories = loader.get_categories(test_path)
         self.assertEqual(len(categories), 0)
 
@@ -111,13 +111,13 @@ class TestBaseDataLoader(unittest.TestCase):
                 pass
 
         loader = ConcreteLoader(self.config)
-        
+
         # Create test data
         X = np.arange(100).reshape(100, 1)
         y = np.arange(100)
-        
+
         X1, X2, y1, y2 = loader.split_data(X, y, split_ratio=0.7)
-        
+
         self.assertEqual(len(X1), 70)
         self.assertEqual(len(X2), 30)
         self.assertEqual(len(y1), 70)
@@ -136,13 +136,13 @@ class TestBaseDataLoader(unittest.TestCase):
                 pass
 
         loader = ConcreteLoader(self.config)
-        
+
         # Create test data
         X = np.arange(100).reshape(100, 1)
         y = np.arange(100)
-        
+
         X_reduced, y_reduced = loader.reduce_dataset(X, y, percent=0.5)
-        
+
         self.assertEqual(len(X_reduced), 50)
         self.assertEqual(len(y_reduced), 50)
 
@@ -159,12 +159,12 @@ class TestBaseDataLoader(unittest.TestCase):
                 pass
 
         loader = ConcreteLoader(self.config)
-        
+
         X = np.arange(100).reshape(100, 1)
         y = np.arange(100)
-        
+
         X_reduced, y_reduced = loader.reduce_dataset(X, y, percent=1.0)
-        
+
         self.assertEqual(len(X_reduced), 100)
         self.assertEqual(len(y_reduced), 100)
 
@@ -211,14 +211,14 @@ class TestImageDataLoader(unittest.TestCase):
         self.config.test_path.mkdir(parents=True)
         (self.config.train_path / "class1").mkdir()
         (self.config.test_path / "class1").mkdir()
-        
+
         result = self.loader.prepare_dataset()
         self.assertTrue(result)
 
     def test_get_cache_path(self):
         """Test _get_cache_path method."""
         x_path, y_path = self.loader._get_cache_path(train=True)
-        
+
         self.assertEqual(x_path.name, "X_data_train.pkl")
         self.assertEqual(y_path.name, "y_data_train.pkl")
         self.assertEqual(x_path.parent, self.config.cache_dir)

@@ -1,13 +1,13 @@
 """Tests for utility functions."""
 
+import shutil
+import tempfile
 import unittest
 from pathlib import Path
-import tempfile
-import shutil
 
-from src.alz_mri_cnn.utils import (
-    ensure_directory_exists,
+from alz_mri_utils import (
     clean_directory,
+    ensure_directory_exists,
 )
 
 
@@ -27,9 +27,9 @@ class TestFileUtils(unittest.TestCase):
         """Test that ensure_directory_exists creates a new directory."""
         new_dir = self.temp_dir / "test_dir"
         self.assertFalse(new_dir.exists())
-        
+
         result = ensure_directory_exists(new_dir)
-        
+
         self.assertTrue(new_dir.exists())
         self.assertTrue(new_dir.is_dir())
         self.assertEqual(result, new_dir)
@@ -39,9 +39,9 @@ class TestFileUtils(unittest.TestCase):
         existing_dir = self.temp_dir / "existing"
         existing_dir.mkdir()
         self.assertTrue(existing_dir.exists())
-        
+
         result = ensure_directory_exists(existing_dir)
-        
+
         self.assertTrue(existing_dir.exists())
         self.assertEqual(result, existing_dir)
 
@@ -49,9 +49,9 @@ class TestFileUtils(unittest.TestCase):
         """Test that ensure_directory_exists creates nested directories."""
         nested_dir = self.temp_dir / "level1" / "level2" / "level3"
         self.assertFalse(nested_dir.exists())
-        
+
         result = ensure_directory_exists(nested_dir)
-        
+
         self.assertTrue(nested_dir.exists())
         self.assertEqual(result, nested_dir)
 
@@ -60,14 +60,14 @@ class TestFileUtils(unittest.TestCase):
         # Create test files
         test_dir = self.temp_dir / "clean_test"
         test_dir.mkdir()
-        
+
         (test_dir / "file1.txt").write_text("test")
         (test_dir / "file2.txt").write_text("test")
         (test_dir / "file3.log").write_text("test")
-        
+
         # Clean .txt files
         count = clean_directory(test_dir, "*.txt")
-        
+
         self.assertEqual(count, 2)
         self.assertFalse((test_dir / "file1.txt").exists())
         self.assertFalse((test_dir / "file2.txt").exists())
@@ -78,14 +78,14 @@ class TestFileUtils(unittest.TestCase):
         # Create test files
         test_dir = self.temp_dir / "clean_all"
         test_dir.mkdir()
-        
+
         (test_dir / "file1.txt").write_text("test")
         (test_dir / "file2.log").write_text("test")
         (test_dir / "file3.dat").write_text("test")
-        
+
         # Clean all files
         count = clean_directory(test_dir)
-        
+
         self.assertEqual(count, 3)
         self.assertEqual(len(list(test_dir.iterdir())), 0)
 
@@ -99,15 +99,15 @@ class TestFileUtils(unittest.TestCase):
         """Test that clean_directory doesn't remove subdirectories."""
         test_dir = self.temp_dir / "preserve_dirs"
         test_dir.mkdir()
-        
+
         (test_dir / "file.txt").write_text("test")
         subdir = test_dir / "subdir"
         subdir.mkdir()
         (subdir / "nested.txt").write_text("test")
-        
+
         # Clean only top-level files
         count = clean_directory(test_dir, "*.txt")
-        
+
         self.assertEqual(count, 1)
         self.assertFalse((test_dir / "file.txt").exists())
         self.assertTrue(subdir.exists())

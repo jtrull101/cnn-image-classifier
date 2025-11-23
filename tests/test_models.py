@@ -1,21 +1,24 @@
 """Tests for model modules."""
 
+import shutil
+import tempfile
 import unittest
 from pathlib import Path
-import tempfile
-import shutil
+
 import numpy as np
+
 
 try:
     import tensorflow as tf
-    from src.alz_mri_cnn.models import BaseModel, CNNClassifier
+
+    from alz_mri_models import BaseModel, CNNClassifier
     TENSORFLOW_AVAILABLE = True
 except ImportError:
     TENSORFLOW_AVAILABLE = False
     BaseModel = None
     CNNClassifier = None
 
-from src.alz_mri_cnn.config import BaseConfig
+from alz_mri_config import BaseConfig
 
 
 @unittest.skipIf(not TENSORFLOW_AVAILABLE, "TensorFlow not available")
@@ -74,7 +77,7 @@ class TestCNNClassifier(unittest.TestCase):
     def test_build_creates_model(self):
         """Test that build creates a Keras model."""
         keras_model = self.model.build()
-        
+
         self.assertIsNotNone(keras_model)
         self.assertEqual(keras_model.input_shape[1:], self.config.input_shape)
         self.assertEqual(keras_model.output_shape[-1], self.config.num_classes)
@@ -88,10 +91,10 @@ class TestCNNClassifier(unittest.TestCase):
     def test_model_layers(self):
         """Test that model has expected layer structure."""
         keras_model = self.model.build()
-        
+
         # Should have Conv2D, MaxPooling2D, Dropout, Flatten, and Dense layers
         layer_types = [type(layer).__name__ for layer in keras_model.layers]
-        
+
         self.assertIn('Conv2D', layer_types)
         self.assertIn('MaxPooling2D', layer_types)
         self.assertIn('Dropout', layer_types)
@@ -101,7 +104,7 @@ class TestCNNClassifier(unittest.TestCase):
     def test_compile_with_defaults(self):
         """Test model compilation with default parameters."""
         self.model.compile()
-        
+
         self.assertIsNotNone(self.model.model)
         self.assertIsNotNone(self.model.model.optimizer)
         self.assertEqual(self.model.model.loss, 'categorical_crossentropy')
@@ -115,13 +118,13 @@ class TestCNNClassifier(unittest.TestCase):
     def test_summary_builds_model(self):
         """Test that summary builds model if not already built."""
         self.assertIsNone(self.model.model)
-        summary = self.model.summary()
+        self.model.summary()
         self.assertIsNotNone(self.model.model)
 
     def test_save_requires_built_model(self):
         """Test that save raises error if model not built."""
         save_path = self.temp_dir / "model.keras"
-        
+
         with self.assertRaises(ValueError):
             self.model.save(save_path)
 
@@ -129,10 +132,10 @@ class TestCNNClassifier(unittest.TestCase):
         """Test that save creates parent directories."""
         self.model.build()
         self.model.compile()
-        
+
         save_dir = self.temp_dir / "subdir" / "models"
         save_path = save_dir / "model.keras"
-        
+
         self.assertFalse(save_dir.exists())
         self.model.save(save_path)
         self.assertTrue(save_path.exists())
@@ -141,27 +144,27 @@ class TestCNNClassifier(unittest.TestCase):
         """Test that model accepts input with correct shape."""
         self.model.build()
         self.model.compile()
-        
+
         # Create dummy input
         batch_size = 2
         dummy_input = np.random.rand(batch_size, *self.config.input_shape)
-        
+
         # Model should be able to predict on this input
         predictions = self.model.model.predict(dummy_input, verbose=0)
-        
+
         self.assertEqual(predictions.shape, (batch_size, self.config.num_classes))
 
     def test_output_is_probability_distribution(self):
         """Test that model output is a probability distribution."""
         self.model.build()
         self.model.compile()
-        
+
         dummy_input = np.random.rand(1, *self.config.input_shape)
         predictions = self.model.model.predict(dummy_input, verbose=0)
-        
+
         # Output should sum to approximately 1 (softmax)
         self.assertAlmostEqual(predictions.sum(), 1.0, places=5)
-        
+
         # All values should be between 0 and 1
         self.assertTrue(np.all(predictions >= 0))
         self.assertTrue(np.all(predictions <= 1))

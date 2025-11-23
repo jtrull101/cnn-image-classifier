@@ -1,16 +1,19 @@
 """Tests for training modules."""
 
+import shutil
+import tempfile
 import unittest
 from pathlib import Path
-import tempfile
-import shutil
+from unittest.mock import MagicMock
+
 import numpy as np
-from unittest.mock import MagicMock, patch
+
 
 try:
     import tensorflow as tf
-    from src.alz_mri_cnn.training import AccuracyThresholdCallback, Trainer
-    from src.alz_mri_cnn.models import CNNClassifier
+
+    from alz_mri_models import CNNClassifier
+    from alz_mri_training import AccuracyThresholdCallback, Trainer
     TENSORFLOW_AVAILABLE = True
 except ImportError:
     TENSORFLOW_AVAILABLE = False
@@ -18,8 +21,8 @@ except ImportError:
     Trainer = None
     CNNClassifier = None
 
-from src.alz_mri_cnn.config import BaseConfig
-from src.alz_mri_cnn.data import BaseDataLoader
+from alz_mri_config import BaseConfig
+from alz_mri_data import BaseDataLoader
 
 
 @unittest.skipIf(not TENSORFLOW_AVAILABLE, "TensorFlow not available")
@@ -39,41 +42,45 @@ class TestAccuracyThresholdCallback(unittest.TestCase):
     def test_stops_on_high_accuracy(self):
         """Test that callback stops training on high accuracy."""
         callback = AccuracyThresholdCallback(threshold=0.95)
-        callback.model = MagicMock()
-        callback.model.stop_training = False
-        
+        mock_model = MagicMock()
+        mock_model.stop_training = False
+        callback.set_model(mock_model)
+
         logs = {'acc': 0.96, 'val_acc': 0.94}
         callback.on_epoch_end(0, logs)
-        
+
         self.assertTrue(callback.model.stop_training)
 
     def test_stops_on_high_val_accuracy(self):
         """Test that callback stops training on high validation accuracy."""
         callback = AccuracyThresholdCallback(threshold=0.95)
-        callback.model = MagicMock()
-        callback.model.stop_training = False
-        
+        mock_model = MagicMock()
+        mock_model.stop_training = False
+        callback.set_model(mock_model)
+
         logs = {'acc': 0.90, 'val_acc': 0.96}
         callback.on_epoch_end(0, logs)
-        
+
         self.assertTrue(callback.model.stop_training)
 
     def test_does_not_stop_on_low_accuracy(self):
         """Test that callback doesn't stop on low accuracy."""
         callback = AccuracyThresholdCallback(threshold=0.95)
-        callback.model = MagicMock()
-        callback.model.stop_training = False
-        
+        mock_model = MagicMock()
+        mock_model.stop_training = False
+        callback.set_model(mock_model)
+
         logs = {'acc': 0.90, 'val_acc': 0.85}
         callback.on_epoch_end(0, logs)
-        
+
         self.assertFalse(callback.model.stop_training)
 
     def test_handles_none_logs(self):
         """Test that callback handles None logs gracefully."""
         callback = AccuracyThresholdCallback()
-        callback.model = MagicMock()
-        
+        mock_model = MagicMock()
+        callback.set_model(mock_model)
+
         # Should not raise an error
         callback.on_epoch_end(0, None)
 
@@ -107,23 +114,23 @@ class TestTrainer(unittest.TestCase):
         class MockDataLoader(BaseDataLoader):
             def __init__(self, config):
                 super().__init__(config)
-                
+
             def load_train_data(self):
                 X = np.random.rand(20, 32, 32, 3).astype('float32')
                 y = np.random.randint(0, 2, 20)
                 return X, y
-                
+
             def load_test_data(self):
                 X = np.random.rand(10, 32, 32, 3).astype('float32')
                 y = np.random.randint(0, 2, 10)
                 return X, y
-                
+
             def download_dataset(self):
                 return True
-                
+
             def prepare_dataset(self):
                 return True
-        
+
         return MockDataLoader(self.config)
 
     def test_initialization(self):
@@ -136,7 +143,7 @@ class TestTrainer(unittest.TestCase):
     def test_prepare_data(self):
         """Test data preparation."""
         X_train, y_train, X_val, y_val, X_test, y_test = self.trainer.prepare_data()
-        
+
         # Check that data is loaded
         self.assertIsInstance(X_train, np.ndarray)
         self.assertIsInstance(y_train, np.ndarray)
@@ -144,18 +151,18 @@ class TestTrainer(unittest.TestCase):
         self.assertIsInstance(y_val, np.ndarray)
         self.assertIsInstance(X_test, np.ndarray)
         self.assertIsInstance(y_test, np.ndarray)
-        
+
         # Check shapes
         self.assertEqual(X_train.shape[1:], self.config.input_shape)
-        
+
         # Check that labels are one-hot encoded
         self.assertEqual(y_train.shape[1], self.config.num_classes)
 
     def test_prepare_data_with_reduced_dataset(self):
         """Test data preparation with dataset reduction."""
         self.config.data_percent = 0.5
-        X_train, y_train, X_val, y_val, X_test, y_test = self.trainer.prepare_data()
-        
+        X_train, _y_train, X_val, _y_val, X_test, _y_test = self.trainer.prepare_data()
+
         # Data should be loaded (though reduced)
         self.assertGreater(len(X_train), 0)
         self.assertGreater(len(X_val), 0)
@@ -164,7 +171,7 @@ class TestTrainer(unittest.TestCase):
     def test_get_callbacks(self):
         """Test callback creation."""
         callbacks = self.trainer.get_callbacks()
-        
+
         self.assertIsInstance(callbacks, list)
         # Should have early stopping, model checkpoint, and accuracy threshold
         self.assertGreaterEqual(len(callbacks), 3)
@@ -174,25 +181,25 @@ class TestTrainer(unittest.TestCase):
         self.config.use_early_stopping = False
         self.config.use_model_checkpoint = False
         self.config.use_accuracy_threshold_stopping = False
-        
+
         callbacks = self.trainer.get_callbacks()
-        
+
         self.assertEqual(len(callbacks), 0)
 
     def test_train_compiles_model(self):
         """Test that train compiles model if needed."""
-        X_train, y_train, X_val, y_val, X_test, y_test = self.trainer.prepare_data()
-        
+        X_train, y_train, X_val, y_val, _X_test, _y_test = self.trainer.prepare_data()
+
         self.assertIsNone(self.model.model)
         self.trainer.train(X_train, y_train, X_val, y_val)
         self.assertIsNotNone(self.model.model)
 
     def test_train_returns_history(self):
         """Test that train returns history object."""
-        X_train, y_train, X_val, y_val, X_test, y_test = self.trainer.prepare_data()
-        
+        X_train, y_train, X_val, y_val, _X_test, _y_test = self.trainer.prepare_data()
+
         history = self.trainer.train(X_train, y_train, X_val, y_val)
-        
+
         self.assertIsNotNone(history)
         self.assertTrue(hasattr(history, 'history'))
         self.assertIn('loss', history.history)
@@ -201,10 +208,10 @@ class TestTrainer(unittest.TestCase):
     def test_evaluate(self):
         """Test model evaluation."""
         X_train, y_train, X_val, y_val, X_test, y_test = self.trainer.prepare_data()
-        
+
         self.trainer.train(X_train, y_train, X_val, y_val)
         loss, acc = self.trainer.evaluate(X_test, y_test)
-        
+
         self.assertIsInstance(loss, float)
         self.assertIsInstance(acc, float)
         self.assertGreaterEqual(acc, 0.0)
@@ -215,7 +222,7 @@ class TestTrainer(unittest.TestCase):
         self.config.min_accuracy_to_save = 0.99
         self.model.build()
         self.model.compile()
-        
+
         # Low accuracy should not save
         result = self.trainer.save_model(acc=0.50, loss=1.0, elapsed_time=100)
         self.assertIsNone(result)
@@ -225,7 +232,7 @@ class TestTrainer(unittest.TestCase):
         self.config.min_accuracy_to_save = 0.99
         self.model.build()
         self.model.compile()
-        
+
         # Should save even with low accuracy
         result = self.trainer.save_model(
             acc=0.50, loss=1.0, elapsed_time=100, force_save=True
@@ -237,18 +244,18 @@ class TestTrainer(unittest.TestCase):
         """Test that log_results creates log file."""
         log_file = self.config.logs_dir / "training_history.log"
         self.assertFalse(log_file.exists())
-        
+
         self.trainer.log_results(acc=0.95, loss=0.1, elapsed_time=100)
-        
+
         self.assertTrue(log_file.exists())
 
     def test_cleanup(self):
         """Test cleanup method."""
         self.model.build()
         self.assertIsNotNone(self.model.model)
-        
+
         self.trainer.cleanup()
-        
+
         self.assertIsNone(self.model.model)
 
 

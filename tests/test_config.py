@@ -1,11 +1,11 @@
 """Tests for configuration modules."""
 
+import shutil
+import tempfile
 import unittest
 from pathlib import Path
-import tempfile
-import shutil
 
-from src.alz_mri_cnn.config import BaseConfig, AlzheimerConfig
+from alz_mri_config import AlzheimerConfig, BaseConfig
 
 
 class TestBaseConfig(unittest.TestCase):
@@ -120,7 +120,7 @@ class TestAlzheimerConfig(unittest.TestCase):
         self.assertEqual(self.config.num_classes, 4)
         self.assertIsNotNone(self.config.class_names)
         self.assertEqual(len(self.config.class_names), 4)
-        
+
         expected_classes = [
             "MildDemented",
             "NonDemented",
@@ -133,7 +133,7 @@ class TestAlzheimerConfig(unittest.TestCase):
         """Test that nice class names are set correctly."""
         self.assertIsNotNone(self.config.nice_class_names)
         self.assertEqual(len(self.config.nice_class_names), 4)
-        
+
         expected_nice_names = [
             "Mild Impairment",
             "No Impairment",

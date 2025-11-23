@@ -1,0 +1,88 @@
+#!/bin/sh
+# Git pre-commit hook
+# This runs automatically before each commit
+
+echo ""
+echo "========================================="
+echo "Running pre-commit checks..."
+echo "========================================="
+echo ""
+
+# Function to get UV command
+get_uv_command() {
+    if command -v uv >/dev/null 2>&1; then
+        echo "uv"
+    elif [ -f "$HOME/.local/bin/uv" ]; then
+        echo "$HOME/.local/bin/uv"
+    else
+        echo ""
+    fi
+}
+
+UV_CMD=$(get_uv_command)
+
+if [ -z "$UV_CMD" ]; then
+    echo "[ERROR] UV not found. Please install UV first."
+    exit 1
+fi
+
+ERROR_COUNT=0
+
+# Format code
+echo "[1/4] Formatting code with ruff..."
+npx nx run-many --target=format --all
+if [ $? -ne 0 ]; then
+    echo "[ERROR] Formatting failed"
+    ERROR_COUNT=$((ERROR_COUNT + 1))
+else
+    echo "[OK] Formatting complete"
+fi
+echo ""
+
+# Lint code
+echo "[2/4] Linting code with ruff..."
+npx nx run-many --target=lint --all
+if [ $? -ne 0 ]; then
+    echo "[ERROR] Linting failed"
+    ERROR_COUNT=$((ERROR_COUNT + 1))
+else
+    echo "[OK] Linting passed"
+fi
+echo ""
+
+# Type check
+echo "[3/4] Running type checks with pyright..."
+"$UV_CMD" run pyright
+if [ $? -ne 0 ]; then
+    echo "[ERROR] Type checking failed"
+    ERROR_COUNT=$((ERROR_COUNT + 1))
+else
+    echo "[OK] Type checking passed"
+fi
+echo ""
+
+# Run tests
+echo "[4/4] Running tests..."
+npx nx run-many --target=test --all
+if [ $? -ne 0 ]; then
+    echo "[ERROR] Tests failed"
+    ERROR_COUNT=$((ERROR_COUNT + 1))
+else
+    echo "[OK] Tests passed"
+fi
+echo ""
+
+# Summary
+echo "========================================="
+if [ $ERROR_COUNT -eq 0 ]; then
+    echo "[OK] All checks passed!"
+    echo "========================================="
+    exit 0
+else
+    echo "[ERROR] $ERROR_COUNT check(s) failed!"
+    echo "========================================="
+    echo ""
+    echo "Commit blocked. Please fix the issues above."
+    exit 1
+fi
+
