@@ -8,8 +8,8 @@ import numpy as np
 from tqdm import tqdm
 
 from .base_loader import BaseDataLoader
-from alz_mri_config import BaseConfig
-from alz_mri_utils import (
+from img_classifier_config import BaseConfig
+from img_classifier_utils import (
     download_from_google_drive,
     extract_archive,
     ensure_directory_exists,

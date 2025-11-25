@@ -14,9 +14,9 @@ import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
-from alz_mri_config import BaseConfig
-from alz_mri_data import BaseDataLoader
-from alz_mri_models import BaseModel
+from img_classifier_config import BaseConfig
+from img_classifier_data import BaseDataLoader
+from img_classifier_models import BaseModel
 from .callbacks import AccuracyThresholdCallback
 
 

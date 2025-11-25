@@ -15,7 +15,7 @@ class AlzheimerConfig(BaseConfig):
     """
 
     project_name: str = "alzheimer_mri_cnn"
-    working_dir: Path = Path("/tmp/alz_mri_cnn/")
+    working_dir: Path = Path("/tmp/img_classifier_cnn/")
 
     dataset_name: str = "Combined Dataset"
     dataset_zip_id: str = "1SQuB_8IL3s7vZPMeGkOZo116QSTMa6BN"

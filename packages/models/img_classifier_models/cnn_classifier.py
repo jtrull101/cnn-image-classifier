@@ -5,10 +5,10 @@ from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
 from keras.models import Sequential
 
 from .base_model import BaseModel
-from alz_mri_config import BaseConfig
+from img_classifier_config import BaseConfig
 
 
-class CNNClassifier(BaseModel):
+class CnnClassifier(BaseModel):
     """Convolutional Neural Network for image classification.
 
     This model uses a series of convolutional and pooling layers
@@ -64,7 +64,7 @@ class CNNClassifier(BaseModel):
         return model
 
 
-class SimpleCNN(BaseModel):
+class SimpleCnn(BaseModel):
     """Simpler CNN for faster training and testing.
 
     This is a lighter version useful for quick experiments.

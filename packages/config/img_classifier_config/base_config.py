@@ -12,11 +12,11 @@ class BaseConfig(BaseSettings):
 
     Uses Pydantic for validation and settings management.
     Can be extended to create custom configurations for different datasets.
-    Supports loading from environment variables with ALZ_MRI_ prefix.
+    Supports loading from environment variables with IMG_CLASSIFIER_ prefix.
     """
 
     model_config = SettingsConfigDict(
-        env_prefix="ALZ_MRI_",
+        env_prefix="IMG_CLASSIFIER_",
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,

@@ -5,7 +5,7 @@ from typing import Tuple, List
 import numpy as np
 from pathlib import Path
 
-from alz_mri_config import BaseConfig
+from img_classifier_config import BaseConfig
 
 
 class BaseDataLoader(ABC):
