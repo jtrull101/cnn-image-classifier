@@ -2,7 +2,7 @@
   "name": "training",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
-  "sourceRoot": "packages/training/alz_mri_training",
+  "sourceRoot": "packages/training/img_classifier_training",
   "targets": {
     "build": {
       "executor": "nx:run-commands",

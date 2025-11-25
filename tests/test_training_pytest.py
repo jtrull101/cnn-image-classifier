@@ -5,9 +5,6 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from img_classifier_config import DatasetConfig
-from img_classifier_data import BaseDataLoader
-
 
 try:
     import tensorflow as tf
@@ -22,6 +19,8 @@ except ImportError:
     ArchitectureFactory = None
     TrainingOrchestrator = None
 
+from img_classifier_config import DatasetConfig
+from img_classifier_data import BaseDataLoader
 
 
 pytestmark = pytest.mark.skipif(not TENSORFLOW_AVAILABLE, reason="TensorFlow not available")
@@ -119,8 +118,10 @@ class TestTrainer:
         self.data_loader = self._create_mock_data_loader()
         self.trainer = Trainer(self.config, self.model, self.data_loader)
 
-        yield
+        yield  # Test runs here
 
+        # Teardown
+        tf.keras.backend.clear_session()
 
     def _create_mock_data_loader(self):
         """Create a mock data loader."""
@@ -202,15 +203,17 @@ class TestTrainer:
     def test_train_compiles_model(self):
         """Test that train compiles model if needed."""
         X_train, y_train, X_val, y_val, _X_test, _y_test = self.trainer.prepare_data()
-        self.model.compile()  # Ensure model is compiled before training
+
+        assert self.model.model is None
         self.trainer.train(X_train, y_train, X_val, y_val)
-        assert hasattr(self.model.model, 'compiled') and self.model.model.compiled
+        assert self.model.model is not None
 
     def test_train_returns_history(self):
         """Test that train returns history object."""
         X_train, y_train, X_val, y_val, _X_test, _y_test = self.trainer.prepare_data()
-        self.model.compile()  # Ensure model is compiled before training
+
         history = self.trainer.train(X_train, y_train, X_val, y_val)
+
         assert history is not None
         assert hasattr(history, 'history')
         assert 'loss' in history.history
@@ -219,10 +222,52 @@ class TestTrainer:
     def test_evaluate(self):
         """Test model evaluation."""
         X_train, y_train, X_val, y_val, X_test, y_test = self.trainer.prepare_data()
-        self.model.compile()  # Ensure model is compiled before training
+
         self.trainer.train(X_train, y_train, X_val, y_val)
         loss, acc = self.trainer.evaluate(X_test, y_test)
+
         assert isinstance(loss, float)
         assert isinstance(acc, float)
-        assert acc >= 0.0
-        assert acc <= 1.0
+        assert 0.0 <= acc <= 1.0
+
+    def test_save_model_requires_minimum_accuracy(self):
+        """Test that save_model respects minimum accuracy."""
+        self.config.min_accuracy_to_save = 0.99
+        self.model.build()
+        self.model.compile()
+
+        # Low accuracy should not save
+        result = self.trainer.save_model(acc=0.50, loss=1.0, elapsed_time=100)
+        assert result is None
+
+    def test_save_model_with_force_save(self):
+        """Test that save_model saves with force_save=True."""
+        self.config.min_accuracy_to_save = 0.99
+        self.model.build()
+        self.model.compile()
+
+        # Should save even with low accuracy
+        result = self.trainer.save_model(
+            acc=0.50, loss=1.0, elapsed_time=100, force_save=True
+        )
+        assert result is not None
+        assert result.exists()
+
+    def test_log_results_creates_file(self):
+        """Test that log_results creates log file."""
+        log_file = self.config.logs_dir / "training_history.log"
+        assert not log_file.exists()
+
+        self.trainer.log_results(acc=0.95, loss=0.1, elapsed_time=100)
+
+        assert log_file.exists()
+
+    def test_cleanup(self):
+        """Test cleanup method."""
+        self.model.build()
+        assert self.model.model is not None
+
+        self.trainer.cleanup()
+
+        assert self.model.model is None
+

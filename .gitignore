@@ -160,9 +160,9 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
-src/alz_mri_cnn/output/*
-!src/alz_mri_cnn/static/*.keras
-src/alz_mri_cnn/static/*.jpg
+src/img_classifier_cnn/output/*
+!src/img_classifier_cnn/static/*.keras
+src/img_classifier_cnn/static/*.jpg
 
 *.pyc
 *.pyo

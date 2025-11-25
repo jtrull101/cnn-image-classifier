@@ -125,7 +125,7 @@ python -m pytest tests/test_data_loaders.py -v
 
 ### Run with Coverage
 ```bash
-python -m pytest tests/ --cov=src/alz_mri_cnn --cov-report=html
+python -m pytest tests/ --cov=src/img_classifier_cnn --cov-report=html
 ```
 
 ## Test Results Summary

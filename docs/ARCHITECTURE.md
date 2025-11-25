@@ -16,7 +16,7 @@ The rearchitected codebase follows these key principles:
 ## Module Structure
 
 ```
-src/alz_mri_cnn/
+src/img_classifier_cnn/
 ├── config/              # Configuration management
 │   ├── __init__.py
 │   ├── base_config.py   # Base configuration class
@@ -56,7 +56,7 @@ src/alz_mri_cnn/
 
 **Usage Example**:
 ```python
-from src.alz_mri_cnn.config import AlzheimerConfig
+from src.img_classifier_cnn.config import AlzheimerConfig
 
 config = AlzheimerConfig(
     batch_size=32,
@@ -83,8 +83,8 @@ config.create_directories()
 
 **Usage Example**:
 ```python
-from src.alz_mri_cnn.data import ImageDataLoader
-from src.alz_mri_cnn.config import AlzheimerConfig
+from src.img_classifier_cnn.data import ImageDataLoader
+from src.img_classifier_cnn.config import AlzheimerConfig
 
 config = AlzheimerConfig()
 loader = ImageDataLoader(config)
@@ -112,8 +112,8 @@ X_test, y_test = loader.load_test_data()
 
 **Usage Example**:
 ```python
-from src.alz_mri_cnn.models import CNNClassifier
-from src.alz_mri_cnn.config import AlzheimerConfig
+from src.img_classifier_cnn.models import CNNClassifier
+from src.img_classifier_cnn.config import AlzheimerConfig
 
 config = AlzheimerConfig()
 model = CNNClassifier(config)
@@ -138,10 +138,10 @@ model.summary()
 
 **Usage Example**:
 ```python
-from src.alz_mri_cnn.training import Trainer
-from src.alz_mri_cnn.models import CNNClassifier
-from src.alz_mri_cnn.data import ImageDataLoader
-from src.alz_mri_cnn.config import AlzheimerConfig
+from src.img_classifier_cnn.training import Trainer
+from src.img_classifier_cnn.models import CNNClassifier
+from src.img_classifier_cnn.data import ImageDataLoader
+from src.img_classifier_cnn.config import AlzheimerConfig
 
 config = AlzheimerConfig()
 model = CNNClassifier(config)
@@ -224,10 +224,10 @@ train_model(epochs=25)
 
 **New Way** (modular):
 ```python
-from src.alz_mri_cnn.config import AlzheimerConfig
-from src.alz_mri_cnn.data import ImageDataLoader
-from src.alz_mri_cnn.models import CNNClassifier
-from src.alz_mri_cnn.training import Trainer
+from src.img_classifier_cnn.config import AlzheimerConfig
+from src.img_classifier_cnn.data import ImageDataLoader
+from src.img_classifier_cnn.models import CNNClassifier
+from src.img_classifier_cnn.training import Trainer
 
 # Configure
 config = AlzheimerConfig(num_epochs=25)

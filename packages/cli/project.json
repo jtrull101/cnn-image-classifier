@@ -1,0 +1,8 @@
+{
+  "name": "@alz-mri/cli",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "packages/cli/img_classifier_cli",
+  "targets": {}
+}
+

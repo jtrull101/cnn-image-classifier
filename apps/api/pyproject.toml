@@ -1,38 +1,43 @@
 [project]
-name = "alz-mri-api"
-version = "0.1.0"
-description = "Flask API for Alzheimer's MRI CNN predictions"
+name = "img-classifier-api"
+  version = "0.2.0"
+description = "FastAPI for generic image classification CNN predictions"
 authors = [{ name = "Jonathan Trull" }]
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 license = { text = "MIT" }
 
 dependencies = [
-    "alz-mri-config",
-    "alz-mri-data",
-    "alz-mri-models",
-    "alz-mri-utils",
-    "flask>=3.0.0",
-    "werkzeug>=3.0.0",
+    "img-classifier-config",
+    "img-classifier-data",
+    "img-classifier-models",
+    "img-classifier-training",
+    "img-classifier-utils",
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "python-multipart>=0.0.6",
+    "jinja2>=3.1.2",
+    "aiofiles>=23.2.1",
     "tensorflow>=2.13.0",
     "keras>=2.13.0",
     "numpy>=1.24.0",
     "opencv-python>=4.8.0",
     "pillow>=10.0.0",
+    "pydantic>=2.5.0",
 ]
 
 [tool.uv.sources]
-alz-mri-config = { workspace = true }
-alz-mri-data = { workspace = true }
-alz-mri-models = { workspace = true }
-alz-mri-utils = { workspace = true }
+img-classifier-config = { workspace = true }
+img-classifier-data = { workspace = true }
+img-classifier-models = { workspace = true }
+img-classifier-utils = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["alz_mri_api"]
+packages = ["img_classifier_api"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

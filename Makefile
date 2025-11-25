@@ -72,7 +72,7 @@ format:
 # Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
-	Get-ChildItem -Path . -Include __pycache__,*.pyc,.pytest_cache,.ruff_cache,dist,build,*.egg-info -Recurse -Force | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue
+	Get-ChildItem -Path . -Include __pycache__,*.pyc,.pytest_cache,.ruff_cache,dist,build,*.egg-info,node_modules -Recurse -Force | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue
 	@echo "Clean complete!"
 
 # Show dependency graph

@@ -1,0 +1,27 @@
+# Quick Training Configuration
+# For fast experiments and testing
+
+project_name: "quick_test"
+working_dir: "/tmp/quick_test/"
+
+dataset_name: "test_dataset"
+
+# Small image size for speed
+image_size: [64, 64]
+color_channels: 3
+
+# Fast training settings
+batch_size: 64
+num_epochs: 10
+learning_rate: 0.01
+data_percent: 0.1  # Use only 10% of data
+
+# Simple architecture
+architecture_complexity: "simple"
+dropout_rate: 0.3
+
+# Less aggressive callbacks
+use_early_stopping: true
+early_stopping_patience: 5
+min_accuracy_to_save: 0.70
+

@@ -1,1 +1,1 @@
-python src/alz_mri_cnn/front_end.py
+python src/img_classifier_cnn/front_end.py

@@ -2,7 +2,7 @@
   "name": "config",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
-  "sourceRoot": "packages/config/alz_mri_config",
+  "sourceRoot": "packages/config/img_classifier_config",
   "targets": {
     "build": {
       "executor": "nx:run-commands",

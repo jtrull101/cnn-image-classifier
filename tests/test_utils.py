@@ -1,59 +1,56 @@
 """Tests for utility functions."""
 
-import shutil
-import tempfile
-import unittest
-from pathlib import Path
 
-from alz_mri_utils import (
+import pytest
+
+from img_classifier_utils import (
     clean_directory,
     ensure_directory_exists,
 )
 
 
-class TestFileUtils(unittest.TestCase):
+class TestFileUtils:
     """Tests for file utility functions."""
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup_method(self, tmp_path):
         """Set up test fixtures."""
-        self.temp_dir = Path(tempfile.mkdtemp())
+        self.temp_dir = tmp_path
 
-    def tearDown(self):
-        """Clean up test fixtures."""
-        if self.temp_dir.exists():
-            shutil.rmtree(self.temp_dir)
+        yield
+
 
     def test_ensure_directory_exists_creates_directory(self):
         """Test that ensure_directory_exists creates a new directory."""
         new_dir = self.temp_dir / "test_dir"
-        self.assertFalse(new_dir.exists())
+        assert not new_dir.exists()
 
         result = ensure_directory_exists(new_dir)
 
-        self.assertTrue(new_dir.exists())
-        self.assertTrue(new_dir.is_dir())
-        self.assertEqual(result, new_dir)
+        assert new_dir.exists()
+        assert new_dir.is_dir()
+        assert result == new_dir
 
     def test_ensure_directory_exists_with_existing_directory(self):
         """Test that ensure_directory_exists handles existing directories."""
         existing_dir = self.temp_dir / "existing"
         existing_dir.mkdir()
-        self.assertTrue(existing_dir.exists())
+        assert existing_dir.exists()
 
         result = ensure_directory_exists(existing_dir)
 
-        self.assertTrue(existing_dir.exists())
-        self.assertEqual(result, existing_dir)
+        assert existing_dir.exists()
+        assert result == existing_dir
 
     def test_ensure_directory_exists_creates_nested_directories(self):
         """Test that ensure_directory_exists creates nested directories."""
         nested_dir = self.temp_dir / "level1" / "level2" / "level3"
-        self.assertFalse(nested_dir.exists())
+        assert not nested_dir.exists()
 
         result = ensure_directory_exists(nested_dir)
 
-        self.assertTrue(nested_dir.exists())
-        self.assertEqual(result, nested_dir)
+        assert nested_dir.exists()
+        assert result == nested_dir
 
     def test_clean_directory_removes_files(self):
         """Test that clean_directory removes files matching pattern."""
@@ -68,10 +65,10 @@ class TestFileUtils(unittest.TestCase):
         # Clean .txt files
         count = clean_directory(test_dir, "*.txt")
 
-        self.assertEqual(count, 2)
-        self.assertFalse((test_dir / "file1.txt").exists())
-        self.assertFalse((test_dir / "file2.txt").exists())
-        self.assertTrue((test_dir / "file3.log").exists())
+        assert count == 2
+        assert not (test_dir / "file1.txt").exists()
+        assert not (test_dir / "file2.txt").exists()
+        assert (test_dir / "file3.log").exists()
 
     def test_clean_directory_with_default_pattern(self):
         """Test that clean_directory removes all files with default pattern."""
@@ -86,14 +83,14 @@ class TestFileUtils(unittest.TestCase):
         # Clean all files
         count = clean_directory(test_dir)
 
-        self.assertEqual(count, 3)
-        self.assertEqual(len(list(test_dir.iterdir())), 0)
+        assert count == 3
+        assert len(list(test_dir.iterdir())) == 0
 
     def test_clean_directory_with_nonexistent_directory(self):
         """Test that clean_directory handles non-existent directories."""
         nonexistent = self.temp_dir / "nonexistent"
         count = clean_directory(nonexistent)
-        self.assertEqual(count, 0)
+        assert count == 0
 
     def test_clean_directory_preserves_subdirectories(self):
         """Test that clean_directory doesn't remove subdirectories."""
@@ -108,11 +105,7 @@ class TestFileUtils(unittest.TestCase):
         # Clean only top-level files
         count = clean_directory(test_dir, "*.txt")
 
-        self.assertEqual(count, 1)
-        self.assertFalse((test_dir / "file.txt").exists())
-        self.assertTrue(subdir.exists())
-        self.assertTrue((subdir / "nested.txt").exists())
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert count == 1
+        assert not (test_dir / "file.txt").exists()
+        assert subdir.exists()
+        assert (subdir / "nested.txt").exists()

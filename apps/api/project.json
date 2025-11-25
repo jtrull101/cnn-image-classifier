@@ -2,12 +2,12 @@
   "name": "api",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
-  "sourceRoot": "apps/api/alz_mri_api",
+  "sourceRoot": "apps/api/img_classifier_api",
   "targets": {
     "serve": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "uv run python -m alz_mri_api.app",
+        "command": "uv run python -m img_classifier_api.app",
         "cwd": "apps/api"
       },
       "dependsOn": ["^build"]

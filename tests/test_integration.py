@@ -6,86 +6,90 @@ These tests verify that all modules work together correctly, including:
 - Overall package structure validation
 """
 
-import shutil
-import tempfile
-import unittest
-from pathlib import Path
+import pytest
 
-from alz_mri_config import AlzheimerConfig
+from img_classifier_config import DatasetConfig
 
 
-class TestArchitectureIntegration(unittest.TestCase):
+class TestArchitectureIntegration:
     """Tests for overall architecture integration."""
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup_method(self, tmp_path):
         """Set up test fixtures."""
-        self.temp_dir = Path(tempfile.mkdtemp())
+        self.temp_dir = tmp_path
+        yield
 
-    def tearDown(self):
-        """Clean up test fixtures."""
-        if self.temp_dir.exists():
-            shutil.rmtree(self.temp_dir)
 
     def test_config_imports(self):
         """Test that all config classes can be imported."""
-        from alz_mri_config import AlzheimerConfig, BaseConfig
-        self.assertIsNotNone(BaseConfig)
-        self.assertIsNotNone(AlzheimerConfig)
+        from img_classifier_config import BaseConfig, DatasetConfig, DatasetDetector
+        assert BaseConfig is not None
+        assert DatasetConfig is not None
+        assert DatasetDetector is not None
 
     def test_data_loader_imports(self):
         """Test that all data loader classes can be imported."""
-        from alz_mri_data import BaseDataLoader, ImageDataLoader
-        self.assertIsNotNone(BaseDataLoader)
-        self.assertIsNotNone(ImageDataLoader)
+        from img_classifier_data import BaseDataLoader, ImageDataLoader
+        assert BaseDataLoader is not None
+        assert ImageDataLoader is not None
 
     def test_utils_imports(self):
         """Test that all utility functions can be imported."""
-        from alz_mri_utils import (
+        from img_classifier_utils import (
             clean_directory,
             download_from_google_drive,
             ensure_directory_exists,
             extract_archive,
             organize_dataset,
         )
-        self.assertIsNotNone(download_from_google_drive)
-        self.assertIsNotNone(extract_archive)
-        self.assertIsNotNone(organize_dataset)
-        self.assertIsNotNone(clean_directory)
-        self.assertIsNotNone(ensure_directory_exists)
+        assert download_from_google_drive is not None
+        assert extract_archive is not None
+        assert organize_dataset is not None
+        assert clean_directory is not None
+        assert ensure_directory_exists is not None
 
     def test_config_and_data_loader_integration(self):
         """Test that config and data loader work together."""
-        from alz_mri_config import BaseConfig
-        from alz_mri_data import ImageDataLoader
+        from img_classifier_config import BaseConfig
+        from img_classifier_data import ImageDataLoader
 
         config = BaseConfig(working_dir=self.temp_dir)
         loader = ImageDataLoader(config)
 
-        self.assertEqual(loader.config, config)
-        self.assertTrue(config.working_dir.exists())
+        assert loader.config == config
+        assert config.working_dir.exists()
 
-    def test_alzheimer_config_initialization(self):
-        """Test that AlzheimerConfig initializes with all required fields."""
-        config = AlzheimerConfig(working_dir=self.temp_dir)
+    def test_dataset_config_initialization(self):
+        """Test that DatasetConfig initializes with all required fields."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            num_classes=4,
+            class_names=["class1", "class2", "class3", "class4"]
+        )
 
         # Verify all expected fields are present
-        self.assertEqual(config.num_classes, 4)
-        self.assertIsNotNone(config.class_names)
-        self.assertIsNotNone(config.nice_class_names)
-        self.assertEqual(len(config.class_names), 4)
-        self.assertEqual(len(config.nice_class_names), 4)
+        assert config.num_classes == 4
+        assert config.class_names is not None
+        assert len(config.class_names) == 4
 
     def test_module_structure(self):
         """Test that the module structure is properly organized."""
-        import alz_mri_config
-        import alz_mri_data
+        import img_classifier_config
+        import img_classifier_data
 
         # Verify __all__ exports
-        self.assertIn('BaseConfig', alz_mri_config.__all__)
-        self.assertIn('AlzheimerConfig', alz_mri_config.__all__)
-        self.assertIn('BaseDataLoader', alz_mri_data.__all__)
-        self.assertIn('ImageDataLoader', alz_mri_data.__all__)
+        assert 'BaseConfig' in img_classifier_config.__all__
+        assert 'DatasetConfig' in img_classifier_config.__all__
+        assert 'BaseDataLoader' in img_classifier_data.__all__
+        assert 'ImageDataLoader' in img_classifier_data.__all__
 
+    def test_new_components_imports(self):
+        """Test that new generalized components can be imported."""
+        from img_classifier_models import ArchitectureFactory
+        from img_classifier_training import HyperparameterOptimizer, TrainingOrchestrator
 
-if __name__ == '__main__':
-    unittest.main()
+        assert ArchitectureFactory is not None
+        assert TrainingOrchestrator is not None
+        assert HyperparameterOptimizer is not None
+

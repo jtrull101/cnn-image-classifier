@@ -68,6 +68,93 @@ make build
 
 ---
 
+## 🚀 NEW: Generalized Image Classification System
+
+This project now includes a **powerful generalized system** that works with ANY image classification dataset, not just Alzheimer's MRI scans!
+
+### Key Features
+
+✅ **Dataset Auto-Detection** - Automatically analyzes any dataset structure  
+✅ **Dynamic Architecture Generation** - Creates optimal CNN architectures  
+✅ **Hyperparameter Optimization** - Grid, random, or Bayesian search  
+✅ **CLI Interface** - Easy-to-use command-line tools  
+✅ **Python API** - Flexible programmatic access  
+✅ **Full Backward Compatibility** - Existing code still works  
+
+### Quick Start with Any Dataset
+
+```bash
+# Install CLI tools
+uv pip install -e packages/cli
+
+# Analyze your dataset
+img-classifier info /path/to/your/dataset
+
+# Train a model (auto-detects everything!)
+img-classifier train /path/to/your/dataset --project-name my_model
+
+# Optimize hyperparameters
+img-classifier optimize /path/to/your/dataset --max-trials 20
+
+# Make predictions
+img-classifier predict model.keras image.jpg --class-names "cat" "dog" "bird"
+```
+
+### Python API
+
+```python
+from pathlib import Path
+from img_classifier_training import TrainingOrchestrator
+
+# One-liner: auto-detect dataset and train
+orchestrator = TrainingOrchestrator.from_dataset_path(
+    dataset_path=Path("/path/to/your/dataset"),
+    optimize_hyperparameters=True,
+    max_trials=20,
+)
+model = orchestrator.run(plot=True)
+```
+
+### Documentation
+
+- 📘 **[Quick Start Guide](docs/QUICK_START.md)** - 5-minute tutorial
+- 📚 **[Complete Documentation](docs/GENERALIZED_SYSTEM.md)** - Full system guide
+- 🔄 **[Migration Guide](docs/MIGRATION_GUIDE.md)** - From Alzheimer's to generalized
+- 📊 **[Transformation Summary](docs/TRANSFORMATION_SUMMARY.md)** - What's new
+- 💻 **[Examples](examples_generalized_system.py)** - Code examples
+
+### Dataset Requirements
+
+Works with any dataset following this structure:
+
+```
+dataset/
+├── train/
+│   ├── class1/
+│   │   ├── image1.jpg
+│   │   └── image2.jpg
+│   ├── class2/
+│   └── class3/
+└── test/
+    ├── class1/
+    ├── class2/
+    └── class3/
+```
+
+Supports: `.jpg`, `.jpeg`, `.png`, `.bmp`, `.gif`, `.tiff`
+
+---
+
+## Original Alzheimer's System
+
+The original Alzheimer's-specific system continues to work as before:
+
+### Usage (Alzheimer's Dataset)
+
+**Note:** All configuration is now in `pyproject.toml` files. No separate `requirements.txt`, `pytest.ini`, or `setup.cfg` files needed.
+
+---
+
 ## Monorepo Architecture
 
 This project uses an **NX/UV managed monorepo** for better modularity and dependency management.
@@ -106,38 +193,68 @@ config (base) → utils → data → training → api
 ### Start the API
 
 ```powershell
-make serve-api
-# or
-npx nx run api:serve
+## Usage
+
+### Start the API (New FastAPI)
+
+```bash
+# Start the modern FastAPI server
+cd apps/api
+python run_api.py
+
+# Or with uvicorn directly
+uvicorn img_classifier_api.app:app --reload
 ```
 
-Navigate to `http://127.0.0.1:5000`
+Navigate to:
+- **Web Interface**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
+- **Alternative Docs**: http://localhost:8000/redoc
 
 ### API Endpoints
 
-**GET /** - Web interface
+**GET /** - Modern web interface with drag-and-drop upload
 
-**POST /predict** - Predict from MRI image
+**POST /api/predict** - Classify an image
 ```python
 import requests
 
 response = requests.post(
-    "http://127.0.0.1:5000/predict",
-    files={"file": open("mri.jpg", "rb")}
+    "http://localhost:8000/api/predict",
+    files={"file": open("image.jpg", "rb")}
 )
-print(response.json())  # {"class": "No Impairment", "confidence": 0.95}
+result = response.json()
+print(f"Class: {result['class_name']}")
+print(f"Confidence: {result['confidence']:.2%}")
+print(f"Probabilities: {result['probabilities']}")
 ```
+
+**GET /api/models** - List available models
+```python
+import requests
+
+response = requests.get("http://localhost:8000/api/models")
+models = response.json()
+print(f"Loaded models: {models['models']}")
+```
+
+### Features
+- ✅ **Multi-Model Support**: Load and switch between models
+- ✅ **Auto-Discovery**: Finds best available model automatically
+- ✅ **Modern UI**: Responsive interface with drag-and-drop
+- ✅ **API Docs**: Auto-generated Swagger/ReDoc documentation
+- ✅ **Generic**: Works with any image classification model
 
 ### Training
 
 ```python
-from alz_mri_training import Trainer
-from alz_mri_models import CNNClassifier
-from alz_mri_data import ImageDataLoader
-from alz_mri_config import AlzheimerConfig
+from img_classifier_training import Trainer
+from img_classifier_models import CnnClassifier
+from img_classifier_data import ImageDataLoader
+from img_classifier_config import AlzheimerConfig
 
 config = AlzheimerConfig()
-model = CNNClassifier(config)
+model = CnnClassifier(config)
 loader = ImageDataLoader(config)
 trainer = Trainer(config, model, loader)
 
@@ -199,7 +316,7 @@ uv add --dev pytest
 alz-mri-neural-network/
 ├── apps/
 │   └── api/                    # Flask application
-│       ├── alz_mri_api/
+│       ├── img_classifier_api/
 │       │   ├── app.py
 │       │   ├── static/         # Model weights
 │       │   └── templates/
@@ -207,19 +324,19 @@ alz-mri-neural-network/
 │       └── project.json
 ├── packages/
 │   ├── config/                 # Configuration
-│   │   ├── alz_mri_config/
+│   │   ├── img_classifier_config/
 │   │   │   ├── base_config.py
 │   │   │   └── alzheimer_config.py
 │   │   ├── pyproject.toml
 │   │   └── project.json
 │   ├── utils/                  # Utilities
-│   │   └── alz_mri_utils/
+│   │   └── img_classifier_utils/
 │   ├── data/                   # Data loading
-│   │   └── alz_mri_data/
+│   │   └── img_classifier_data/
 │   ├── models/                 # Neural networks
-│   │   └── alz_mri_models/
+│   │   └── img_classifier_models/
 │   └── training/               # Training pipeline
-│       └── alz_mri_training/
+│       └── img_classifier_training/
 ├── docs/
 │   ├── ARCHITECTURE.md         # System design
 │   └── TESTING.md              # Test strategy
@@ -253,14 +370,14 @@ alz-mri-neural-network/
 Configuration management using **Pydantic** for validation and settings.
 
 ```python
-from alz_mri_config import AlzheimerConfig
+from img_classifier_config import AlzheimerConfig
 
 # Load from defaults
 config = AlzheimerConfig(batch_size=32, num_epochs=25)
 
-# Load from environment variables (ALZ_MRI_ prefix)
-# export ALZ_MRI_BATCH_SIZE=64
-# export ALZ_MRI_NUM_EPOCHS=50
+# Load from environment variables (IMG_CLASSIFIER_ prefix)
+# export IMG_CLASSIFIER_BATCH_SIZE=64
+# export IMG_CLASSIFIER_NUM_EPOCHS=50
 config = AlzheimerConfig()  # Automatically loads from env
 
 # Load from .env file
@@ -281,34 +398,62 @@ config = AlzheimerConfig(batch_size=0)  # Raises ValidationError
 File operations, downloads, archive extraction.
 
 ```python
-from alz_mri_utils import download_from_google_drive, extract_archive
+from img_classifier_utils import download_from_google_drive, extract_archive
 ```
 
 ### data (alz-mri-data)
 Data loading, preprocessing, caching.
 
 ```python
-from alz_mri_data import ImageDataLoader
+from img_classifier_data import ImageDataLoader
 loader = ImageDataLoader(config)
 X_train, y_train = loader.load_train_data()
 ```
 
 ### models (alz-mri-models)
-CNN architectures (CNNClassifier, SimpleCNN).
+Dynamic CNN architecture generation.
 
 ```python
-from alz_mri_models import CNNClassifier
-model = CNNClassifier(config)
-model.compile()
+from img_classifier_models import ArchitectureFactory
+
+# Auto-generate based on dataset
+model = ArchitectureFactory.create(config)
+
+# Or specify complexity
+model = ArchitectureFactory.create(config, complexity="deep")
+
+# Use in training
+model.compile(optimizer='adam', loss='categorical_crossentropy')
 ```
 
 ### training (alz-mri-training)
-Training pipeline with callbacks and visualization.
+Complete training pipeline with optimization.
 
 ```python
-from alz_mri_training import Trainer
-trainer = Trainer(config, model, loader)
-trainer.run()
+from img_classifier_training import TrainingOrchestrator
+
+# Simple training
+orchestrator = TrainingOrchestrator.from_dataset_path(
+    dataset_path=Path("/path/to/dataset")
+)
+model = orchestrator.run()
+
+# With hyperparameter optimization
+orchestrator = TrainingOrchestrator.from_dataset_path(
+    dataset_path=Path("/path/to/dataset"),
+    optimize_hyperparameters=True,
+    max_trials=20
+)
+model = orchestrator.run()
+```
+
+### cli (alz-mri-cli)
+Command-line interface for easy access.
+
+```bash
+img-classifier train /path/to/dataset
+img-classifier optimize /path/to/dataset --max-trials 30
+img-classifier predict model.keras image.jpg
 ```
 
 ### api (alz-mri-api)
@@ -330,7 +475,7 @@ npx nx run data:test
 uv run pytest --cov
 ```
 
-**Test Suite:** 73 tests covering configuration, data loading, models, training, and integration.
+**Test Suite:** Comprehensive tests covering configuration, data loading, models, training, and integration.
 
 ---
 
@@ -369,7 +514,7 @@ npm install
 Ensure you're using absolute imports:
 ```python
 # ✓ Correct
-from alz_mri_config import AlzheimerConfig
+from img_classifier_config import AlzheimerConfig
 
 # ✗ Wrong
 from .config import AlzheimerConfig

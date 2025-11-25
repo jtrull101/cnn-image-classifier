@@ -2,7 +2,7 @@
   "name": "utils",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
-  "sourceRoot": "packages/utils/alz_mri_utils",
+  "sourceRoot": "packages/utils/img_classifier_utils",
   "targets": {
     "build": {
       "executor": "nx:run-commands",
