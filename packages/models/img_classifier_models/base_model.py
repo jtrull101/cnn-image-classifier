@@ -1,10 +1,10 @@
 """Base model interface."""
 
 from abc import ABC, abstractmethod
-from typing import Optional
-import tensorflow as tf
 from pathlib import Path
+from typing import Optional
 
+import tensorflow as tf
 from img_classifier_config import BaseConfig
 
 

@@ -13,9 +13,9 @@ from img_classifier_training import HyperparameterSpace, TrainingOrchestrator
 
 def example_1_simple_training():
     """Example 1: Simple training with auto-detection."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Example 1: Simple Training with Auto-Detection")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     # Point to your dataset directory
     dataset_path = Path("/path/to/your/dataset")
@@ -35,9 +35,9 @@ def example_1_simple_training():
 
 def example_2_custom_config():
     """Example 2: Training with custom configuration."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Example 2: Training with Custom Configuration")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     # Create custom configuration
     config = DatasetConfig(
@@ -45,20 +45,16 @@ def example_2_custom_config():
         working_dir=Path("/tmp/custom_classifier/"),
         dataset_name="my_dataset",
         data_path=Path("/path/to/your/dataset"),
-
         # Image settings
         image_size=(128, 128),
         color_channels=3,
-
         # Training parameters
         batch_size=32,
         num_epochs=50,
         learning_rate=0.001,
-
         # Model architecture
         architecture_complexity="medium",
         dropout_rate=0.3,
-
         # Use less data for faster experimentation
         data_percent=0.1,  # Use only 10% of data
     )
@@ -72,9 +68,9 @@ def example_2_custom_config():
 
 def example_3_hyperparameter_optimization():
     """Example 3: Hyperparameter optimization."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Example 3: Hyperparameter Optimization")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     dataset_path = Path("/path/to/your/dataset")
 
@@ -115,9 +111,9 @@ def example_3_hyperparameter_optimization():
 
 def example_4_dataset_detection():
     """Example 4: Dataset detection and analysis."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Example 4: Dataset Detection and Analysis")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     dataset_path = Path("/path/to/your/dataset")
 
@@ -133,14 +129,14 @@ def example_4_dataset_detection():
     print(f"Class names: {', '.join(info['class_names'])}")
     print(f"Total images: {info['total_images']}")
     print("\nClass distribution:")
-    for cls, count in info['class_distribution'].items():
+    for cls, count in info["class_distribution"].items():
         print(f"  {cls}: {count}")
     print(f"\nBalanced: {info['is_balanced']}")
     print(f"Has train/test split: {info['has_train_test_split']}")
     print(f"Recommended complexity: {info['recommended_complexity']}")
 
-    if info['sample_image_shape']:
-        h, w, c = info['sample_image_shape']
+    if info["sample_image_shape"]:
+        h, w, c = info["sample_image_shape"]
         print(f"Sample image shape: {h}x{w}x{c}")
 
     # Create configuration from detected info
@@ -156,9 +152,9 @@ def example_4_dataset_detection():
 
 def example_5_manual_architecture():
     """Example 5: Creating custom architecture."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Example 5: Custom Architecture")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     from img_classifier_models import ArchitectureFactory, ArchitectureSpec
 
@@ -195,9 +191,9 @@ def example_5_manual_architecture():
 
 def example_6_using_yaml_config():
     """Example 6: Loading configuration from YAML file."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Example 6: Loading Configuration from YAML")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     # Create a sample config file first
     config = DatasetConfig(
@@ -234,9 +230,9 @@ def example_6_using_yaml_config():
 
 def example_7_quick_experiment():
     """Example 7: Quick experiment with small dataset."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Example 7: Quick Experiment")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     dataset_path = Path("/path/to/your/dataset")
 
@@ -298,4 +294,3 @@ if __name__ == "__main__":
     # example_5_manual_architecture()
     # example_6_using_yaml_config()
     # example_7_quick_experiment()
-

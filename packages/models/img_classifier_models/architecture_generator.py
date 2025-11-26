@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Dict, List, Optional
 
 import tensorflow as tf
+from img_classifier_config import BaseConfig
 from keras.layers import (
     BatchNormalization,
     Conv2D,
@@ -14,8 +15,6 @@ from keras.layers import (
     MaxPooling2D,
 )
 from keras.models import Sequential
-
-from img_classifier_config import BaseConfig
 
 
 class ArchitectureComplexity(Enum):

@@ -7,17 +7,17 @@ import pytest
 from img_classifier_config import BaseConfig, DatasetConfig
 
 
+@pytest.mark.unit
 class TestBaseConfig:
     """Tests for BaseConfig class."""
 
     @pytest.fixture(autouse=True)
-    def setup_method(self, tmp_path):
+    def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
-        self.temp_dir = str(tmp_path)
+        self.temp_dir = str(isolated_tmp_dir)
         self.config = BaseConfig(working_dir=Path(self.temp_dir))
 
         yield
-
 
     def test_default_values(self):
         """Test default configuration values."""
@@ -77,28 +77,25 @@ class TestBaseConfig:
     def test_custom_paths(self):
         """Test custom path configuration."""
         data_path = Path(self.temp_dir) / "custom_data"
-        config = BaseConfig(
-            working_dir=Path(self.temp_dir),
-            data_path=data_path
-        )
+        config = BaseConfig(working_dir=Path(self.temp_dir), data_path=data_path)
         assert config.data_path == data_path
 
 
+@pytest.mark.unit
 class TestDatasetConfig:
     """Tests for DatasetConfig class."""
 
     @pytest.fixture(autouse=True)
-    def setup_method(self, tmp_path):
+    def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
-        self.temp_dir = str(tmp_path)
+        self.temp_dir = str(isolated_tmp_dir)
         self.config = DatasetConfig(
             working_dir=Path(self.temp_dir),
             num_classes=4,
-            class_names=["class1", "class2", "class3", "class4"]
+            class_names=["class1", "class2", "class3", "class4"],
         )
 
         yield
-
 
     def test_project_specific_values(self):
         """Test dataset-specific configuration."""
@@ -107,7 +104,7 @@ class TestDatasetConfig:
             dataset_name="my_dataset",
             working_dir=Path(self.temp_dir),
             num_classes=3,
-            class_names=["cat", "dog", "bird"]
+            class_names=["cat", "dog", "bird"],
         )
         assert config.project_name == "my_classifier"
         assert config.dataset_name == "my_dataset"
@@ -136,9 +133,7 @@ class TestDatasetConfig:
         """Test setting custom class names."""
         custom_names = ["Class1", "Class2", "Class3", "Class4"]
         config = DatasetConfig(
-            working_dir=Path(self.temp_dir),
-            num_classes=4,
-            class_names=custom_names
+            working_dir=Path(self.temp_dir), num_classes=4, class_names=custom_names
         )
         assert config.class_names == custom_names
 
@@ -155,19 +150,13 @@ class TestDatasetConfig:
     def test_validate_complexity_valid(self):
         """Test architecture complexity validation with valid values."""
         for complexity in ["auto", "simple", "medium", "deep", "custom"]:
-            config = DatasetConfig(
-                working_dir=self.temp_dir,
-                architecture_complexity=complexity
-            )
+            config = DatasetConfig(working_dir=self.temp_dir, architecture_complexity=complexity)
             assert config.architecture_complexity == complexity
 
     def test_validate_complexity_invalid(self):
         """Test architecture complexity validation with invalid value."""
         with pytest.raises(ValueError, match="architecture_complexity must be one of"):
-            DatasetConfig(
-                working_dir=self.temp_dir,
-                architecture_complexity="invalid"
-            )
+            DatasetConfig(working_dir=self.temp_dir, architecture_complexity="invalid")
 
     def test_recommended_batch_sizes_default(self):
         """Test default recommended batch sizes."""
@@ -210,7 +199,7 @@ class TestDatasetConfig:
         self.config.to_yaml(yaml_path)
 
         # Read raw YAML to check string conversion
-        with open(yaml_path, 'r') as f:
+        with open(yaml_path, "r") as f:
             raw_yaml = f.read()
 
         # Paths should be strings in YAML
@@ -219,8 +208,7 @@ class TestDatasetConfig:
     def test_description_field(self):
         """Test optional description field."""
         config = DatasetConfig(
-            working_dir=self.temp_dir,
-            description="Test dataset for unit testing"
+            working_dir=self.temp_dir, description="Test dataset for unit testing"
         )
         assert config.description == "Test dataset for unit testing"
 
@@ -232,13 +220,14 @@ class TestDatasetConfig:
         config = DatasetConfig(
             working_dir=self.temp_dir,
             recommended_batch_sizes=custom_batches,
-            recommended_learning_rates=custom_lrs
+            recommended_learning_rates=custom_lrs,
         )
 
         assert config.recommended_batch_sizes == custom_batches
         assert config.recommended_learning_rates == custom_lrs
 
 
+@pytest.mark.unit
 class TestBaseConfigEdgeCases:
     """Edge case tests for BaseConfig."""
 
@@ -330,7 +319,7 @@ class TestBaseConfigEdgeCases:
             use_early_stopping=False,
             use_checkpointing=False,
             use_model_checkpoint=False,
-            use_accuracy_threshold_stopping=False
+            use_accuracy_threshold_stopping=False,
         )
         assert config.use_early_stopping is False
         assert config.use_checkpointing is False
@@ -406,11 +395,7 @@ class TestBaseConfigEdgeCases:
         """Test explicit train and test paths."""
         train = tmp_path / "custom_train"
         test = tmp_path / "custom_test"
-        config = BaseConfig(
-            working_dir=tmp_path,
-            train_path=train,
-            test_path=test
-        )
+        config = BaseConfig(working_dir=tmp_path, train_path=train, test_path=test)
         assert config.train_path == train
         assert config.test_path == test
 
@@ -423,6 +408,7 @@ class TestBaseConfigEdgeCases:
         assert config.models_dir.exists()
 
 
+@pytest.mark.unit
 class TestDatasetConfigEdgeCases:
     """Edge case tests for DatasetConfig."""
 
@@ -442,11 +428,7 @@ class TestDatasetConfigEdgeCases:
 
     def test_yaml_with_none_values(self, tmp_path):
         """Test YAML serialization with None values."""
-        config = DatasetConfig(
-            working_dir=tmp_path,
-            description=None,
-            dataset_zip_id=None
-        )
+        config = DatasetConfig(working_dir=tmp_path, description=None, dataset_zip_id=None)
         yaml_path = tmp_path / "test.yaml"
         config.to_yaml(yaml_path)
 
@@ -472,7 +454,7 @@ class TestDatasetConfigEdgeCases:
             num_epochs=50,
             learning_rate=0.0005,
             validation_split=0.15,
-            dropout_rate=0.5
+            dropout_rate=0.5,
         )
 
         yaml_path = tmp_path / "full_config.yaml"
@@ -491,19 +473,13 @@ class TestDatasetConfigEdgeCases:
     def test_invalid_architecture_complexity_empty_string(self, tmp_path):
         """Test empty string for architecture complexity."""
         with pytest.raises(ValueError, match="architecture_complexity must be one of"):
-            DatasetConfig(
-                working_dir=tmp_path,
-                architecture_complexity=""
-            )
+            DatasetConfig(working_dir=tmp_path, architecture_complexity="")
 
     def test_all_valid_architecture_complexities(self, tmp_path):
         """Test all valid architecture complexity values."""
         valid_complexities = ["auto", "simple", "medium", "deep", "custom"]
         for complexity in valid_complexities:
-            config = DatasetConfig(
-                working_dir=tmp_path,
-                architecture_complexity=complexity
-            )
+            config = DatasetConfig(working_dir=tmp_path, architecture_complexity=complexity)
             assert config.architecture_complexity == complexity
 
     def test_empty_class_names_with_zero_classes(self, tmp_path):
@@ -511,7 +487,7 @@ class TestDatasetConfigEdgeCases:
         config = DatasetConfig(
             working_dir=tmp_path,
             num_classes=5,
-            class_names=[]  # Empty list but num_classes is 5
+            class_names=[],  # Empty list but num_classes is 5
         )
         assert config.num_classes == 5
         assert len(config.class_names) == 0
@@ -526,47 +502,31 @@ class TestDatasetConfigEdgeCases:
 
     def test_dataset_type_custom_value(self, tmp_path):
         """Test custom dataset type."""
-        config = DatasetConfig(
-            working_dir=tmp_path,
-            dataset_type="medical_imaging"
-        )
+        config = DatasetConfig(working_dir=tmp_path, dataset_type="medical_imaging")
         assert config.dataset_type == "medical_imaging"
 
     def test_long_description(self, tmp_path):
         """Test very long description field."""
         long_desc = "A" * 10000
-        config = DatasetConfig(
-            working_dir=tmp_path,
-            description=long_desc
-        )
+        config = DatasetConfig(working_dir=tmp_path, description=long_desc)
         assert config.description == long_desc
 
     def test_special_characters_in_class_names(self, tmp_path):
         """Test class names with special characters."""
         special_names = ["class-1", "class_2", "class.3", "class 4"]
-        config = DatasetConfig(
-            working_dir=tmp_path,
-            num_classes=4,
-            class_names=special_names
-        )
+        config = DatasetConfig(working_dir=tmp_path, num_classes=4, class_names=special_names)
         assert config.class_names == special_names
 
     def test_unicode_in_class_names(self, tmp_path):
         """Test class names with unicode characters."""
         unicode_names = ["类别1", "κλάση2", "クラス3"]
-        config = DatasetConfig(
-            working_dir=tmp_path,
-            num_classes=3,
-            class_names=unicode_names
-        )
+        config = DatasetConfig(working_dir=tmp_path, num_classes=3, class_names=unicode_names)
         assert config.class_names == unicode_names
 
     def test_empty_recommended_lists(self, tmp_path):
         """Test empty recommended batch sizes and learning rates."""
         config = DatasetConfig(
-            working_dir=tmp_path,
-            recommended_batch_sizes=[],
-            recommended_learning_rates=[]
+            working_dir=tmp_path, recommended_batch_sizes=[], recommended_learning_rates=[]
         )
         assert config.recommended_batch_sizes == []
         assert config.recommended_learning_rates == []
@@ -574,9 +534,7 @@ class TestDatasetConfigEdgeCases:
     def test_single_element_recommended_lists(self, tmp_path):
         """Test single element in recommended lists."""
         config = DatasetConfig(
-            working_dir=tmp_path,
-            recommended_batch_sizes=[32],
-            recommended_learning_rates=[0.001]
+            working_dir=tmp_path, recommended_batch_sizes=[32], recommended_learning_rates=[0.001]
         )
         assert config.recommended_batch_sizes == [32]
         assert config.recommended_learning_rates == [0.001]
@@ -586,12 +544,13 @@ class TestDatasetConfigEdgeCases:
         config = DatasetConfig(
             working_dir=tmp_path,
             recommended_batch_sizes=[4, 8, 16, 32, 64, 128, 256],
-            recommended_learning_rates=[0.00001, 0.0001, 0.0005, 0.001, 0.005, 0.01]
+            recommended_learning_rates=[0.00001, 0.0001, 0.0005, 0.001, 0.005, 0.01],
         )
         assert len(config.recommended_batch_sizes) == 7
         assert len(config.recommended_learning_rates) == 6
 
 
+@pytest.mark.unit
 class TestAlzheimerConfig:
     """Tests for AlzheimerConfig class."""
 
@@ -654,11 +613,7 @@ class TestAlzheimerConfig:
         """Test overriding AlzheimerConfig values."""
         from img_classifier_config import AlzheimerConfig
 
-        config = AlzheimerConfig(
-            working_dir=tmp_path,
-            batch_size=64,
-            num_epochs=50
-        )
+        config = AlzheimerConfig(working_dir=tmp_path, batch_size=64, num_epochs=50)
         assert config.working_dir == tmp_path
         assert config.batch_size == 64
         assert config.num_epochs == 50
@@ -667,6 +622,7 @@ class TestAlzheimerConfig:
         assert len(config.class_names) == 4
 
 
+@pytest.mark.unit
 class TestDatasetDetector:
     """Tests for DatasetDetector class."""
 
@@ -889,10 +845,7 @@ class TestDatasetDetector:
                 (class_dir / f"img_{i}.jpg").touch()
 
         detector = DatasetDetector(tmp_path)
-        config = detector.create_config(
-            project_name="test_project",
-            working_dir=tmp_path / "work"
-        )
+        config = detector.create_config(project_name="test_project", working_dir=tmp_path / "work")
 
         assert config.num_classes == 3
         assert set(config.class_names) == {"a", "b", "c"}
@@ -913,11 +866,7 @@ class TestDatasetDetector:
         (class_dir2 / "img.jpg").touch()
 
         detector = DatasetDetector(tmp_path)
-        config = detector.create_config(
-            batch_size=128,
-            learning_rate=0.0001,
-            num_epochs=100
-        )
+        config = detector.create_config(batch_size=128, learning_rate=0.0001, num_epochs=100)
 
         assert config.batch_size == 128
         assert config.learning_rate == 0.0001
@@ -947,4 +896,3 @@ class TestDatasetDetector:
         # Should include all classes
         assert info["num_classes"] == 4
         assert set(info["class_names"]) == {"a", "b", "c", "d"}
-

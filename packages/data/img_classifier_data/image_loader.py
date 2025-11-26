@@ -2,19 +2,20 @@
 
 import pickle
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Optional, Tuple
+
 import cv2
 import numpy as np
-from tqdm import tqdm
-
-from .base_loader import BaseDataLoader
 from img_classifier_config import BaseConfig
 from img_classifier_utils import (
     download_from_google_drive,
-    extract_archive,
     ensure_directory_exists,
+    extract_archive,
     organize_dataset,
 )
+from tqdm import tqdm
+
+from .base_loader import BaseDataLoader
 
 
 class ImageDataLoader(BaseDataLoader):

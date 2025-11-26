@@ -4,19 +4,19 @@ import gc
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Tuple
+from typing import List, Optional, Tuple
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
 import tensorflow as tf
-from keras import backend as K
-from keras.callbacks import EarlyStopping, ModelCheckpoint
-
 from img_classifier_config import BaseConfig
 from img_classifier_data import BaseDataLoader
 from img_classifier_models import BaseModel
+from keras import backend as K
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+
 from .callbacks import AccuracyThresholdCallback
 
 

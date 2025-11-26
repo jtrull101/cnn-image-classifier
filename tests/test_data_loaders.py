@@ -18,26 +18,29 @@ class TestBaseDataLoader:
 
         yield
 
-
     def test_initialization(self):
         """Test that BaseDataLoader cannot be instantiated directly."""
         # Since it's abstract, we can't instantiate it
         # But we can test that it has the required methods
-        assert hasattr(BaseDataLoader, 'load_train_data')
-        assert hasattr(BaseDataLoader, 'load_test_data')
-        assert hasattr(BaseDataLoader, 'download_dataset')
-        assert hasattr(BaseDataLoader, 'prepare_dataset')
+        assert hasattr(BaseDataLoader, "load_train_data")
+        assert hasattr(BaseDataLoader, "load_test_data")
+        assert hasattr(BaseDataLoader, "download_dataset")
+        assert hasattr(BaseDataLoader, "prepare_dataset")
 
     def test_get_categories(self):
         """Test get_categories method."""
+
         # Create a concrete subclass for testing
         class ConcreteLoader(BaseDataLoader):
             def load_train_data(self):
                 pass
+
             def load_test_data(self):
                 pass
+
             def download_dataset(self):
                 pass
+
             def prepare_dataset(self):
                 pass
 
@@ -60,13 +63,17 @@ class TestBaseDataLoader:
 
     def test_get_categories_empty_directory(self):
         """Test get_categories with empty directory."""
+
         class ConcreteLoader(BaseDataLoader):
             def load_train_data(self):
                 pass
+
             def load_test_data(self):
                 pass
+
             def download_dataset(self):
                 pass
+
             def prepare_dataset(self):
                 pass
 
@@ -79,13 +86,17 @@ class TestBaseDataLoader:
 
     def test_get_categories_nonexistent_directory(self):
         """Test get_categories with non-existent directory."""
+
         class ConcreteLoader(BaseDataLoader):
             def load_train_data(self):
                 pass
+
             def load_test_data(self):
                 pass
+
             def download_dataset(self):
                 pass
+
             def prepare_dataset(self):
                 pass
 
@@ -95,13 +106,17 @@ class TestBaseDataLoader:
 
     def test_split_data(self):
         """Test split_data method."""
+
         class ConcreteLoader(BaseDataLoader):
             def load_train_data(self):
                 pass
+
             def load_test_data(self):
                 pass
+
             def download_dataset(self):
                 pass
+
             def prepare_dataset(self):
                 pass
 
@@ -120,13 +135,17 @@ class TestBaseDataLoader:
 
     def test_reduce_dataset(self):
         """Test reduce_dataset method."""
+
         class ConcreteLoader(BaseDataLoader):
             def load_train_data(self):
                 pass
+
             def load_test_data(self):
                 pass
+
             def download_dataset(self):
                 pass
+
             def prepare_dataset(self):
                 pass
 
@@ -143,13 +162,17 @@ class TestBaseDataLoader:
 
     def test_reduce_dataset_full_size(self):
         """Test reduce_dataset with 100% returns original data."""
+
         class ConcreteLoader(BaseDataLoader):
             def load_train_data(self):
                 pass
+
             def load_test_data(self):
                 pass
+
             def download_dataset(self):
                 pass
+
             def prepare_dataset(self):
                 pass
 
@@ -175,7 +198,6 @@ class TestImageDataLoader:
         self.loader = ImageDataLoader(self.config)
 
         yield
-
 
     def test_initialization(self):
         """Test ImageDataLoader initialization."""

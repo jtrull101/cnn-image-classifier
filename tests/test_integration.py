@@ -20,10 +20,10 @@ class TestArchitectureIntegration:
         self.temp_dir = tmp_path
         yield
 
-
     def test_config_imports(self):
         """Test that all config classes can be imported."""
         from img_classifier_config import BaseConfig, DatasetConfig, DatasetDetector
+
         assert BaseConfig is not None
         assert DatasetConfig is not None
         assert DatasetDetector is not None
@@ -31,6 +31,7 @@ class TestArchitectureIntegration:
     def test_data_loader_imports(self):
         """Test that all data loader classes can be imported."""
         from img_classifier_data import BaseDataLoader, ImageDataLoader
+
         assert BaseDataLoader is not None
         assert ImageDataLoader is not None
 
@@ -43,6 +44,7 @@ class TestArchitectureIntegration:
             extract_archive,
             organize_dataset,
         )
+
         assert download_from_google_drive is not None
         assert extract_archive is not None
         assert organize_dataset is not None
@@ -65,7 +67,7 @@ class TestArchitectureIntegration:
         config = DatasetConfig(
             working_dir=self.temp_dir,
             num_classes=4,
-            class_names=["class1", "class2", "class3", "class4"]
+            class_names=["class1", "class2", "class3", "class4"],
         )
 
         # Verify all expected fields are present
@@ -79,10 +81,10 @@ class TestArchitectureIntegration:
         import img_classifier_data
 
         # Verify __all__ exports
-        assert 'BaseConfig' in img_classifier_config.__all__
-        assert 'DatasetConfig' in img_classifier_config.__all__
-        assert 'BaseDataLoader' in img_classifier_data.__all__
-        assert 'ImageDataLoader' in img_classifier_data.__all__
+        assert "BaseConfig" in img_classifier_config.__all__
+        assert "DatasetConfig" in img_classifier_config.__all__
+        assert "BaseDataLoader" in img_classifier_data.__all__
+        assert "ImageDataLoader" in img_classifier_data.__all__
 
     def test_new_components_imports(self):
         """Test that new generalized components can be imported."""
@@ -92,4 +94,3 @@ class TestArchitectureIntegration:
         assert ArchitectureFactory is not None
         assert TrainingOrchestrator is not None
         assert HyperparameterOptimizer is not None
-
