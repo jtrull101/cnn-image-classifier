@@ -5,9 +5,8 @@ from pathlib import Path
 from typing import Optional
 
 import click
-
 from img_classifier_config import DatasetConfig, DatasetDetector
-from img_classifier_training import TrainingOrchestrator, HyperparameterSpace
+from img_classifier_training import HyperparameterSpace, TrainingOrchestrator
 
 
 @click.group()
@@ -30,23 +29,23 @@ def info(dataset_path: Path, project_name: Optional[str], working_dir: Optional[
     detector = DatasetDetector(dataset_path)
     info_dict = detector.detect()
 
-    click.echo("\n" + "="*60)
+    click.echo("\n" + "=" * 60)
     click.echo("Dataset Information")
-    click.echo("="*60)
+    click.echo("=" * 60)
     click.echo(f"Path: {info_dict['dataset_path']}")
     click.echo(f"Number of classes: {info_dict['num_classes']}")
     click.echo(f"Class names: {', '.join(info_dict['class_names'])}")
     click.echo(f"Total images: {info_dict['total_images']}")
     click.echo("\nClass distribution:")
-    for cls, count in info_dict['class_distribution'].items():
+    for cls, count in info_dict["class_distribution"].items():
         click.echo(f"  {cls}: {count}")
     click.echo(f"\nBalanced: {'Yes' if info_dict['is_balanced'] else 'No'}")
     click.echo(f"Train/Test split: {'Yes' if info_dict['has_train_test_split'] else 'No'}")
     click.echo(f"Recommended complexity: {info_dict['recommended_complexity']}")
-    if info_dict['sample_image_shape']:
-        h, w, c = info_dict['sample_image_shape']
+    if info_dict["sample_image_shape"]:
+        h, w, c = info_dict["sample_image_shape"]
         click.echo(f"Sample image shape: {h}x{w}x{c}")
-    click.echo("="*60 + "\n")
+    click.echo("=" * 60 + "\n")
 
 
 @cli.command()
@@ -57,8 +56,12 @@ def info(dataset_path: Path, project_name: Optional[str], working_dir: Optional[
 @click.option("--epochs", "-e", type=int, help="Number of training epochs")
 @click.option("--batch-size", "-b", type=int, help="Batch size")
 @click.option("--learning-rate", "-lr", type=float, help="Learning rate")
-@click.option("--architecture", "-a", type=click.Choice(['auto', 'simple', 'medium', 'deep']),
-              help="Model architecture complexity")
+@click.option(
+    "--architecture",
+    "-a",
+    type=click.Choice(["auto", "simple", "medium", "deep"]),
+    help="Model architecture complexity",
+)
 @click.option("--plot/--no-plot", default=False, help="Plot training history")
 def train(
     dataset_path: Path,
@@ -72,9 +75,9 @@ def train(
     plot: bool,
 ):
     """Train a model on a dataset."""
-    click.echo("\n" + "="*60)
+    click.echo("\n" + "=" * 60)
     click.echo("Training Neural Network")
-    click.echo("="*60 + "\n")
+    click.echo("=" * 60 + "\n")
 
     # Load or create config
     if config:
@@ -98,9 +101,9 @@ def train(
 
     try:
         model = orchestrator.run(plot=plot)
-        click.echo("\n" + "="*60)
+        click.echo("\n" + "=" * 60)
         click.echo("Training completed successfully!")
-        click.echo("="*60 + "\n")
+        click.echo("=" * 60 + "\n")
     except KeyboardInterrupt:
         click.echo("\nTraining interrupted by user.")
         sys.exit(1)
@@ -114,8 +117,14 @@ def train(
 @click.option("--project-name", "-n", help="Name for the project")
 @click.option("--working-dir", "-w", type=click.Path(path_type=Path), help="Working directory")
 @click.option("--config", "-c", type=click.Path(path_type=Path), help="Path to config YAML file")
-@click.option("--optimizer", "-o", "optimizer_type", type=click.Choice(['random', 'grid', 'bayesian']),
-              default='random', help="Optimization algorithm")
+@click.option(
+    "--optimizer",
+    "-o",
+    "optimizer_type",
+    type=click.Choice(["random", "grid", "bayesian"]),
+    default="random",
+    help="Optimization algorithm",
+)
 @click.option("--max-trials", "-t", type=int, default=20, help="Maximum number of trials")
 @click.option("--target-accuracy", type=float, default=0.95, help="Target accuracy to stop early")
 @click.option("--quick/--full", default=False, help="Use quick search space")
@@ -130,13 +139,13 @@ def optimize(
     quick: bool,
 ):
     """Optimize hyperparameters for a dataset."""
-    click.echo("\n" + "="*60)
+    click.echo("\n" + "=" * 60)
     click.echo("Hyperparameter Optimization")
-    click.echo("="*60)
+    click.echo("=" * 60)
     click.echo(f"Optimizer: {optimizer_type}")
     click.echo(f"Max trials: {max_trials}")
     click.echo(f"Target accuracy: {target_accuracy}")
-    click.echo("="*60 + "\n")
+    click.echo("=" * 60 + "\n")
 
     # Load or create config
     if config:
@@ -159,9 +168,9 @@ def optimize(
 
     try:
         model = orchestrator.run(plot=False)
-        click.echo("\n" + "="*60)
+        click.echo("\n" + "=" * 60)
         click.echo("Optimization completed successfully!")
-        click.echo("="*60)
+        click.echo("=" * 60)
 
         opt = orchestrator.optimizer
         if opt is not None:
@@ -186,8 +195,13 @@ def optimize(
 @click.option("--epochs", "-e", type=int, default=25, help="Number of training epochs")
 @click.option("--batch-size", "-b", type=int, default=32, help="Batch size")
 @click.option("--learning-rate", "-lr", type=float, default=0.001, help="Learning rate")
-@click.option("--architecture", "-a", type=click.Choice(['auto', 'simple', 'medium', 'deep']),
-              default='auto', help="Model architecture complexity")
+@click.option(
+    "--architecture",
+    "-a",
+    type=click.Choice(["auto", "simple", "medium", "deep"]),
+    default="auto",
+    help="Model architecture complexity",
+)
 def create_config(
     dataset_path: Path,
     output_path: Path,
@@ -248,9 +262,9 @@ def predict(model_path: Path, image_path: Path, class_names: tuple):
     confidence = predictions[0][predicted_class]
 
     # Display result
-    click.echo("\n" + "="*60)
+    click.echo("\n" + "=" * 60)
     click.echo("Prediction Result")
-    click.echo("="*60)
+    click.echo("=" * 60)
     if class_names and len(class_names) > predicted_class:
         click.echo(f"Predicted class: {class_names[predicted_class]}")
     else:
@@ -260,7 +274,7 @@ def predict(model_path: Path, image_path: Path, class_names: tuple):
     for i, prob in enumerate(predictions[0]):
         label = class_names[i] if class_names and len(class_names) > i else f"Class {i}"
         click.echo(f"  {label}: {prob:.2%}")
-    click.echo("="*60 + "\n")
+    click.echo("=" * 60 + "\n")
 
 
 def main():
@@ -270,4 +284,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

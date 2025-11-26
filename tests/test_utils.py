@@ -1,6 +1,5 @@
 """Tests for utility functions."""
 
-
 import pytest
 
 from img_classifier_utils import (
@@ -18,7 +17,6 @@ class TestFileUtils:
         self.temp_dir = tmp_path
 
         yield
-
 
     def test_ensure_directory_exists_creates_directory(self):
         """Test that ensure_directory_exists creates a new directory."""
@@ -218,11 +216,12 @@ class TestFileUtils:
     def test_extract_archive_creates_dest_dir(self):
         """Test that extract_archive creates destination directory."""
         import zipfile
+
         from img_classifier_utils import extract_archive
 
         # Create a test zip file
         zip_path = self.temp_dir / "test.zip"
-        with zipfile.ZipFile(zip_path, 'w') as zf:
+        with zipfile.ZipFile(zip_path, "w") as zf:
             zf.writestr("test.txt", "content")
 
         extract_to = self.temp_dir / "extracted"

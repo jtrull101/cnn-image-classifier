@@ -14,6 +14,7 @@ try:
 
     from img_classifier_models import ArchitectureFactory
     from img_classifier_training import AccuracyThresholdCallback, Trainer, TrainingOrchestrator
+
     TENSORFLOW_AVAILABLE = True
 except ImportError:
     TENSORFLOW_AVAILABLE = False
@@ -21,7 +22,6 @@ except ImportError:
     Trainer = None
     ArchitectureFactory = None
     TrainingOrchestrator = None
-
 
 
 pytestmark = pytest.mark.skipif(not TENSORFLOW_AVAILABLE, reason="TensorFlow not available")
@@ -47,7 +47,7 @@ class TestAccuracyThresholdCallback:
         mock_model.stop_training = False
         callback.set_model(mock_model)
 
-        logs = {'acc': 0.96, 'val_acc': 0.94}
+        logs = {"acc": 0.96, "val_acc": 0.94}
         callback.on_epoch_end(0, logs)
 
         assert callback.model.stop_training is True
@@ -59,7 +59,7 @@ class TestAccuracyThresholdCallback:
         mock_model.stop_training = False
         callback.set_model(mock_model)
 
-        logs = {'acc': 0.90, 'val_acc': 0.96}
+        logs = {"acc": 0.90, "val_acc": 0.96}
         callback.on_epoch_end(0, logs)
 
         assert callback.model.stop_training is True
@@ -71,7 +71,7 @@ class TestAccuracyThresholdCallback:
         mock_model.stop_training = False
         callback.set_model(mock_model)
 
-        logs = {'acc': 0.90, 'val_acc': 0.85}
+        logs = {"acc": 0.90, "val_acc": 0.85}
         callback.on_epoch_end(0, logs)
 
         assert callback.model.stop_training is False
@@ -100,13 +100,14 @@ class TestTrainer:
             class_names=["class0", "class1"],
             batch_size=4,
             num_epochs=2,
-            architecture_complexity="simple"
+            architecture_complexity="simple",
         )
 
         # Create model using ArchitectureFactory wrapped in BaseModel
         keras_model = ArchitectureFactory.create(self.config, complexity="simple")
 
         from img_classifier_models import BaseModel
+
         class FactoryModel(BaseModel):
             def __init__(self, config, keras_model):
                 super().__init__(config)
@@ -121,20 +122,20 @@ class TestTrainer:
 
         yield
 
-
     def _create_mock_data_loader(self):
         """Create a mock data loader."""
+
         class MockDataLoader(BaseDataLoader):
             def __init__(self, config):
                 super().__init__(config)
 
             def load_train_data(self):
-                X = np.random.rand(20, 32, 32, 3).astype('float32')
+                X = np.random.rand(20, 32, 32, 3).astype("float32")
                 y = np.random.randint(0, 2, 20)
                 return X, y
 
             def load_test_data(self):
-                X = np.random.rand(10, 32, 32, 3).astype('float32')
+                X = np.random.rand(10, 32, 32, 3).astype("float32")
                 y = np.random.randint(0, 2, 10)
                 return X, y
 
@@ -204,7 +205,7 @@ class TestTrainer:
         X_train, y_train, X_val, y_val, _X_test, _y_test = self.trainer.prepare_data()
         self.model.compile()  # Ensure model is compiled before training
         self.trainer.train(X_train, y_train, X_val, y_val)
-        assert hasattr(self.model.model, 'compiled') and self.model.model.compiled
+        assert hasattr(self.model.model, "compiled") and self.model.model.compiled
 
     def test_train_returns_history(self):
         """Test that train returns history object."""
@@ -212,9 +213,9 @@ class TestTrainer:
         self.model.compile()  # Ensure model is compiled before training
         history = self.trainer.train(X_train, y_train, X_val, y_val)
         assert history is not None
-        assert hasattr(history, 'history')
-        assert 'loss' in history.history
-        assert 'val_loss' in history.history
+        assert hasattr(history, "history")
+        assert "loss" in history.history
+        assert "val_loss" in history.history
 
     def test_evaluate(self):
         """Test model evaluation."""

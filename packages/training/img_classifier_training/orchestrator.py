@@ -5,17 +5,17 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-
 from img_classifier_config import BaseConfig, DatasetConfig, DatasetDetector
 from img_classifier_data import BaseDataLoader, ImageDataLoader
 from img_classifier_models import ArchitectureFactory, BaseModel
-from .trainer import Trainer
+
 from .optimizer import (
     HyperparameterOptimizer,
     HyperparameterSpace,
     TrialResult,
     create_optimizer,
 )
+from .trainer import Trainer
 
 
 class TrainingOrchestrator:

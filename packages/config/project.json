@@ -15,7 +15,7 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "uv run python -m pytest tests/test_config.py -v",
+        "command": "uv run python -m pytest tests/test_config.py -v -n auto",
         "cwd": "."
       },
       "dependsOn": ["build"]
@@ -23,7 +23,7 @@
     "test-cov": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "uv run python -m pytest . -v --cov=packages/config --cov-report=term-missing",
+        "command": "uv run python -m pytest tests/test_config.py -v -n auto --cov=packages/config --cov-report=term-missing",
         "cwd": "."
       },
       "dependsOn": ["build"]

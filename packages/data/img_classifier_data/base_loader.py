@@ -1,10 +1,10 @@
 """Base data loader interface."""
 
 from abc import ABC, abstractmethod
-from typing import Tuple, List
-import numpy as np
 from pathlib import Path
+from typing import List, Tuple
 
+import numpy as np
 from img_classifier_config import BaseConfig
 
 

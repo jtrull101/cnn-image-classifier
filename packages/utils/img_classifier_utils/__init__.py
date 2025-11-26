@@ -1,9 +1,9 @@
 """Utilities package for Alzheimer's MRI CNN."""
 
 from .file_utils import (
-    ensure_directory_exists,
     clean_directory,
     download_from_google_drive,
+    ensure_directory_exists,
     extract_archive,
     organize_dataset,
 )
