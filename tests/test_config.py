@@ -151,3 +151,89 @@ class TestDatasetConfig:
         loaded_config = DatasetConfig.from_yaml(yaml_path)
         assert loaded_config.num_classes == self.config.num_classes
         assert loaded_config.class_names == self.config.class_names
+
+    def test_validate_complexity_valid(self):
+        """Test architecture complexity validation with valid values."""
+        for complexity in ["auto", "simple", "medium", "deep", "custom"]:
+            config = DatasetConfig(
+                working_dir=self.temp_dir,
+                architecture_complexity=complexity
+            )
+            assert config.architecture_complexity == complexity
+
+    def test_validate_complexity_invalid(self):
+        """Test architecture complexity validation with invalid value."""
+        with pytest.raises(ValueError, match="architecture_complexity must be one of"):
+            DatasetConfig(
+                working_dir=self.temp_dir,
+                architecture_complexity="invalid"
+            )
+
+    def test_recommended_batch_sizes_default(self):
+        """Test default recommended batch sizes."""
+        config = DatasetConfig(working_dir=self.temp_dir)
+        assert config.recommended_batch_sizes == [16, 32, 64]
+
+    def test_recommended_learning_rates_default(self):
+        """Test default recommended learning rates."""
+        config = DatasetConfig(working_dir=self.temp_dir)
+        assert config.recommended_learning_rates == [0.0001, 0.001, 0.01]
+
+    def test_dataset_type_default(self):
+        """Test default dataset type."""
+        config = DatasetConfig(working_dir=self.temp_dir)
+        assert config.dataset_type == "image_classification"
+
+    def test_auto_detect_classes_default(self):
+        """Test default auto_detect_classes setting."""
+        config = DatasetConfig(working_dir=self.temp_dir)
+        assert config.auto_detect_classes is True
+
+    def test_min_images_per_class_default(self):
+        """Test default min_images_per_class setting."""
+        config = DatasetConfig(working_dir=self.temp_dir)
+        assert config.min_images_per_class == 10
+
+    def test_yaml_with_nested_paths(self):
+        """Test YAML save/load with nested directory structure."""
+        nested_yaml = Path(self.temp_dir) / "configs" / "nested" / "config.yaml"
+        self.config.to_yaml(nested_yaml)
+        assert nested_yaml.exists()
+        assert nested_yaml.parent.exists()
+
+        loaded = DatasetConfig.from_yaml(nested_yaml)
+        assert loaded.working_dir == self.config.working_dir
+
+    def test_yaml_path_conversion(self):
+        """Test that paths are properly converted in YAML."""
+        yaml_path = Path(self.temp_dir) / "path_test.yaml"
+        self.config.to_yaml(yaml_path)
+
+        # Read raw YAML to check string conversion
+        with open(yaml_path, 'r') as f:
+            raw_yaml = f.read()
+
+        # Paths should be strings in YAML
+        assert str(self.config.working_dir) in raw_yaml
+
+    def test_description_field(self):
+        """Test optional description field."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            description="Test dataset for unit testing"
+        )
+        assert config.description == "Test dataset for unit testing"
+
+    def test_custom_recommended_settings(self):
+        """Test custom recommended batch sizes and learning rates."""
+        custom_batches = [8, 16, 32]
+        custom_lrs = [0.00001, 0.0001]
+
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            recommended_batch_sizes=custom_batches,
+            recommended_learning_rates=custom_lrs
+        )
+
+        assert config.recommended_batch_sizes == custom_batches
+        assert config.recommended_learning_rates == custom_lrs

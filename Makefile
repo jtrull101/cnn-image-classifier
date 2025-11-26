@@ -59,6 +59,11 @@ test:
 	@echo "Running tests for all packages..."
 	npx nx run-many --target=test --all
 
+# Test with coverage
+test-coverage:
+	@echo "Running tests with coverage for all packages..."
+	npx nx run-many --target=test-cov --all
+
 # Lint all packages
 lint:
 	@echo "Linting all packages..."

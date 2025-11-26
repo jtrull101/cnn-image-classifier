@@ -20,6 +20,14 @@
       },
       "dependsOn": ["build"]
     },
+    "test-cov": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "uv run python -m pytest . -v --cov=packages/config --cov-report=term-missing",
+        "cwd": "."
+      },
+      "dependsOn": ["build"]
+    },
     "lint": {
       "executor": "nx:run-commands",
       "options": {

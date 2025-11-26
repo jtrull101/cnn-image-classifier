@@ -133,8 +133,118 @@ class TestArchitectureFactory:
 
     def test_different_complexities_different_sizes(self):
         """Test that different complexities produce different model sizes."""
-        simple_model = ArchitectureFactory.create(self.config, complexity="simple")
-        deep_model = ArchitectureFactory.create(self.config, complexity="deep")
+        simple = ArchitectureFactory.create(self.config, "simple")
+        medium = ArchitectureFactory.create(self.config, "medium")
+        deep = ArchitectureFactory.create(self.config, "deep")
 
-        # Deep model should have more layers
-        assert len(deep_model.layers) > len(simple_model.layers)
+        # Count trainable parameters
+        simple_params = simple.count_params()
+        medium_params = medium.count_params()
+        deep_params = deep.count_params()
+
+        # Should have increasing complexity
+        assert simple_params < medium_params < deep_params
+
+
+class TestCnnClassifier:
+    """Tests for CnnClassifier."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, tmp_path):
+        """Set up test fixtures."""
+        self.temp_dir = tmp_path
+        self.config = BaseConfig(working_dir=self.temp_dir)
+
+        yield
+
+    def test_initialization(self):
+        """Test CnnClassifier initialization."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config, seed=42)
+        assert classifier.config == self.config
+        assert classifier.seed == 42
+        assert classifier.model is None
+
+    def test_build_creates_model(self):
+        """Test that build() creates a valid model."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        model = classifier.build()
+
+        assert model is not None
+        assert isinstance(model, tf.keras.Model)
+        assert classifier.model is not None
+
+    def test_model_input_shape(self):
+        """Test that model accepts correct input shape."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        model = classifier.build()
+
+        # Check input shape
+        expected_shape = (None,) + self.config.input_shape
+        assert model.input_shape == expected_shape
+
+    def test_model_output_shape(self):
+        """Test that model output matches num_classes."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        model = classifier.build()
+
+        # Check output shape
+        assert model.output_shape == (None, self.config.num_classes)
+
+    def test_compile_and_predict(self):
+        """Test that compiled model can make predictions."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        model = classifier.build()
+        model.compile(optimizer='adam', loss='categorical_crossentropy')
+
+        # Make a prediction with dummy data
+        dummy_input = np.random.rand(1, *self.config.input_shape).astype('float32')
+        predictions = model.predict(dummy_input, verbose=0)
+
+        assert predictions.shape == (1, self.config.num_classes)
+        # Output should be probabilities summing to 1
+        assert abs(predictions.sum() - 1.0) < 0.01
+
+    def test_model_has_dropout(self):
+        """Test that model includes dropout layers."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        model = classifier.build()
+
+        # Check for dropout layers
+        layer_types = [type(layer).__name__ for layer in model.layers]
+        assert 'Dropout' in layer_types
+
+    def test_model_layer_count(self):
+        """Test that model has expected number of layers."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        model = classifier.build()
+
+        # Should have multiple layers (conv, pool, dropout, dense, etc.)
+        assert len(model.layers) >= 10
+
+    def test_different_seeds_produce_same_architecture(self):
+        """Test that different seeds produce same architecture."""
+        from img_classifier_models import CnnClassifier
+
+        classifier1 = CnnClassifier(self.config, seed=42)
+        classifier2 = CnnClassifier(self.config, seed=123)
+
+        model1 = classifier1.build()
+        model2 = classifier2.build()
+
+        # Same architecture (layer count and shapes)
+        assert len(model1.layers) == len(model2.layers)
+        assert model1.count_params() == model2.count_params()
