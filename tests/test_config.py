@@ -903,10 +903,14 @@ class TestDatasetDetector:
         """Test creating config with custom overrides."""
         from img_classifier_config.dataset_config import DatasetDetector
 
-        # Create dataset
-        class_dir = tmp_path / "class1"
-        class_dir.mkdir()
-        (class_dir / "img.jpg").touch()
+        # Create dataset with at least 2 classes
+        class_dir1 = tmp_path / "class1"
+        class_dir1.mkdir()
+        (class_dir1 / "img.jpg").touch()
+
+        class_dir2 = tmp_path / "class2"
+        class_dir2.mkdir()
+        (class_dir2 / "img.jpg").touch()
 
         detector = DatasetDetector(tmp_path)
         config = detector.create_config(

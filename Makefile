@@ -37,10 +37,12 @@ help:
 	@echo "  Pre-commit checks run automatically on each commit"
 	@echo "  Run 'make install-hooks' to install/reinstall hooks"
 
-# Install NX and dependencies
+# Install NX, UV, and dependencies
 install:
 	@echo "Installing NX..."
 	npm install
+	@echo "Checking UV installation..."
+	@powershell -NoProfile -Command "$$uvCmd = Get-Command uv -ErrorAction SilentlyContinue; if (-not $$uvCmd) { $$uvPath = Join-Path $$env:USERPROFILE '.local\bin\uv.exe'; if (-not (Test-Path $$uvPath)) { Write-Host 'UV not found. Installing UV...' -ForegroundColor Yellow; irm https://astral.sh/uv/install.ps1 | iex; Write-Host 'UV installation complete. You may need to restart your terminal or add it to PATH.' -ForegroundColor Green } } else { Write-Host 'UV is already installed:' (uv --version) -ForegroundColor Green }"
 	@echo "Installing UV dependencies..."
 	uv sync
 
