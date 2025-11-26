@@ -4,13 +4,13 @@ Modern FastAPI-based REST API for generic image classification with support for 
 
 ## Features
 
-- ✅ **Multi-Model Support**: Load and switch between different models
-- ✅ **Generic Classification**: Works with any trained image classification model
-- ✅ **Modern UI**: Responsive web interface with drag-and-drop upload
-- ✅ **REST API**: Full-featured API with automatic documentation
-- ✅ **Auto-Discovery**: Automatically finds and loads best available model
-- ✅ **Model Metadata**: Extracts class names, accuracy, and input shape
-- ✅ **Real-time Predictions**: Fast inference with confidence scores
+- **Multi-Model Support**: Load and switch between different models
+- **Generic Classification**: Works with any trained image classification model
+- **Modern UI**: Responsive web interface with drag-and-drop upload
+- **REST API**: Full-featured API with automatic documentation
+- **Auto-Discovery**: Automatically finds and loads best available model
+- **Model Metadata**: Extracts class names, accuracy, and input shape
+- **Real-time Predictions**: Fast inference with confidence scores
 
 ## Quick Start
 

@@ -26,7 +26,7 @@ A deep learning system for classifying Alzheimer's disease progression from MRI 
 - Mild Impairment
 - Moderate Impairment
 
-**⚠️ Important:** Trained on fictitious data from [Kaggle](https://www.kaggle.com/datasets/lukechugh/best-alzheimer-mri-dataset-99-accuracy) for educational purposes. Not for medical diagnosis.
+**Important:** Trained on fictitious data from [Kaggle](https://www.kaggle.com/datasets/lukechugh/best-alzheimer-mri-dataset-99-accuracy) for educational purposes. Not for medical diagnosis.
 
 ---
 
@@ -53,12 +53,8 @@ The setup script installs NX, UV dependencies, and builds all packages.
 ### Manual Setup
 
 ```powershell
-# Install UV
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-# Install dependencies
-npm install       # NX
-uv sync          # Python packages
+# Install UV and dependencies
+make install
 
 # Build packages
 make build
@@ -68,18 +64,18 @@ make build
 
 ---
 
-## 🚀 NEW: Generalized Image Classification System
+## NEW: Generalized Image Classification System
 
 This project now includes a **powerful generalized system** that works with ANY image classification dataset, not just Alzheimer's MRI scans!
 
 ### Key Features
 
-✅ **Dataset Auto-Detection** - Automatically analyzes any dataset structure  
-✅ **Dynamic Architecture Generation** - Creates optimal CNN architectures  
-✅ **Hyperparameter Optimization** - Grid, random, or Bayesian search  
-✅ **CLI Interface** - Easy-to-use command-line tools  
-✅ **Python API** - Flexible programmatic access  
-✅ **Full Backward Compatibility** - Existing code still works  
+- **Dataset Auto-Detection** - Automatically analyzes any dataset structure  
+- **Dynamic Architecture Generation** - Creates optimal CNN architectures  
+- **Hyperparameter Optimization** - Grid, random, or Bayesian search  
+- **CLI Interface** - Easy-to-use command-line tools  
+- **Python API** - Flexible programmatic access  
+- **Full Backward Compatibility** - Existing code still works  
 
 ### Quick Start with Any Dataset
 
@@ -117,11 +113,11 @@ model = orchestrator.run(plot=True)
 
 ### Documentation
 
-- 📘 **[Quick Start Guide](docs/QUICK_START.md)** - 5-minute tutorial
-- 📚 **[Complete Documentation](docs/GENERALIZED_SYSTEM.md)** - Full system guide
-- 🔄 **[Migration Guide](docs/MIGRATION_GUIDE.md)** - From Alzheimer's to generalized
-- 📊 **[Transformation Summary](docs/TRANSFORMATION_SUMMARY.md)** - What's new
-- 💻 **[Examples](examples_generalized_system.py)** - Code examples
+- **[Quick Start Guide](docs/QUICK_START.md)** - 5-minute tutorial
+- **[Complete Documentation](docs/GENERALIZED_SYSTEM.md)** - Full system guide
+- **[Migration Guide](docs/MIGRATION_GUIDE.md)** - From Alzheimer's to generalized
+- **[Transformation Summary](docs/TRANSFORMATION_SUMMARY.md)** - What's new
+- **[Examples](examples_generalized_system.py)** - Code examples
 
 ### Dataset Requirements
 
@@ -239,11 +235,11 @@ print(f"Loaded models: {models['models']}")
 ```
 
 ### Features
-- ✅ **Multi-Model Support**: Load and switch between models
-- ✅ **Auto-Discovery**: Finds best available model automatically
-- ✅ **Modern UI**: Responsive interface with drag-and-drop
-- ✅ **API Docs**: Auto-generated Swagger/ReDoc documentation
-- ✅ **Generic**: Works with any image classification model
+- **Multi-Model Support**: Load and switch between models
+- **Auto-Discovery**: Finds best available model automatically
+- **Modern UI**: Responsive interface with drag-and-drop
+- **API Docs**: Auto-generated Swagger/ReDoc documentation
+- **Generic**: Works with any image classification model
 
 ### Training
 
@@ -571,7 +567,7 @@ MIT License - see [LICENSE](LICENSE) file.
 ---
 
 <div align="center">
-  <strong>Made with ❤️ and 🧠 for Alzheimer's research</strong>
+  <strong>Made with dedication for Alzheimer's research</strong>
   <br><br>
-  ⭐ Star this repo if you find it helpful!
+  Star this repo if you find it helpful!
 </div>

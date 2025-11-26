@@ -79,11 +79,11 @@ img-classifier train /path/to/my_dataset \
 ```
 
 The system will:
-1. ✅ Auto-detect dataset characteristics
-2. ✅ Generate appropriate CNN architecture
-3. ✅ Train the model
-4. ✅ Save the best model
-5. ✅ Show training plots
+1. Auto-detect dataset characteristics
+2. Generate appropriate CNN architecture
+3. Train the model
+4. Save the best model
+5. Show training plots
 
 ### Step 4: Make Predictions
 
@@ -209,9 +209,9 @@ img-classifier optimize /path/to/dataset \
   --max-trials 20
 ```
 
-- ⚡ Fast
-- 🎯 Good results
-- 🔀 Explores search space well
+- Fast
+- Good results
+- Explores search space well
 
 ### Grid Search (Exhaustive)
 
@@ -221,9 +221,9 @@ img-classifier optimize /path/to/dataset \
   --quick  # Reduces search space
 ```
 
-- 🐌 Slow
-- ✅ Guaranteed to find best in search space
-- 💰 Resource intensive
+- Slow
+- Guaranteed to find best in search space
+- Resource intensive
 
 ### Bayesian Optimization (Best results)
 
@@ -234,9 +234,9 @@ img-classifier optimize /path/to/dataset \
   --max-trials 50
 ```
 
-- 🧠 Learns from previous trials
-- 🎯 Most efficient
-- ⏱️ Best for expensive evaluations
+- Learns from previous trials
+- Most efficient
+- Best for expensive evaluations
 
 ## Configuration Files
 
@@ -304,9 +304,9 @@ img-classifier train /path/to/dataset --plot
 ```
 
 Watch for:
-- 📈 Val accuracy increasing
-- 📉 Val loss decreasing
-- ⚠️ Overfitting (val loss increases while train loss decreases)
+- Val accuracy increasing
+- Val loss decreasing
+- Overfitting (val loss increases while train loss decreases)
 
 ### 3. Handle Overfitting
 
@@ -387,10 +387,10 @@ img-classifier info --help
 ```
 
 Or check:
-- 📚 `docs/GENERALIZED_SYSTEM.md` - Full documentation
-- 🔄 `docs/MIGRATION_GUIDE.md` - Migration from old system
-- 💻 `examples_generalized_system.py` - Code examples
-- 🐛 GitHub Issues - Report bugs or ask questions
+- `docs/GENERALIZED_SYSTEM.md` - Full documentation
+- `docs/MIGRATION_GUIDE.md` - Migration from old system
+- `examples_generalized_system.py` - Code examples
+- GitHub Issues - Report bugs or ask questions
 
 ## Cheat Sheet
 
@@ -419,5 +419,5 @@ img-classifier predict model.keras image.jpg \
   --class-names "class1" "class2" "class3"
 ```
 
-Happy training! 🚀
+Happy training!
 
