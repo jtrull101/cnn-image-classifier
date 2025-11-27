@@ -1,4 +1,4 @@
-﻿﻿.PHONY: help install sync clean test lint format build graph install-hooks pre-commit pre-commit-fix ci
+﻿.PHONY: help install sync clean test lint format build graph install-hooks pre-commit pre-commit-fix ci
 
 # Default shell for Windows
 SHELL := pwsh.exe
@@ -75,8 +75,8 @@ test:
 
 # Test with coverage
 test-coverage:
-	@echo "Running tests with coverage for all packages..."
-	npx nx run-many --target=test-cov --all
+	@echo "Running tests with comprehensive coverage report..."
+	uv run python -m pytest tests/ -n auto --cov=packages --cov=apps --cov-report=term-missing:skip-covered --cov-report=html --cov-report=xml -v
 
 # Test with specific number of workers
 test-parallel:

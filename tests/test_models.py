@@ -23,13 +23,14 @@ from img_classifier_config import BaseConfig, DatasetConfig
 pytestmark = pytest.mark.skipif(not TENSORFLOW_AVAILABLE, reason="TensorFlow not available")
 
 
+@pytest.mark.unit
 class TestBaseModel:
     """Tests for BaseModel abstract class."""
 
     @pytest.fixture(autouse=True)
-    def setup_method(self, tmp_path):
+    def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
-        self.temp_dir = tmp_path
+        self.temp_dir = isolated_tmp_dir
         self.config = BaseConfig(working_dir=self.temp_dir)
 
         yield
@@ -42,13 +43,14 @@ class TestBaseModel:
         assert hasattr(BaseModel, "load")
 
 
+@pytest.mark.unit
 class TestArchitectureFactory:
     """Tests for ArchitectureFactory."""
 
     @pytest.fixture(autouse=True)
-    def setup_method(self, tmp_path):
+    def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
-        self.temp_dir = tmp_path
+        self.temp_dir = isolated_tmp_dir
         self.config = DatasetConfig(
             working_dir=self.temp_dir,
             image_size=(64, 64),
@@ -247,3 +249,276 @@ class TestCnnClassifier:
         # Same architecture (layer count and shapes)
         assert len(model1.layers) == len(model2.layers)
         assert model1.count_params() == model2.count_params()
+
+
+@pytest.mark.unit
+class TestArchitectureFactoryEdgeCases:
+    """Edge case tests for ArchitectureFactory."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, isolated_tmp_dir):
+        """Set up test fixtures."""
+        self.temp_dir = isolated_tmp_dir
+        yield
+
+    def test_create_with_binary_classification(self):
+        """Test creating model for binary classification."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=2,
+            class_names=["class1", "class2"],
+        )
+
+        model = ArchitectureFactory.create(config, complexity="simple")
+
+        assert model is not None
+        assert model.output_shape[-1] == 2
+
+    def test_create_with_many_classes(self):
+        """Test creating model with many classes."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=100,
+            class_names=[f"class{i}" for i in range(100)],
+        )
+
+        model = ArchitectureFactory.create(config, complexity="simple")
+
+        assert model is not None
+        assert model.output_shape[-1] == 100
+
+    def test_create_with_very_small_image_size(self):
+        """Test creating model with very small images."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(32, 32),
+            num_classes=4,
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+
+        model = ArchitectureFactory.create(config, complexity="simple")
+
+        assert model is not None
+        assert model.input_shape[1:] == (32, 32, 3)
+
+    def test_create_with_large_image_size(self):
+        """Test creating model with large images."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(256, 256),
+            num_classes=4,
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+
+        model = ArchitectureFactory.create(config, complexity="simple")
+
+        assert model is not None
+        assert model.input_shape[1:] == (256, 256, 3)
+
+    def test_create_with_grayscale_images(self):
+        """Test creating model with grayscale images."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            color_channels=1,
+            num_classes=4,
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+
+        model = ArchitectureFactory.create(config, complexity="simple")
+
+        assert model is not None
+        assert model.input_shape[1:] == (64, 64, 1)
+
+    def test_create_with_rectangular_images(self):
+        """Test creating model with non-square images."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(128, 64),
+            num_classes=4,
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+
+        model = ArchitectureFactory.create(config, complexity="simple")
+
+        assert model is not None
+        assert model.input_shape[1:] == (128, 64, 3)
+
+    def test_model_handles_batch_prediction(self):
+        """Test that model can handle batch predictions."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=4,
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+
+        model = ArchitectureFactory.create(config, complexity="simple")
+        model.compile(optimizer="adam", loss="categorical_crossentropy")
+
+        # Test with various batch sizes
+        for batch_size in [1, 8, 32, 64]:
+            dummy_input = np.random.rand(batch_size, *config.input_shape).astype("float32")
+            predictions = model.predict(dummy_input, verbose=0)
+            assert predictions.shape == (batch_size, config.num_classes)
+
+    def test_model_trainable_parameters(self):
+        """Test that model has trainable parameters."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=4,
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+
+        model = ArchitectureFactory.create(config, complexity="simple")
+
+        # Should have trainable parameters
+        trainable_count = sum([tf.keras.backend.count_params(w) for w in model.trainable_weights])
+        assert trainable_count > 0
+
+    def test_model_with_extreme_dropout(self):
+        """Test model creation with extreme dropout rate."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=4,
+            dropout_rate=0.9,
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+
+        model = ArchitectureFactory.create(config, complexity="simple")
+
+        assert model is not None
+        # Check that dropout layers exist
+        layer_types = [type(layer).__name__ for layer in model.layers]
+        assert "Dropout" in layer_types
+
+    def test_model_with_no_dropout(self):
+        """Test model creation with zero dropout."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=4,
+            dropout_rate=0.0,
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+
+        model = ArchitectureFactory.create(config, complexity="simple")
+
+        assert model is not None
+
+    def test_auto_complexity_with_small_dataset(self):
+        """Test auto complexity selection prefers simple for small datasets."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=2,
+            class_names=["c1", "c2"],
+            architecture_complexity="auto",
+        )
+
+        model = ArchitectureFactory.create(config, complexity="auto")
+
+        assert model is not None
+        # Auto should choose appropriately
+        assert model.output_shape[-1] == 2
+
+    def test_auto_complexity_with_many_classes(self):
+        """Test auto complexity selection with many classes."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=50,
+            class_names=[f"c{i}" for i in range(50)],
+            architecture_complexity="auto",
+        )
+
+        model = ArchitectureFactory.create(config, complexity="auto")
+
+        assert model is not None
+        assert model.output_shape[-1] == 50
+
+    def test_model_output_activation_is_softmax(self):
+        """Test that final layer uses softmax activation."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=4,
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+
+        model = ArchitectureFactory.create(config, complexity="simple")
+
+        # Check last layer activation
+        last_layer = model.layers[-1]
+        assert hasattr(last_layer, "activation")
+        # Softmax activation function
+        assert last_layer.activation.__name__ == "softmax"
+
+    def test_model_summary_works(self):
+        """Test that model.summary() works without errors."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=4,
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+
+        model = ArchitectureFactory.create(config, complexity="simple")
+
+        # Should not raise any errors
+        try:
+            import io
+            import sys
+
+            old_stdout = sys.stdout
+            sys.stdout = buffer = io.StringIO()
+            model.summary()
+            output = buffer.getvalue()
+            sys.stdout = old_stdout
+
+            assert len(output) > 0
+            assert "Total params" in output
+        except Exception as e:
+            pytest.fail(f"model.summary() raised exception: {e}")
+
+    def test_model_is_serializable(self):
+        """Test that model can be converted to JSON."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=4,
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+
+        model = ArchitectureFactory.create(config, complexity="simple")
+
+        # Should be able to serialize
+        json_config = model.to_json()
+        assert len(json_config) > 0
+        assert "config" in json_config
+
+    def test_complexity_consistency(self):
+        """Test that same complexity produces consistent models."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=4,
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+
+        model1 = ArchitectureFactory.create(config, complexity="medium")
+        model2 = ArchitectureFactory.create(config, complexity="medium")
+
+        # Should have same architecture
+        assert len(model1.layers) == len(model2.layers)
+        assert model1.count_params() == model2.count_params()
+
+        # Check layer types match
+        types1 = [type(layer).__name__ for layer in model1.layers]
+        types2 = [type(layer).__name__ for layer in model2.layers]
+        assert types1 == types2
+

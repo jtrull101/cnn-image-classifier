@@ -122,6 +122,9 @@ exclude_lines = [
     "@abstractmethod",
 ]
 precision = 2
+show_missing = true
+skip_covered = false
+sort = "Cover"
 
 # Ruff Configuration (replaces flake8, isort, autopep8)
 [tool.ruff]
