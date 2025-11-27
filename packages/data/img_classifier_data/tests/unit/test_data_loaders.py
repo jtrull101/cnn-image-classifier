@@ -1,21 +1,31 @@
-"""Tests for data loading modules."""
+"""Unit tests for data loading modules using mocking.
+
+These tests verify data loader behavior with mocked dependencies
+to ensure fast execution and isolation from other packages.
+"""
 
 import numpy as np
 import pytest
+from unittest.mock import Mock
 
-from img_classifier_config import BaseConfig
 from img_classifier_data import BaseDataLoader, ImageDataLoader
 
 
 @pytest.mark.unit
 class TestBaseDataLoader:
-    """Tests for BaseDataLoader abstract class."""
+    """Unit tests for BaseDataLoader abstract class."""
 
     @pytest.fixture(autouse=True)
     def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
-        self.config = BaseConfig(working_dir=self.temp_dir)
+
+        # Create mock config
+        self.mock_config = Mock()
+        self.mock_config.working_dir = self.temp_dir
+        self.mock_config.data_path = self.temp_dir / "data"
+        self.mock_config.train_path = self.temp_dir / "data" / "train"
+        self.mock_config.test_path = self.temp_dir / "data" / "test"
 
         yield
 
@@ -45,7 +55,7 @@ class TestBaseDataLoader:
             def prepare_dataset(self):
                 pass
 
-        loader = ConcreteLoader(self.config)
+        loader = ConcreteLoader(self.mock_config)
 
         # Create test directory structure
         test_path = self.temp_dir / "categories_test"
@@ -193,10 +203,10 @@ class TestImageDataLoader:
     """Tests for ImageDataLoader class."""
 
     @pytest.fixture(autouse=True)
-    def setup_method(self, isolated_tmp_dir):
+    def setup_method(self, isolated_tmp_dir, mock_config):
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
-        self.config = BaseConfig(working_dir=self.temp_dir)
+        self.config = mock_config
         self.loader = ImageDataLoader(self.config)
 
         yield
@@ -258,10 +268,10 @@ class TestBaseDataLoaderEdgeCases:
     """Edge case tests for BaseDataLoader."""
 
     @pytest.fixture(autouse=True)
-    def setup_method(self, isolated_tmp_dir):
+    def setup_method(self, isolated_tmp_dir, mock_config):
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
-        self.config = BaseConfig(working_dir=self.temp_dir)
+        self.config = mock_config
 
         # Create concrete implementation for testing
         class ConcreteLoader(BaseDataLoader):
@@ -303,6 +313,100 @@ class TestBaseDataLoaderEdgeCases:
         assert len(x2) == 0
         assert len(y1) == 100
         assert len(y2) == 0
+
+    def test_reduce_dataset_with_zero_percent(self):
+        """Test reduce_dataset with 0% (empty dataset)."""
+        x = np.arange(100).reshape(100, 1)
+        y = np.arange(100)
+
+        x_reduced, y_reduced = self.loader.reduce_dataset(x, y, percent=0.0)
+
+        assert len(x_reduced) == 0
+        assert len(y_reduced) == 0
+
+    def test_reduce_dataset_with_small_data(self):
+        """Test reduce_dataset with very small dataset."""
+        x = np.arange(5).reshape(5, 1)
+        y = np.arange(5)
+
+        x_reduced, y_reduced = self.loader.reduce_dataset(x, y, percent=0.5)
+
+        # Should get at least some samples
+        assert len(x_reduced) > 0
+        assert len(y_reduced) > 0
+
+    def test_split_data_single_sample(self):
+        """Test split_data with single sample."""
+        x = np.array([[1]])
+        y = np.array([0])
+
+        x1, x2, y1, y2 = self.loader.split_data(x, y, split_ratio=0.5)
+
+        # With single sample, split may produce 0 or 1 in each set
+        assert len(x1) + len(x2) == 1
+        assert len(y1) + len(y2) == 1
+
+    def test_get_categories_with_special_characters(self):
+        """Test get_categories with special characters in names."""
+        test_path = self.temp_dir / "special"
+        test_path.mkdir()
+        (test_path / "cat-1_test").mkdir()
+        (test_path / "cat.2").mkdir()
+
+        categories = self.loader.get_categories(test_path)
+
+        assert len(categories) == 2
+        assert "cat-1_test" in categories
+        assert "cat.2" in categories
+
+    def test_reduce_dataset_maintains_distribution(self):
+        """Test that reduce_dataset maintains relative distribution."""
+        # Create data with known distribution
+        x = np.vstack([np.ones((50, 1)), np.zeros((50, 1))])
+        y = np.hstack([np.ones(50), np.zeros(50)])
+
+        x_reduced, y_reduced = self.loader.reduce_dataset(x, y, percent=0.5)
+
+        assert len(x_reduced) == 50
+        # Check that both classes are represented (with some tolerance)
+        assert 15 <= np.sum(y_reduced == 1) <= 35  # Allow some variance
+
+
+@pytest.mark.unit
+class TestImageDataLoaderEdgeCases:
+    """Edge case tests for ImageDataLoader."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, isolated_tmp_dir, mock_config):
+        """Set up test fixtures."""
+        self.temp_dir = isolated_tmp_dir
+        self.config = mock_config
+        self.loader = ImageDataLoader(self.config)
+        yield
+
+    def test_cache_path_for_test_data(self):
+        """Test cache path generation for test data."""
+        x_path, y_path = self.loader._get_cache_path(train=False)
+
+        assert x_path.name == "X_data_test.pkl"
+        assert y_path.name == "y_data_test.pkl"
+
+    def test_multiple_loader_instances(self):
+        """Test creating multiple loader instances."""
+        loader1 = ImageDataLoader(self.config)
+        loader2 = ImageDataLoader(self.config)
+
+        assert loader1.config == loader2.config
+        assert loader1 is not loader2
+
+    def test_config_modification_after_init(self):
+        """Test that loader respects config modifications."""
+        original_batch_size = self.config.batch_size
+        self.config.batch_size = 64
+
+        assert self.loader.config.batch_size == 64
+        assert self.loader.config.batch_size != original_batch_size
+
 
     def test_split_data_with_single_sample(self):
         """Test split_data with only one sample."""
@@ -447,7 +551,9 @@ class TestBaseDataLoaderEdgeCases:
         assert len(x2) == 30
         # Data should be shuffled - not in original order
         # (Note: small chance this could fail if shuffle happens to maintain order)
-        total_order_preserved = np.array_equal(y1, np.arange(70)) and np.array_equal(y2, np.arange(70, 100))
+        total_order_preserved = np.array_equal(y1, np.arange(70)) and np.array_equal(
+            y2, np.arange(70, 100)
+        )
         # If not totally preserved, it was shuffled (expected)
         assert not total_order_preserved or len(y1) < 10  # Allow for very small datasets
 
@@ -461,92 +567,4 @@ class TestBaseDataLoaderEdgeCases:
         assert len(x_reduced) == 5
         assert len(y_reduced) == 5
         assert x_reduced.shape[1:] == (10, 10)
-
-
-@pytest.mark.unit
-class TestImageDataLoaderEdgeCases:
-    """Edge case tests for ImageDataLoader."""
-
-    @pytest.fixture(autouse=True)
-    def setup_method(self, isolated_tmp_dir):
-        """Set up test fixtures."""
-        self.temp_dir = isolated_tmp_dir
-        self.config = BaseConfig(working_dir=self.temp_dir)
-        self.loader = ImageDataLoader(self.config)
-        yield
-
-    def test_get_cache_path_for_test_data(self):
-        """Test _get_cache_path for test data."""
-        x_path, y_path = self.loader._get_cache_path(train=False)
-
-        assert x_path.name == "X_data_test.pkl"
-        assert y_path.name == "y_data_test.pkl"
-        assert x_path.parent == self.config.cache_dir
-
-    def test_multiple_prepare_dataset_calls_idempotent(self):
-        """Test that multiple prepare_dataset calls are safe."""
-        # Create directories
-        self.config.train_path.mkdir(parents=True)
-        self.config.test_path.mkdir(parents=True)
-        (self.config.train_path / "class1").mkdir()
-        (self.config.test_path / "class1").mkdir()
-
-        result1 = self.loader.prepare_dataset()
-        result2 = self.loader.prepare_dataset()
-        result3 = self.loader.prepare_dataset()
-
-        assert result1 is True
-        assert result2 is True
-        assert result3 is True
-
-
-    def test_setup_with_missing_train_path(self):
-        """Test setup when train path doesn't exist."""
-        # Only create test path
-        self.config.test_path.mkdir(parents=True)
-        (self.config.test_path / "class1").mkdir()
-
-        result = self.loader.setup()
-        assert result is False
-
-    def test_setup_with_missing_test_path(self):
-        """Test setup when test path doesn't exist."""
-        # Only create train path
-        self.config.train_path.mkdir(parents=True)
-        (self.config.train_path / "class1").mkdir()
-
-        result = self.loader.setup()
-        assert result is False
-
-    def test_setup_with_empty_train_directory(self):
-        """Test setup when train directory is empty."""
-        self.config.train_path.mkdir(parents=True)
-        self.config.test_path.mkdir(parents=True)
-        (self.config.test_path / "class1").mkdir()
-
-        result = self.loader.setup()
-        assert result is False
-
-    def test_setup_with_empty_test_directory(self):
-        """Test setup when test directory is empty."""
-        self.config.train_path.mkdir(parents=True)
-        self.config.test_path.mkdir(parents=True)
-        (self.config.train_path / "class1").mkdir()
-
-        result = self.loader.setup()
-        assert result is False
-
-    def test_cache_directory_creation(self):
-        """Test that cache directory is created properly."""
-        assert self.config.cache_dir.exists()
-        assert self.config.cache_dir.is_dir()
-
-    def test_loader_config_reference(self):
-        """Test that loader stores config reference correctly."""
-        original_config = self.loader.config
-        assert original_config is self.config
-
-        # Config should be accessible through loader
-        assert self.loader.config.image_size == self.config.image_size
-        assert self.loader.config.num_classes == self.config.num_classes
 

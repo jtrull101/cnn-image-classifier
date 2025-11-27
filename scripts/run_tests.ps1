@@ -67,30 +67,6 @@ switch ($Target) {
         Write-Host "Running all tests" -ForegroundColor Cyan
         $pytestCmd += " tests/"
     }
-    "config" {
-        Write-Host "Running config tests" -ForegroundColor Cyan
-        $pytestCmd += " tests/test_config.py"
-    }
-    "data" {
-        Write-Host "Running data loader tests" -ForegroundColor Cyan
-        $pytestCmd += " tests/test_data_loaders.py"
-    }
-    "models" {
-        Write-Host "Running model tests" -ForegroundColor Cyan
-        $pytestCmd += " tests/test_models.py"
-    }
-    "training" {
-        Write-Host "Running training tests" -ForegroundColor Cyan
-        $pytestCmd += " tests/test_training_pytest.py"
-    }
-    "utils" {
-        Write-Host "Running utils tests" -ForegroundColor Cyan
-        $pytestCmd += " tests/test_utils.py"
-    }
-    "integration" {
-        Write-Host "Running integration tests" -ForegroundColor Cyan
-        $pytestCmd += " tests/test_integration.py"
-    }
     default {
         Write-Host "Unknown target: $Target" -ForegroundColor Red
         Write-Host "Valid targets: all, config, data, models, training, utils, integration" -ForegroundColor Yellow

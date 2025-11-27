@@ -100,7 +100,7 @@ def train(
     orchestrator = TrainingOrchestrator(cfg, optimize_hyperparameters=False)
 
     try:
-        model = orchestrator.run(plot=plot)
+        orchestrator.run(plot=plot)
         click.echo("\n" + "=" * 60)
         click.echo("Training completed successfully!")
         click.echo("=" * 60 + "\n")
@@ -167,7 +167,7 @@ def optimize(
     )
 
     try:
-        model = orchestrator.run(plot=False)
+        orchestrator.run(plot=False)
         click.echo("\n" + "=" * 60)
         click.echo("Optimization completed successfully!")
         click.echo("=" * 60)

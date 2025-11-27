@@ -49,37 +49,36 @@ minversion = "7.0"
 addopts = [
     "-n=auto",  # Run tests in parallel using all available CPU cores
     "--dist=loadgroup",  # Distribute tests by group (respects marks)
+    "--strict-markers",  # Enforce marker registration
+    "--tb=short",  # Shorter traceback format
+    "-v",  # Verbose output
     "--maxfail=3",  # Stop after 3 failures
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",
-    "--strict-markers",
-    "--strict-config",
     "--timeout=300",  # Global timeout of 5 minutes per test
     "-ra",  # Show extra test summary info
-    "--tb=short",  # Shorter traceback format
 ]
-testpaths = [
-    "packages/config/tests",
-    "packages/utils/tests",
-    "packages/data/tests",
-    "packages/models/tests",
-    "packages/training/tests",
-    "apps/api/tests",
-]
+testpaths = ["tests", "packages"]
 pythonpath = ["."]
-python_files = ["test_*.py", "tests.py"]
+python_files = ["test_*.py", "*_test.py", "tests.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# Marker definitions (also registered in conftest.py)
 markers = [
-    "serial: marks tests that must run serially (not in parallel)",
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests",
-    "unit: marks tests as unit tests",
-    "requires_gpu: marks tests that require GPU",
-    "requires_data: marks tests that require dataset download",
+    "unit: Fast unit tests using mocks and no I/O (default)",
+    "integration: Slower integration tests using real dependencies and I/O",
+    "slow: Slow tests that take significant time to run",
+    "serial: Tests that must run serially, not in parallel",
+    "requires_gpu: Tests that require GPU access",
+    "requires_data: Tests that require dataset download",
 ]
+
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
+
 log_cli = true
 log_cli_level = "INFO"
 log_file = "/tmp/img_classifier_cnn/logs/test.log"

@@ -1,6 +1,5 @@
 """Tests for model modules."""
 
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -198,6 +197,261 @@ class TestCnnClassifier:
 
         # Check output shape
         assert model.output_shape == (None, self.config.num_classes)
+
+    def test_compile_with_default_settings(self):
+        """Test compile with default settings."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        model = classifier.build()
+        classifier.compile()
+
+        assert model.optimizer is not None
+        assert model.loss is not None
+
+    def test_compile_with_custom_settings(self):
+        """Test compile with custom optimizer and learning rate."""
+        from img_classifier_models import CnnClassifier
+
+        self.config.learning_rate = 0.01
+        classifier = CnnClassifier(self.config)
+        model = classifier.build()
+        classifier.compile()
+
+        # Check that learning rate was applied
+        assert hasattr(model.optimizer, "learning_rate")
+
+    def test_save_and_load_model(self):
+        """Test saving and loading a model."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        classifier.build()
+        classifier.compile()
+
+        # Save model
+        self.config.models_dir.mkdir(parents=True, exist_ok=True)
+        model_path = self.config.models_dir / "test_model.keras"
+        classifier.save(model_path)
+
+        assert model_path.exists()
+
+        # Load model
+        new_classifier = CnnClassifier(self.config)
+        new_classifier.load(model_path)
+
+        assert new_classifier.model is not None
+
+    def test_model_can_train_on_dummy_data(self):
+        """Test that model can train on dummy data."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        model = classifier.build()
+        classifier.compile()
+
+        # Create dummy data
+        X_train = np.random.rand(10, *self.config.input_shape).astype("float32")
+        y_train = tf.keras.utils.to_categorical(
+            np.random.randint(0, self.config.num_classes, 10), num_classes=self.config.num_classes
+        )
+
+        # Train for 1 epoch
+        history = model.fit(X_train, y_train, epochs=1, verbose=0)
+
+        assert history is not None
+        assert "loss" in history.history
+
+
+@pytest.mark.unit
+class TestArchitectureFactoryEdgeCases:
+    """Edge case tests for ArchitectureFactory."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, isolated_tmp_dir):
+        """Set up test fixtures."""
+        self.temp_dir = isolated_tmp_dir
+        yield
+
+    def test_invalid_complexity_raises_error(self):
+        """Test that invalid complexity raises appropriate error."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=2,
+            class_names=["class1", "class2"],
+        )
+
+        with pytest.raises(ValueError):
+            ArchitectureFactory.create(config, complexity="invalid")
+
+    def test_very_small_image_size(self):
+        """Test with very small image size."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(32, 32),
+            num_classes=2,
+            class_names=["class1", "class2"],
+        )
+
+        model = ArchitectureFactory.create(config, "simple")
+        assert model is not None
+
+    def test_large_number_of_classes(self):
+        """Test with large number of classes."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=100,
+            class_names=[f"class{i}" for i in range(100)],
+        )
+
+        model = ArchitectureFactory.create(config)
+        assert model.output_shape[-1] == 100
+
+    def test_binary_classification(self):
+        """Test binary classification (2 classes)."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=2,
+            class_names=["class0", "class1"],
+        )
+
+        model = ArchitectureFactory.create(config)
+        assert model.output_shape[-1] == 2
+
+    def test_non_square_images(self):
+        """Test with non-square images."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(128, 64),  # Wider than tall
+            num_classes=4,
+            class_names=["a", "b", "c", "d"],
+        )
+
+        model = ArchitectureFactory.create(config)
+        assert model.input_shape[1:] == (128, 64, 3)
+
+    def test_grayscale_images(self):
+        """Test with grayscale images (1 channel)."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=3,
+            class_names=["a", "b", "c"],
+            color_channels=1,
+        )
+
+        model = ArchitectureFactory.create(config)
+        assert model.input_shape[1:] == (64, 64, 1)
+
+    def test_model_with_different_dropout_rates(self):
+        """Test models with different dropout rates."""
+        config1 = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=2,
+            class_names=["a", "b"],
+            dropout_rate=0.2,
+        )
+
+        config2 = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=2,
+            class_names=["a", "b"],
+            dropout_rate=0.5,
+        )
+
+        model1 = ArchitectureFactory.create(config1)
+        model2 = ArchitectureFactory.create(config2)
+
+        # Both should be valid models
+        assert model1 is not None
+        assert model2 is not None
+
+
+@pytest.mark.unit
+class TestCnnClassifierEdgeCases:
+    """Edge case tests for CnnClassifier."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, isolated_tmp_dir):
+        """Set up test fixtures."""
+        self.temp_dir = isolated_tmp_dir
+        self.config = BaseConfig(working_dir=self.temp_dir)
+        yield
+
+    def test_multiple_builds_replace_model(self):
+        """Test that building multiple times replaces the model."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        model1 = classifier.build()
+        model2 = classifier.build()
+
+        # Should be different models
+        assert model1 is not model2
+        assert classifier.model is model2
+
+    def test_compile_before_build_does_nothing(self):
+        """Test that compile before build handles gracefully."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        # Compile without building first
+        classifier.compile()
+
+        # Should not raise an error, but model should still be None
+        assert classifier.model is None
+
+    def test_save_without_model_raises_error(self):
+        """Test that save without model raises appropriate error."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+
+        with pytest.raises(Exception):
+            classifier.save(self.temp_dir / "model.keras")
+
+    def test_load_nonexistent_model_raises_error(self):
+        """Test that loading non-existent model raises error."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+
+        with pytest.raises(Exception):
+            classifier.load(self.temp_dir / "nonexistent.keras")
+
+    def test_seed_produces_reproducible_models(self):
+        """Test that seed produces reproducible models."""
+        from img_classifier_models import CnnClassifier
+
+        # Create two models with same seed
+        classifier1 = CnnClassifier(self.config, seed=42)
+        model1 = classifier1.build()
+
+        classifier2 = CnnClassifier(self.config, seed=42)
+        model2 = classifier2.build()
+
+        # Models should have same architecture
+        assert model1.count_params() == model2.count_params()
+
+    def test_different_seeds_produce_different_initializations(self):
+        """Test that different seeds produce different weight initializations."""
+        from img_classifier_models import CnnClassifier
+
+        classifier1 = CnnClassifier(self.config, seed=42)
+        model1 = classifier1.build()
+        weights1 = model1.get_weights()[0]
+
+        classifier2 = CnnClassifier(self.config, seed=43)
+        model2 = classifier2.build()
+        weights2 = model2.get_weights()[0]
+
+        # Weights should be different
+        assert not np.allclose(weights1, weights2)
 
     def test_compile_and_predict(self):
         """Test that compiled model can make predictions."""
@@ -521,4 +775,3 @@ class TestArchitectureFactoryEdgeCases:
         types1 = [type(layer).__name__ for layer in model1.layers]
         types2 = [type(layer).__name__ for layer in model2.layers]
         assert types1 == types2
-

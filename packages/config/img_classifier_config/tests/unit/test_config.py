@@ -629,7 +629,6 @@ class TestDatasetDetector:
     @pytest.fixture
     def mock_dataset(self, tmp_path):
         """Create a mock dataset structure."""
-        from img_classifier_config.dataset_config import DatasetDetector
 
         # Create train/test split structure
         train_dir = tmp_path / "train"

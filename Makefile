@@ -76,7 +76,7 @@ test:
 # Test with coverage
 test-coverage:
 	@echo "Running tests with comprehensive coverage report..."
-	uv run python -m pytest tests/ -n auto --cov=packages --cov=apps --cov-report=term-missing:skip-covered --cov-report=html --cov-report=xml -v
+	uv run python -m pytest . -n auto --cov=packages --cov=apps --cov-report=term-missing:skip-covered --cov-report=html --cov-report=xml -v
 
 # Test with specific number of workers
 test-parallel:
@@ -97,23 +97,6 @@ test-integration:
 test-slow:
 	@echo "Running tests and showing slowest..."
 	.\scripts\run_tests.ps1 -ShowSlowest
-
-# Test specific target
-test-config:
-	@echo "Running config tests..."
-	.\scripts\run_tests.ps1 -Target config
-
-test-data:
-	@echo "Running data tests..."
-	.\scripts\run_tests.ps1 -Target data
-
-test-models:
-	@echo "Running model tests..."
-	.\scripts\run_tests.ps1 -Target models
-
-test-training:
-	@echo "Running training tests..."
-	.\scripts\run_tests.ps1 -Target training
 
 # Lint all packages
 lint:
