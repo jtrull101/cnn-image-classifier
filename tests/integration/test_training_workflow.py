@@ -12,7 +12,7 @@ These tests are slow and should be run separately from unit tests.
 import numpy as np
 import pytest
 
-from img_classifier_config import BaseConfig, DatasetConfig
+from img_classifier_config import DatasetConfig
 
 
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
@@ -173,7 +173,8 @@ class TestRealDataWorkflow:
 
         # Detect dataset configuration
         detector = DatasetDetector(self.dataset_dir)
-        info = detector.detect()
+        detected_info = detector.detect()
+        assert detected_info["num_classes"] == 4
         config = detector.create_config(working_dir=self.dataset_dir.parent)
 
         # Create loader and attempt to load data
@@ -257,4 +258,3 @@ class TestModelSaveLoad:
         assert loaded_model.model is not None
         # Verify architectures match
         assert len(loaded_model.model.layers) == len(model.model.layers)
-

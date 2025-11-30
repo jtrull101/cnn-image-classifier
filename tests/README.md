@@ -71,6 +71,55 @@ Use pytest markers to categorize tests:
 
 ## Running Tests
 
+### Quick Reference - Make Commands
+
+The Makefile provides convenient shortcuts for running tests:
+
+```powershell
+# Run all tests with coverage (parallel)
+make test
+
+# Run all tests with full coverage reports
+make test-coverage
+
+# Run only unit tests (fast)
+make test-unit
+
+# Run only integration tests
+make test-integration
+
+# Run tests for specific packages (with coverage)
+make test-config      # Config package tests
+make test-data        # Data package tests
+make test-models      # Models package tests
+make test-training    # Training package tests
+make test-utils       # Utils package tests
+make test-cli         # CLI package tests
+make test-api         # API app tests
+```
+
+### Using PowerShell Script Directly
+
+For more control, use the `run_tests.ps1` script:
+
+```powershell
+# Run all tests
+.\scripts\run_tests.ps1 -Target all
+
+# Run specific package tests
+.\scripts\run_tests.ps1 -Target config -Coverage
+.\scripts\run_tests.ps1 -Target data -Coverage
+.\scripts\run_tests.ps1 -Target models -Coverage
+.\scripts\run_tests.ps1 -Target training -Coverage
+.\scripts\run_tests.ps1 -Target utils -Coverage
+.\scripts\run_tests.ps1 -Target cli -Coverage
+.\scripts\run_tests.ps1 -Target api -Coverage
+
+# Run with custom options
+.\scripts\run_tests.ps1 -Target config -Verbose -Workers 4
+.\scripts\run_tests.ps1 -Target all -UnitOnly -FailFast
+```
+
 ### Run All Unit Tests (Default)
 
 ```powershell

@@ -159,4 +159,3 @@ class TestArchitectureGeneration:
             assert model is not None
             assert model.input_shape[1:] == config.input_shape
             assert model.output_shape[-1] == config.num_classes
-

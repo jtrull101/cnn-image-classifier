@@ -378,6 +378,7 @@ class TestOrganizeDataset:
         # Create invalid structure that might cause issues
         train_dir = source / "train" / "class1"
         train_dir.mkdir(parents=True)
+        (train_dir / "image.jpg").write_text("image")
 
         dest = self.temp_dir / "dest"
 
@@ -446,14 +447,6 @@ class TestUtilsEdgeCases:
 
         assert result is True
         assert (extract_to / "nested" / "subdir" / "file.txt").exists()
-        (subdir / "nested.txt").write_text("test")
-
-        # Clean only top-level files
-        count = clean_directory(test_dir, "*.txt")
-
-        assert count == 1
-        assert subdir.exists()
-        assert (subdir / "nested.txt").exists()
 
 
 @pytest.mark.unit

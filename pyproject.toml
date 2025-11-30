@@ -3,7 +3,10 @@
 name = "alz-mri-neural-network"
 version = "0.1.0"
 requires-python = ">=3.11,<3.14"
+# Workspace packages must be listed here to be installed by UV
+# The [tool.uv.sources] section tells UV they come from the workspace
 dependencies = [
+    "img-classifier-api",
     "img-classifier-config",
     "img-classifier-data",
     "img-classifier-models",
@@ -25,17 +28,28 @@ members = [
 
 [dependency-groups]
 dev = [
+    "ruff>=0.14.7",
+    "pyright>=1.1.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+]
+
+test = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
     "pytest-ordering>=0.6",
     "pytest-xdist>=3.5.0",
     "pytest-timeout>=2.2.0",
     "pytest-asyncio>=0.23.0",
-    "ruff>=0.1.0",
-    "pyright>=1.1.0",
+]
+
+types = [
+    "pandas-stubs>=2.0.0",
 ]
 
 [tool.uv.sources]
+img-classifier-api = { workspace = true }
 img-classifier-cli = { workspace = true }
 img-classifier-config = { workspace = true }
 img-classifier-data = { workspace = true }
@@ -59,7 +73,7 @@ addopts = [
     "--timeout=300",  # Global timeout of 5 minutes per test
     "-ra",  # Show extra test summary info
 ]
-testpaths = ["tests", "packages"]
+testpaths = ["apps", "tests", "packages"]
 pythonpath = ["."]
 python_files = ["test_*.py", "*_test.py", "tests.py"]
 python_classes = ["Test*"]
@@ -77,6 +91,8 @@ markers = [
 
 filterwarnings = [
     "ignore::DeprecationWarning",
+    "ignore::ResourceWarning",
+    "ignore::pytest.PytestUnhandledThreadExceptionWarning",
 ]
 
 log_cli = true
@@ -104,6 +120,7 @@ source = [
     "apps/api/img_classifier_api",
 ]
 branch = true
+parallel = true
 omit = [
     "*/tests/*",
     "*/__pycache__/*",
@@ -124,6 +141,7 @@ precision = 2
 show_missing = true
 skip_covered = false
 sort = "Cover"
+fail_under = 80
 
 # Ruff Configuration (replaces flake8, isort, autopep8)
 [tool.ruff]

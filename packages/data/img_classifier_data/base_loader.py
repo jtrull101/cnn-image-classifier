@@ -116,7 +116,13 @@ class BaseDataLoader(ABC):
         if percent >= 1.0:
             return X, y
 
-        indices = np.arange(int(percent * len(X)))
-        np.random.shuffle(indices)
+        total = len(X)
+        keep = max(int(percent * total), 0)
+        if keep == 0:
+            return X[:0], y[:0]
 
-        return X[indices], y[indices]
+        indices = np.arange(total)
+        np.random.shuffle(indices)
+        selected = indices[:keep]
+
+        return X[selected], y[selected]

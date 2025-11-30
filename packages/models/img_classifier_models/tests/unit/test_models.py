@@ -1,25 +1,14 @@
 """Tests for model modules."""
 
-
 import numpy as np
 import pytest
 
+tf = pytest.importorskip("tensorflow", reason="TensorFlow not available")
 
-try:
-    import tensorflow as tf
+from img_classifier_config import BaseConfig, DatasetConfig  # noqa: E402
+from img_classifier_models import ArchitectureFactory, BaseModel  # noqa: E402
 
-    from img_classifier_models import ArchitectureFactory, BaseModel
-
-    TENSORFLOW_AVAILABLE = True
-except ImportError:
-    TENSORFLOW_AVAILABLE = False
-    BaseModel = None
-    ArchitectureFactory = None
-
-from img_classifier_config import BaseConfig, DatasetConfig
-
-
-pytestmark = pytest.mark.skipif(not TENSORFLOW_AVAILABLE, reason="TensorFlow not available")
+pytestmark = pytest.mark.unit
 
 
 @pytest.mark.unit
@@ -264,8 +253,8 @@ class TestCnnClassifier:
 
 
 @pytest.mark.unit
-class TestArchitectureFactoryEdgeCases:
-    """Edge case tests for ArchitectureFactory."""
+class TestArchitectureFactoryEdgeCasesAdditional:
+    """Additional edge case tests for ArchitectureFactory."""
 
     @pytest.fixture(autouse=True)
     def setup_method(self, isolated_tmp_dir):
@@ -400,11 +389,11 @@ class TestCnnClassifierEdgeCases:
         from img_classifier_models import CnnClassifier
 
         classifier = CnnClassifier(self.config)
-        # Compile without building first
         classifier.compile()
 
-        # Should not raise an error, but model should still be None
-        assert classifier.model is None
+        # Compile should build the model if needed
+        assert classifier.model is not None
+        assert classifier.model.optimizer is not None
 
     def test_save_without_model_raises_error(self):
         """Test that save without model raises appropriate error."""
@@ -775,3 +764,348 @@ class TestArchitectureFactoryEdgeCases:
         types1 = [type(layer).__name__ for layer in model1.layers]
         types2 = [type(layer).__name__ for layer in model2.layers]
         assert types1 == types2
+
+
+@pytest.mark.unit
+class TestArchitectureFactoryCustomSpec:
+    """Tests for ArchitectureFactory with custom specifications."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, isolated_tmp_dir):
+        """Set up test fixtures."""
+        self.temp_dir = isolated_tmp_dir
+        self.config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=4,
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+        yield
+
+    def test_create_with_custom_spec(self):
+        """Test creating model with custom architecture specification."""
+        from img_classifier_models.architecture_generator import ArchitectureSpec
+
+        custom_spec = ArchitectureSpec(
+            name="custom",
+            conv_blocks=[
+                {"filters": 32, "kernel_size": 3, "activation": "relu", "pooling": True},
+                {"filters": 64, "kernel_size": 3, "activation": "relu", "pooling": True},
+            ],
+            dense_layers=[128],
+            use_batch_norm=True,
+            use_global_pooling=False,
+            dropout_rate=0.5,
+        )
+
+        model = ArchitectureFactory.create(self.config, custom_spec=custom_spec)
+
+        assert model is not None
+        assert model.output_shape[-1] == self.config.num_classes
+
+    def test_custom_spec_with_batch_normalization(self):
+        """Test custom spec with batch normalization enabled."""
+        from img_classifier_models.architecture_generator import ArchitectureSpec
+
+        custom_spec = ArchitectureSpec(
+            name="custom_bn",
+            conv_blocks=[
+                {"filters": 32, "kernel_size": 3, "activation": "relu", "pooling": True},
+            ],
+            dense_layers=[64],
+            use_batch_norm=True,
+            dropout_rate=0.3,
+        )
+
+        model = ArchitectureFactory.create(self.config, custom_spec=custom_spec)
+
+        # Should contain BatchNormalization layers
+        layer_types = [type(layer).__name__ for layer in model.layers]
+        assert "BatchNormalization" in layer_types
+
+    def test_custom_spec_with_global_pooling(self):
+        """Test custom spec with global average pooling."""
+        from img_classifier_models.architecture_generator import ArchitectureSpec
+
+        custom_spec = ArchitectureSpec(
+            name="custom_gap",
+            conv_blocks=[
+                {"filters": 32, "kernel_size": 3, "activation": "relu", "pooling": True},
+            ],
+            dense_layers=[64],
+            use_global_pooling=True,
+            dropout_rate=0.3,
+        )
+
+        model = ArchitectureFactory.create(self.config, custom_spec=custom_spec)
+
+        # Should contain GlobalAveragePooling2D layer
+        layer_types = [type(layer).__name__ for layer in model.layers]
+        assert "GlobalAveragePooling2D" in layer_types
+        assert "Flatten" not in layer_types  # Should not have Flatten with GAP
+
+    def test_custom_spec_with_no_pooling(self):
+        """Test custom spec with conv blocks without pooling."""
+        from img_classifier_models.architecture_generator import ArchitectureSpec
+
+        custom_spec = ArchitectureSpec(
+            name="no_pooling",
+            conv_blocks=[
+                {"filters": 32, "kernel_size": 3, "activation": "relu", "pooling": False},
+                {"filters": 64, "kernel_size": 3, "activation": "relu", "pooling": False},
+            ],
+            dense_layers=[128],
+            dropout_rate=0.3,
+        )
+
+        model = ArchitectureFactory.create(self.config, custom_spec=custom_spec)
+
+        assert model is not None
+        # Count pooling layers - should be fewer or none
+        layer_types = [type(layer).__name__ for layer in model.layers]
+        pooling_count = layer_types.count("MaxPooling2D")
+        # With pooling=False in all blocks, should have 0 MaxPooling2D layers from conv blocks
+        assert pooling_count == 0
+
+    def test_custom_spec_with_multiple_dense_layers(self):
+        """Test custom spec with multiple dense layers."""
+        from img_classifier_models.architecture_generator import ArchitectureSpec
+
+        custom_spec = ArchitectureSpec(
+            name="multi_dense",
+            conv_blocks=[
+                {"filters": 32, "kernel_size": 3, "activation": "relu", "pooling": True},
+            ],
+            dense_layers=[256, 128, 64],
+            dropout_rate=0.4,
+        )
+
+        model = ArchitectureFactory.create(self.config, custom_spec=custom_spec)
+
+        # Count Dense layers (excluding output layer)
+        layer_types = [type(layer).__name__ for layer in model.layers]
+        dense_count = layer_types.count("Dense")
+        # Should have 3 + 1 (output layer) = 4 Dense layers
+        assert dense_count == 4
+
+    def test_custom_spec_with_different_kernel_sizes(self):
+        """Test custom spec with varying kernel sizes."""
+        from img_classifier_models.architecture_generator import ArchitectureSpec
+
+        custom_spec = ArchitectureSpec(
+            name="varied_kernels",
+            conv_blocks=[
+                {"filters": 32, "kernel_size": 5, "activation": "relu", "pooling": True},
+                {"filters": 64, "kernel_size": 3, "activation": "relu", "pooling": True},
+                {"filters": 128, "kernel_size": 7, "activation": "relu", "pooling": True},
+            ],
+            dense_layers=[128],
+            dropout_rate=0.3,
+        )
+
+        model = ArchitectureFactory.create(self.config, custom_spec=custom_spec)
+
+        assert model is not None
+        # Check that we have Conv2D layers
+        layer_types = [type(layer).__name__ for layer in model.layers]
+        assert layer_types.count("Conv2D") == 3
+
+    def test_custom_spec_with_zero_dropout(self):
+        """Test custom spec with zero dropout."""
+        from img_classifier_models.architecture_generator import ArchitectureSpec
+
+        custom_spec = ArchitectureSpec(
+            name="no_dropout",
+            conv_blocks=[
+                {"filters": 32, "kernel_size": 3, "activation": "relu", "pooling": True},
+            ],
+            dense_layers=[64],
+            dropout_rate=0.0,
+        )
+
+        model = ArchitectureFactory.create(self.config, custom_spec=custom_spec)
+
+        # With 0.0 dropout, dropout layers might still be present but with rate=0
+        assert model is not None
+
+
+@pytest.mark.unit
+class TestArchitectureFactoryAutoSelection:
+    """Tests for ArchitectureFactory auto-selection logic."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, isolated_tmp_dir):
+        """Set up test fixtures."""
+        self.temp_dir = isolated_tmp_dir
+        yield
+
+    def test_auto_selects_simple_for_binary(self):
+        """Test auto complexity selects appropriately for binary classification."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=2,
+            class_names=["c1", "c2"],
+        )
+
+        model = ArchitectureFactory.create(config, complexity="auto")
+
+        assert model is not None
+        # Auto should work for binary classification
+        assert model.output_shape[-1] == 2
+
+    def test_auto_selects_for_small_images(self):
+        """Test auto complexity works with small images."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(28, 28),
+            num_classes=10,
+            class_names=[f"c{i}" for i in range(10)],
+        )
+
+        model = ArchitectureFactory.create(config, complexity="auto")
+
+        assert model is not None
+        assert model.input_shape[1:] == (28, 28, 3)
+
+    def test_auto_selects_for_large_images(self):
+        """Test auto complexity works with large images."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(224, 224),
+            num_classes=10,
+            class_names=[f"c{i}" for i in range(10)],
+        )
+
+        model = ArchitectureFactory.create(config, complexity="auto")
+
+        assert model is not None
+        assert model.input_shape[1:] == (224, 224, 3)
+
+    def test_complexity_from_config_attribute(self):
+        """Test that complexity can be read from config attribute."""
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=4,
+            architecture_complexity="deep",
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+
+        model = ArchitectureFactory.create(config, complexity=None)
+
+        assert model is not None
+        # Should use 'deep' from config
+        assert model.output_shape[-1] == 4
+
+
+@pytest.mark.unit
+class TestCnnClassifierAdvanced:
+    """Advanced tests for CnnClassifier."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, isolated_tmp_dir):
+        """Set up test fixtures."""
+        self.temp_dir = isolated_tmp_dir
+        self.config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=4,
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+        yield
+
+    def test_build_with_different_complexities(self):
+        """Test building with different complexity levels."""
+        from img_classifier_models import CnnClassifier
+
+        for complexity in ["simple", "medium", "deep"]:
+            classifier = CnnClassifier(self.config)
+            model = classifier.build(complexity=complexity)
+
+            assert model is not None
+            assert model.output_shape[-1] == self.config.num_classes
+
+    def test_compile_with_different_optimizers(self):
+        """Test compile with various optimizer types."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        classifier.build()
+
+        # Test with different optimizers
+        for optimizer in ["adam", "sgd", "rmsprop"]:
+            classifier.compile(learning_rate=0.001, optimizer=optimizer)
+            # Should not raise errors
+            assert classifier.model is not None
+
+    def test_compile_with_different_learning_rates(self):
+        """Test compile with various learning rates."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        classifier.build()
+
+        # Test with different learning rates
+        for lr in [0.1, 0.01, 0.001, 0.0001]:
+            classifier.compile(learning_rate=lr)
+            assert classifier.model is not None
+
+    def test_save_creates_directory(self):
+        """Test that save creates parent directory if needed."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        classifier.build()
+        classifier.compile()
+
+        save_path = self.temp_dir / "deep" / "nested" / "model.keras"
+
+        classifier.save(save_path)
+
+        assert save_path.exists()
+        assert save_path.parent.exists()
+
+    def test_load_updates_model_attribute(self):
+        """Test that load properly updates the model attribute."""
+        from img_classifier_models import CnnClassifier
+
+        # Create and save a model
+        classifier1 = CnnClassifier(self.config)
+        classifier1.build()
+        classifier1.compile()
+
+        save_path = self.temp_dir / "model_load_test.keras"
+        classifier1.save(save_path)
+
+        # Create new classifier and load
+        classifier2 = CnnClassifier(self.config)
+        classifier2.load(save_path)
+
+        assert classifier2.model is not None
+        assert classifier2.model.output_shape[-1] == self.config.num_classes
+
+    def test_build_with_custom_seed(self):
+        """Test build with custom random seed."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        model = classifier.build(seed=42)
+
+        assert model is not None
+
+    def test_model_predictions_shape(self):
+        """Test that model predictions have correct shape."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        model = classifier.build()
+        classifier.compile()
+
+        # Test prediction
+        dummy_input = np.random.rand(10, *self.config.input_shape).astype("float32")
+        predictions = model.predict(dummy_input, verbose=0)
+
+        assert predictions.shape == (10, self.config.num_classes)
+        # Check softmax output (sum to 1)
+        assert np.allclose(predictions.sum(axis=1), 1.0, atol=1e-5)

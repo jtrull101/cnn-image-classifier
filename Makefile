@@ -1,38 +1,39 @@
-﻿.PHONY: help install sync clean test lint format build graph install-hooks pre-commit pre-commit-fix ci
+﻿.PHONY: help install sync clean test test-coverage test-parallel test-unit test-integration test-slow test-config test-data test-models test-training test-utils test-cli test-api lint format typecheck build build-config build-utils build-data build-models build-training build-cli build-api serve-api install-hooks pre-commit pre-commit-fix ci
 
 # Default shell for Windows
 SHELL := pwsh.exe
 .SHELLFLAGS := -NoProfile -Command
 
+PY_PACKAGES = "packages/config","packages/utils","packages/data","packages/models","packages/training","packages/cli","apps/api"
+
 help:
-	@echo "Alzheimer's MRI CNN - NX/UV Monorepo"
+	@echo "Alzheimer's MRI CNN - Python/UV Monorepo"
 	@echo ""
 	@echo "Available commands:"
-	@echo "  make install        - Install NX and setup workspace"
+	@echo "  make install        - Install UV and sync dependencies"
 	@echo "  make install-hooks  - Install Git pre-commit hooks"
 	@echo "  make sync           - Sync all UV dependencies"
-	@echo "  make build          - Build all packages"
-	@echo "  make test           - Run tests for all packages (parallel)"
-	@echo "  make lint           - Lint all packages"
-	@echo "  make format         - Format all packages"
-	@echo "  make clean          - Clean build artifacts"
-	@echo "  make graph          - Show dependency graph"
+	@echo "  make build          - Build all packages/apps (uv build)"
+	@echo "  make test           - Run tests with coverage (parallel)"
+	@echo "  make lint           - Lint all code with ruff"
+	@echo "  make format         - Format all code with ruff"
+	@echo "  make typecheck      - Run pyright across the workspace"
+	@echo "  make clean          - Clean build/test artifacts"
 	@echo ""
-	@echo "Testing commands (concurrent/parallel):"
+	@echo "Testing commands:"
 	@echo "  make test           - Run all tests in parallel (auto CPU detection)"
-	@echo "  make test-coverage  - Run all tests with coverage"
+	@echo "  make test-coverage  - Run tests with full coverage reports"
 	@echo "  make test-parallel  - Run tests with custom worker count"
-	@echo "  make test-unit      - Run only unit tests (fast)"
-	@echo "  make test-integration - Run only integration tests (serial)"
-	@echo "  make test-slow      - Run tests and show slowest ones"
-	@echo "  make test-config    - Run config tests only"
-	@echo "  make test-data      - Run data loader tests only"
-	@echo "  make test-models    - Run model tests only"
-	@echo "  make test-training  - Run training tests only"
-	@echo ""
-	@echo "Pre-commit commands:"
-	@echo "  make pre-commit     - Run all pre-commit checks (format, lint, typecheck, test)"
-	@echo "  make pre-commit-fix - Auto-fix formatting and linting issues"
+	@echo "  make test-unit      - Run only unit tests"
+	@echo "  make test-integration - Run only integration tests"
+	@echo "  make test-slow      - Run tests and show slowest cases"
+	@echo "  make test-config    - Run config package tests"
+	@echo "  make test-data      - Run data package tests"
+	@echo "  make test-models    - Run models package tests"
+	@echo "  make test-training  - Run training package tests"
+	@echo "  make test-utils     - Run utils package tests"
+	@echo "  make test-cli       - Run CLI package tests"
+	@echo "  make test-api       - Run API app tests"
 	@echo ""
 	@echo "Package-specific commands:"
 	@echo "  make build-config   - Build config package"
@@ -40,6 +41,7 @@ help:
 	@echo "  make build-data     - Build data package"
 	@echo "  make build-models   - Build models package"
 	@echo "  make build-training - Build training package"
+	@echo "  make build-cli      - Build CLI package"
 	@echo "  make build-api      - Build API application"
 	@echo ""
 	@echo "Application commands:"
@@ -49,34 +51,33 @@ help:
 	@echo "  Pre-commit checks run automatically on each commit"
 	@echo "  Run 'make install-hooks' to install/reinstall hooks"
 
-# Install NX, UV, and dependencies
+# Install UV and dependencies
 install:
-	@echo "Installing NX..."
-	npm install
 	@echo "Checking UV installation..."
-	@powershell -NoProfile -Command "$$uvCmd = Get-Command uv -ErrorAction SilentlyContinue; if (-not $$uvCmd) { $$uvPath = Join-Path $$env:USERPROFILE '.local\bin\uv.exe'; if (-not (Test-Path $$uvPath)) { Write-Host 'UV not found. Installing UV...' -ForegroundColor Yellow; irm https://astral.sh/uv/install.ps1 | iex; Write-Host 'UV installation complete. You may need to restart your terminal or add it to PATH.' -ForegroundColor Green } } else { Write-Host 'UV is already installed:' (uv --version) -ForegroundColor Green }"
-	@echo "Installing UV dependencies..."
-	uv sync
+	@powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install_uv.ps1
+	@echo "Syncing UV workspace (including dev deps)..."
+	uv sync --all-groups
+	@echo "Installing Git hooks..."
+	.\scripts\install_hooks.ps1
 
 # Sync UV dependencies across workspace
 sync:
 	@echo "Syncing workspace dependencies..."
-	uv sync
+	uv sync --all-groups
 
-# Build all packages
+# Build all packages/apps
 build:
-	@echo "Building all packages..."
-	npx nx run-many --target=build --all
+	@echo "Building all packages and apps with uv..."
+	@pwsh -NoProfile -Command "foreach ($$pkg in @($(PY_PACKAGES))) { Write-Host \"[build] $$pkg\" -ForegroundColor Cyan; Push-Location $$pkg; uv build; if ($$LASTEXITCODE -ne 0) { exit $$LASTEXITCODE }; Pop-Location }"
 
-# Test all packages
+# Test all packages with coverage
 test:
-	@echo "Running tests for all packages..."
-	npx nx run-many --target=test --all
+	@echo "Running tests with coverage..."
+	uv run python -m pytest -c pyproject.toml --rootdir . -v -n auto --maxfail=3 --cov=packages --cov=apps --cov-report=term-missing
 
-# Test with coverage
+# Test with coverage reports/combination helper
 test-coverage:
-	@echo "Running tests with comprehensive coverage report..."
-	uv run python -m pytest . -n auto --cov=packages --cov=apps --cov-report=term-missing:skip-covered --cov-report=html --cov-report=xml -v
+	@powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run_coverage.ps1
 
 # Test with specific number of workers
 test-parallel:
@@ -88,7 +89,7 @@ test-unit:
 	@echo "Running unit tests only..."
 	.\scripts\run_tests.ps1 -UnitOnly
 
-# Test integration tests only (slower, serial)
+# Test integration tests only (slower)
 test-integration:
 	@echo "Running integration tests only..."
 	.\scripts\run_tests.ps1 -IntegrationOnly
@@ -98,49 +99,79 @@ test-slow:
 	@echo "Running tests and showing slowest..."
 	.\scripts\run_tests.ps1 -ShowSlowest
 
+# Package-specific test commands
+test-config:
+	@echo "Running config package tests..."
+	.\scripts\run_tests.ps1 -Target config -Coverage
+
+test-data:
+	@echo "Running data package tests..."
+	.\scripts\run_tests.ps1 -Target data -Coverage
+
+test-models:
+	@echo "Running models package tests..."
+	.\scripts\run_tests.ps1 -Target models -Coverage
+
+test-training:
+	@echo "Running training package tests..."
+	.\scripts\run_tests.ps1 -Target training -Coverage
+
+test-utils:
+	@echo "Running utils package tests..."
+	.\scripts\run_tests.ps1 -Target utils -Coverage
+
+test-cli:
+	@echo "Running CLI package tests..."
+	.\scripts\run_tests.ps1 -Target cli -Coverage
+
+test-api:
+	@echo "Running API app tests..."
+	.\scripts\run_tests.ps1 -Target api -Coverage
+
 # Lint all packages
 lint:
 	@echo "Linting all packages..."
-	npx nx run-many --target=lint --all
+	uv run ruff check apps packages scripts tests
 
 # Format all packages
 format:
 	@echo "Formatting all packages..."
-	npx nx run-many --target=format --all
+	uv run ruff format apps packages scripts tests
+
+# Type checking
+typecheck:
+	@echo "Running pyright..."
+	uv run pyright
 
 # Clean build artifacts
 clean:
-	@echo "Cleaning build artifacts..."
-	Get-ChildItem -Path . -Include __pycache__,*.pyc,.pytest_cache,.ruff_cache,dist,build,*.egg-info,node_modules -Recurse -Force | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue
-	@echo "Clean complete!"
-
-# Show dependency graph
-graph:
-	@echo "Generating dependency graph..."
-	npx nx graph
+	@powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean.ps1
 
 # Package-specific builds
 build-config:
-	npx nx run config:build
+	uv build --directory packages/config
 
 build-utils:
-	npx nx run utils:build
+	uv build --directory packages/utils
 
 build-data:
-	npx nx run data:build
+	uv build --directory packages/data
 
 build-models:
-	npx nx run models:build
+	uv build --directory packages/models
 
 build-training:
-	npx nx run training:build
+	uv build --directory packages/training
+
+build-cli:
+	uv build --directory packages/cli
 
 build-api:
-	npx nx run api:build
+	uv build --directory apps/api
 
 # Application commands
 serve-api:
-	npx nx run api:serve
+	uv run python apps/api/run_api.py
 
 # Git hooks
 install-hooks:
@@ -156,5 +187,5 @@ pre-commit-fix:
 	@.\scripts\run-pre-commit-fix.ps1
 
 # CI workflow
-ci: lint test build
+ci: lint typecheck test build
 	@echo "CI checks passed!"

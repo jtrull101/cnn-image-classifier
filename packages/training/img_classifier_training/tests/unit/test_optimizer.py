@@ -9,6 +9,7 @@ import random
 from unittest.mock import patch
 
 import pytest
+from img_classifier_config import BaseConfig
 
 from img_classifier_training.optimizer import (
     HyperparameterSpace,

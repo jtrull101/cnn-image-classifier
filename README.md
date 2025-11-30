@@ -6,7 +6,7 @@
   <sub><a href="https://www.vecteezy.com/free-vector/brain">Brain Vectors by Vecteezy</a></sub>
   
   <h3>AI-Powered Alzheimer's Disease Classification</h3>
-  <p>Production-ready CNN for analyzing MRI images using NX/UV monorepo architecture</p>
+  <p>Production-ready CNN for analyzing MRI images using a UV-managed Python monorepo</p>
   
   ![Tests](https://github.com/jtrull101/alz-mri-neural-network/actions/workflows/tests.yml/badge.svg)
   [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
@@ -34,7 +34,6 @@ A deep learning system for classifying Alzheimer's disease progression from MRI 
 
 ### Prerequisites
 - Python 3.13+
-- Node.js 18+ (for NX)
 - [UV](https://github.com/astral-sh/uv) package manager
 
 ### Installation
@@ -45,19 +44,16 @@ git clone https://github.com/jtrull101/alz-mri-neural-network.git
 cd alz-mri-neural-network
 
 # Automated setup
-.\scripts\setup_monorepo.ps1
+.\scripts\setup.ps1
 ```
 
-The setup script installs NX, UV dependencies, and builds all packages.
+The setup script ensures UV is available, installs dependencies, and runs initial checks/builds.
 
 ### Manual Setup
 
 ```powershell
-# Install UV and dependencies
+# Install UV (if needed) and sync dependencies
 make install
-
-# Build packages
-make build
 ```
 
 **Note:** All configuration is now in `pyproject.toml` files. No separate `requirements.txt`, `pytest.ini`, or `setup.cfg` files needed.
@@ -153,34 +149,31 @@ The original Alzheimer's-specific system continues to work as before:
 
 ## Monorepo Architecture
 
-This project uses an **NX/UV managed monorepo** for better modularity and dependency management.
+This project uses a UV workspace to manage multiple Python packages with shared tooling.
 
 ### Structure
 
 ```
-apps/
-  api/              # Flask REST API
-packages/
-  config/           # Configuration (no dependencies)
-  utils/            # Common utilities
-  data/             # Data loading → config, utils
-  models/           # Neural networks → config
-  training/         # Training pipeline → config, data, models
+alz-mri-neural-network/
+|-- apps/
+|   `-- api/                    # FastAPI application
+|-- packages/
+|   |-- config/                 # Configuration (Pydantic)
+|   |-- utils/                  # Common utilities
+|   |-- data/                   # Data loading
+|   |-- models/                 # Neural networks
+|   |-- training/               # Training pipeline
+|   `-- cli/                    # CLI entrypoints
+|-- scripts/                    # Dev/CI helper scripts
+|-- docs/                       # Documentation
+|-- tests/                      # Shared tests
+`-- pyproject.toml              # Workspace configuration
 ```
 
-### Dependency Graph
-
-```
-config (base) → utils → data → training → api
-                    ↓      ↓       ↓
-                 models ────────────
-```
-
-### Benefits
-- **Modularity**: Clear package boundaries
-- **Speed**: Parallel builds, incremental rebuilds, caching
-- **Type Safety**: Per-package type checking
-- **Reusability**: Packages work independently
+### Dependency Flow
+- `config` -> `utils` -> `data` -> `training` -> `api`
+- `models` is consumed by `training` and `api`
+- `cli` pulls from config/data/models/training for end-user commands
 
 ---
 
@@ -264,33 +257,33 @@ accuracy, loss = trainer.run(plot=True)
 ### Commands
 
 ```powershell
-make help          # Show all commands
-make build         # Build all packages
-make test          # Run all tests
-make lint          # Lint code
-make format        # Format code
-make serve-api     # Start API
-make graph         # View dependency graph
-make pre-commit    # Run all checks
+make help           # Show all commands
+make install        # Install UV (if needed) and sync deps
+make sync           # Sync deps (including dev)
+make build          # Build all packages/apps
+make test           # Run all tests with coverage
+make test-coverage  # Full coverage reports
+make lint           # Ruff lint
+make format         # Ruff format
+make typecheck      # Pyright
+make serve-api      # Start API
+make pre-commit     # Run all checks
 ```
 
-### NX Commands
+### Scoped tasks
 
 ```powershell
 # Build specific package
-npx nx run config:build
-npx nx run data:build
+uv build --directory packages/config
+uv build --directory packages/models
 
-# Test specific package  
-npx nx run models:test
+# Run targeted tests
+uv run python -m pytest packages/data/img_classifier_data/tests -v
+.\scripts\run_tests.ps1 -UnitOnly
 
-# Lint/format specific package
-npx nx run api:lint
-npx nx run training:format
-
-# Only affected by changes
-npx nx affected --target=build
-npx nx affected --target=test
+# Lint/format a path
+uv run ruff check apps/api
+uv run ruff format packages/training
 ```
 
 ### Adding Dependencies
@@ -310,37 +303,24 @@ uv add --dev pytest
 
 ```
 alz-mri-neural-network/
-├── apps/
-│   └── api/                    # Flask application
-│       ├── img_classifier_api/
-│       │   ├── app.py
-│       │   ├── static/         # Model weights
-│       │   └── templates/
-│       ├── pyproject.toml
-│       └── project.json
-├── packages/
-│   ├── config/                 # Configuration
-│   │   ├── img_classifier_config/
-│   │   │   ├── base_config.py
-│   │   │   └── alzheimer_config.py
-│   │   ├── pyproject.toml
-│   │   └── project.json
-│   ├── utils/                  # Utilities
-│   │   └── img_classifier_utils/
-│   ├── data/                   # Data loading
-│   │   └── img_classifier_data/
-│   ├── models/                 # Neural networks
-│   │   └── img_classifier_models/
-│   └── training/               # Training pipeline
-│       └── img_classifier_training/
-├── docs/
-│   ├── ARCHITECTURE.md         # System design
-│   └── TESTING.md              # Test strategy
-├── nx.json                     # NX config
-├── package.json                # Node/NX deps
-├── pyproject.toml              # UV workspace
-├── Makefile                    # Build commands
-└── README.md                   # This file
+|-- apps/
+|   `-- api/                    # FastAPI application
+|       |-- img_classifier_api/
+|       |-- tests/
+|       `-- pyproject.toml
+|-- packages/
+|   |-- config/                 # Configuration
+|   |-- utils/                  # Utilities
+|   |-- data/                   # Data loading
+|   |-- models/                 # Neural networks
+|   |-- training/               # Training pipeline
+|   `-- cli/                    # CLI interface
+|-- docs/                       # System docs
+|-- scripts/                    # Developer tooling
+|-- tests/                      # Shared tests
+|-- pyproject.toml              # UV workspace
+|-- Makefile                    # Build commands
+`-- README.md                   # This file
 ```
 
 ---
@@ -349,13 +329,13 @@ alz-mri-neural-network/
 
 | Component | Tool | Purpose |
 |-----------|------|---------|
-| **Build System** | NX | Task orchestration, caching, parallel builds |
+| **Task Runner** | Make + UV | Workspace orchestration |
 | **Package Manager** | UV | 10-100x faster than pip |
 | **Linter/Formatter** | Ruff | Replaces flake8, isort, autopep8 |
 | **Type Checker** | Pyright | Fast, accurate type inference |
 | **Testing** | Pytest | With coverage reporting |
 | **Deep Learning** | TensorFlow/Keras | Neural network training |
-| **Web Framework** | Flask | REST API |
+| **Web Framework** | FastAPI | REST API |
 | **Data Processing** | NumPy, OpenCV, Pandas | Image and data manipulation |
 
 ---
@@ -453,7 +433,7 @@ img-classifier predict model.keras image.jpg
 ```
 
 ### api (alz-mri-api)
-Flask REST API with web interface.
+FastAPI application with web interface.
 
 ---
 
@@ -464,11 +444,11 @@ Flask REST API with web interface.
 make test
 
 # Test specific package
-npx nx run config:test
-npx nx run data:test
+uv run python -m pytest packages/config/img_classifier_config/tests -v
+uv run python -m pytest packages/data/img_classifier_data/tests -v
 
 # With coverage
-uv run pytest --cov
+uv run python -m pytest -c pyproject.toml --rootdir . --cov=packages --cov=apps --cov-report=term-missing
 ```
 
 **Test Suite:** Comprehensive tests covering configuration, data loading, models, training, and integration.
@@ -501,9 +481,9 @@ uv sync
 make build
 ```
 
-### NX Commands Fail
+### UV issues
 ```powershell
-npm install
+uv sync --dev --reinstall
 ```
 
 ### Import Errors

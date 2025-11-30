@@ -6,7 +6,6 @@ to ensure fast execution and isolation from other packages.
 
 import numpy as np
 import pytest
-from unittest.mock import Mock
 
 from img_classifier_data import BaseDataLoader, ImageDataLoader
 
@@ -16,16 +15,10 @@ class TestBaseDataLoader:
     """Unit tests for BaseDataLoader abstract class."""
 
     @pytest.fixture(autouse=True)
-    def setup_method(self, isolated_tmp_dir):
+    def setup_method(self, isolated_tmp_dir, mock_config):
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
-
-        # Create mock config
-        self.mock_config = Mock()
-        self.mock_config.working_dir = self.temp_dir
-        self.mock_config.data_path = self.temp_dir / "data"
-        self.mock_config.train_path = self.temp_dir / "data" / "train"
-        self.mock_config.test_path = self.temp_dir / "data" / "test"
+        self.config = mock_config
 
         yield
 
@@ -55,7 +48,7 @@ class TestBaseDataLoader:
             def prepare_dataset(self):
                 pass
 
-        loader = ConcreteLoader(self.mock_config)
+        loader = ConcreteLoader(self.config)
 
         # Create test directory structure
         test_path = self.temp_dir / "categories_test"
@@ -235,8 +228,8 @@ class TestImageDataLoader:
     def test_prepare_dataset_already_prepared(self):
         """Test prepare_dataset when dataset is already prepared."""
         # Create train and test directories with content
-        self.config.train_path.mkdir(parents=True)
-        self.config.test_path.mkdir(parents=True)
+        self.config.train_path.mkdir(parents=True, exist_ok=True)
+        self.config.test_path.mkdir(parents=True, exist_ok=True)
         (self.config.train_path / "class1").mkdir()
         (self.config.test_path / "class1").mkdir()
 
@@ -407,7 +400,6 @@ class TestImageDataLoaderEdgeCases:
         assert self.loader.config.batch_size == 64
         assert self.loader.config.batch_size != original_batch_size
 
-
     def test_split_data_with_single_sample(self):
         """Test split_data with only one sample."""
         x = np.array([[1]])
@@ -568,3 +560,539 @@ class TestImageDataLoaderEdgeCases:
         assert len(y_reduced) == 5
         assert x_reduced.shape[1:] == (10, 10)
 
+
+@pytest.mark.unit
+class TestImageDataLoaderCacheOperations:
+    """Tests for ImageDataLoader cache operations."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, isolated_tmp_dir, mock_config):
+        """Set up test fixtures."""
+        self.temp_dir = isolated_tmp_dir
+        self.config = mock_config
+        self.loader = ImageDataLoader(self.config)
+        yield
+
+    def test_save_and_load_cache_train(self):
+        """Test saving and loading training data cache."""
+        x = np.random.rand(10, 128, 128, 3).astype("float32")
+        y = np.array([0, 1, 2, 3, 0, 1, 2, 3, 0, 1])
+
+        # Save to cache
+        self.loader._save_to_cache(x, y, train=True)
+
+        # Load from cache
+        cached = self.loader._load_from_cache(train=True)
+
+        assert cached is not None
+        x_cached, y_cached = cached
+        np.testing.assert_array_equal(x, x_cached)
+        np.testing.assert_array_equal(y, y_cached)
+
+    def test_save_and_load_cache_test(self):
+        """Test saving and loading test data cache."""
+        x = np.random.rand(5, 128, 128, 3).astype("float32")
+        y = np.array([0, 1, 2, 3, 0])
+
+        # Save to cache
+        self.loader._save_to_cache(x, y, train=False)
+
+        # Load from cache
+        cached = self.loader._load_from_cache(train=False)
+
+        assert cached is not None
+        x_cached, y_cached = cached
+        np.testing.assert_array_equal(x, x_cached)
+        np.testing.assert_array_equal(y, y_cached)
+
+    def test_load_from_corrupted_cache(self):
+        """Test loading from corrupted cache returns None."""
+        # Create corrupted cache files
+        x_path, y_path = self.loader._get_cache_path(train=True)
+        x_path.parent.mkdir(parents=True, exist_ok=True)
+        x_path.write_text("corrupted data")
+        y_path.write_text("corrupted data")
+
+        result = self.loader._load_from_cache(train=True)
+        assert result is None
+
+    def test_cache_path_creates_parent_directory(self):
+        """Test that save_to_cache creates parent directories."""
+        # Ensure cache dir doesn't exist
+        import shutil
+
+        if self.config.cache_dir.exists():
+            shutil.rmtree(self.config.cache_dir)
+
+        x = np.random.rand(5, 128, 128, 3).astype("float32")
+        y = np.array([0, 1, 2, 3, 0])
+
+        self.loader._save_to_cache(x, y, train=True)
+
+        assert self.config.cache_dir.exists()
+
+    def test_load_cache_with_only_x_file(self):
+        """Test loading cache when only X file exists."""
+        x_path, y_path = self.loader._get_cache_path(train=True)
+        x_path.parent.mkdir(parents=True, exist_ok=True)
+
+        import pickle
+
+        with open(x_path, "wb") as f:  # type: ignore[arg-type]
+            pickle.dump(np.array([1, 2, 3]), f)  # type: ignore[arg-type]
+
+        result = self.loader._load_from_cache(train=True)
+        assert result is None
+
+    def test_load_cache_with_only_y_file(self):
+        """Test loading cache when only y file exists."""
+        x_path, y_path = self.loader._get_cache_path(train=True)
+        y_path.parent.mkdir(parents=True, exist_ok=True)
+
+        import pickle
+
+        with open(y_path, "wb") as f:  # type: ignore[arg-type]
+            pickle.dump(np.array([0, 1, 2]), f)  # type: ignore[arg-type]
+
+        result = self.loader._load_from_cache(train=True)
+        assert result is None
+
+
+@pytest.mark.unit
+class TestImageDataLoaderDownloadPrepare:
+    """Tests for ImageDataLoader download and prepare operations."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, isolated_tmp_dir, mock_config):
+        """Set up test fixtures."""
+        self.temp_dir = isolated_tmp_dir
+        self.config = mock_config
+        self.loader = ImageDataLoader(self.config)
+        yield
+
+    def test_download_dataset_already_exists(self):
+        """Test download_dataset when zip already exists."""
+        self.config.dataset_zip_id = "test_id_123"
+        zip_path = self.config.data_path / f"{self.config.dataset_name}.zip"
+        zip_path.parent.mkdir(parents=True, exist_ok=True)
+        zip_path.write_text("fake zip content")
+
+        result = self.loader.download_dataset()
+        assert result is True
+
+    def test_prepare_dataset_missing_zip(self):
+        """Test prepare_dataset fails when zip doesn't exist."""
+        result = self.loader.prepare_dataset()
+        assert result is False
+
+    def test_prepare_dataset_with_empty_train_test(self):
+        """Test prepare_dataset when train/test exist but are empty."""
+        self.config.train_path.mkdir(parents=True, exist_ok=True)
+        self.config.test_path.mkdir(parents=True, exist_ok=True)
+
+        # Create zip file
+        zip_path = self.config.data_path / f"{self.config.dataset_name}.zip"
+        zip_path.write_text("fake zip")
+
+        result = self.loader.prepare_dataset()
+        # Will fail because extraction will fail with fake zip
+        assert result is False
+
+    def test_setup_with_valid_structure(self):
+        """Test setup with valid directory structure."""
+        # Create valid train/test structure
+        self.config.train_path.mkdir(parents=True, exist_ok=True)
+        self.config.test_path.mkdir(parents=True, exist_ok=True)
+        (self.config.train_path / "class1").mkdir()
+        (self.config.train_path / "class2").mkdir()
+        (self.config.test_path / "class1").mkdir()
+        (self.config.test_path / "class2").mkdir()
+
+        result = self.loader.setup()
+        assert result is True
+
+    def test_setup_with_no_categories(self):
+        """Test setup fails when no categories found."""
+        self.config.train_path.mkdir(parents=True, exist_ok=True)
+        self.config.test_path.mkdir(parents=True, exist_ok=True)
+
+        result = self.loader.setup()
+        assert result is False
+
+    def test_setup_missing_test_path(self):
+        """Test setup fails when test path missing."""
+        self.config.train_path.mkdir(parents=True, exist_ok=True)
+        (self.config.train_path / "class1").mkdir()
+
+        result = self.loader.setup()
+        assert result is False
+
+    def test_setup_missing_train_path(self):
+        """Test setup fails when train path missing."""
+        self.config.test_path.mkdir(parents=True, exist_ok=True)
+        (self.config.test_path / "class1").mkdir()
+
+        result = self.loader.setup()
+        assert result is False
+
+
+@pytest.mark.unit
+class TestImageDataLoaderProcessing:
+    """Tests for ImageDataLoader image processing."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, isolated_tmp_dir, mock_config):
+        """Set up test fixtures."""
+        self.temp_dir = isolated_tmp_dir
+        self.config = mock_config
+        self.loader = ImageDataLoader(self.config)
+        yield
+
+    def test_process_images_no_categories(self):
+        """Test _process_images raises error when no categories found."""
+        test_path = self.temp_dir / "empty"
+        test_path.mkdir()
+
+        with pytest.raises(ValueError, match="No categories found"):
+            self.loader._process_images(test_path)
+
+    def test_process_images_with_valid_images(self, mocker):
+        """Test _process_images successfully processes valid images."""
+        # Create test directory structure
+        test_path = self.temp_dir / "images"
+        test_path.mkdir()
+        (test_path / "class1").mkdir()
+        (test_path / "class2").mkdir()
+
+        # Create mock image files
+        img1 = test_path / "class1" / "img1.jpg"
+        img2 = test_path / "class1" / "img2.png"
+        img3 = test_path / "class2" / "img3.jpeg"
+
+        for img_file in [img1, img2, img3]:
+            img_file.write_text("fake image data")
+
+        # Mock cv2 functions - use config's image_size
+        img_h, img_w = self.config.image_size
+        mock_image = np.random.randint(0, 255, (img_h, img_w, 3), dtype=np.uint8)
+        mocker.patch("cv2.imread", return_value=mock_image)
+        mocker.patch("cv2.resize", return_value=mock_image)
+
+        # Mock tqdm to avoid progress bars in tests
+        mocker.patch("img_classifier_data.image_loader.tqdm", side_effect=lambda x, **kwargs: x)
+
+        x, y = self.loader._process_images(test_path)
+
+        assert x.shape[0] == 3  # 3 images
+        assert y.shape[0] == 3
+        assert x.dtype == np.float32
+        assert np.all(x >= 0) and np.all(x <= 1)  # Normalized
+        assert self.loader.num_categories == 2
+
+    def test_process_images_with_none_image(self, mocker):
+        """Test _process_images skips images that fail to load."""
+        test_path = self.temp_dir / "images"
+        test_path.mkdir()
+        (test_path / "class1").mkdir()
+
+        # Create mock image files
+        img1 = test_path / "class1" / "img1.jpg"
+        img2 = test_path / "class1" / "img2.jpg"
+        img1.write_text("fake")
+        img2.write_text("fake")
+
+        # Mock cv2.imread to return None for first image, valid for second
+        img_h, img_w = self.config.image_size
+        mock_image = np.random.randint(0, 255, (img_h, img_w, 3), dtype=np.uint8)
+        mocker.patch("cv2.imread", side_effect=[None, mock_image])
+        mocker.patch("cv2.resize", return_value=mock_image)
+        mocker.patch("img_classifier_data.image_loader.tqdm", side_effect=lambda x, **kwargs: x)
+
+        x, y = self.loader._process_images(test_path)
+
+        assert x.shape[0] == 1  # Only 1 image successfully processed
+
+    def test_process_images_with_exception(self, mocker):
+        """Test _process_images handles exceptions during processing."""
+        test_path = self.temp_dir / "images"
+        test_path.mkdir()
+        (test_path / "class1").mkdir()
+
+        img1 = test_path / "class1" / "img1.jpg"
+        img2 = test_path / "class1" / "img2.jpg"
+        img1.write_text("fake")
+        img2.write_text("fake")
+
+        img_h, img_w = self.config.image_size
+        mock_image = np.random.randint(0, 255, (img_h, img_w, 3), dtype=np.uint8)
+        # First image raises exception, second succeeds
+        mocker.patch("cv2.imread", side_effect=[Exception("Read error"), mock_image])
+        mocker.patch("cv2.resize", return_value=mock_image)
+        mocker.patch("img_classifier_data.image_loader.tqdm", side_effect=lambda x, **kwargs: x)
+
+        x, y = self.loader._process_images(test_path)
+
+        assert x.shape[0] == 1  # Only 1 image successfully processed
+
+    def test_process_images_ignores_non_image_files(self, mocker):
+        """Test _process_images ignores non-image files."""
+        test_path = self.temp_dir / "images"
+        test_path.mkdir()
+        (test_path / "class1").mkdir()
+
+        # Create various file types
+        (test_path / "class1" / "img1.jpg").write_text("fake")
+        (test_path / "class1" / "doc.txt").write_text("text")
+        (test_path / "class1" / "data.csv").write_text("csv")
+        (test_path / "class1" / "img2.png").write_text("fake")
+
+        img_h, img_w = self.config.image_size
+        mock_image = np.random.randint(0, 255, (img_h, img_w, 3), dtype=np.uint8)
+        mocker.patch("cv2.imread", return_value=mock_image)
+        mocker.patch("cv2.resize", return_value=mock_image)
+        mocker.patch("img_classifier_data.image_loader.tqdm", side_effect=lambda x, **kwargs: x)
+
+        x, y = self.loader._process_images(test_path)
+
+        assert x.shape[0] == 2  # Only 2 image files
+
+    def test_process_images_sets_categories(self, mocker):
+        """Test _process_images properly sets categories and num_categories."""
+        test_path = self.temp_dir / "images"
+        test_path.mkdir()
+        (test_path / "cat").mkdir()
+        (test_path / "dog").mkdir()
+        (test_path / "bird").mkdir()
+
+        (test_path / "cat" / "img.jpg").write_text("fake")
+        (test_path / "dog" / "img.jpg").write_text("fake")
+        (test_path / "bird" / "img.jpg").write_text("fake")
+
+        img_h, img_w = self.config.image_size
+        mock_image = np.random.randint(0, 255, (img_h, img_w, 3), dtype=np.uint8)
+        mocker.patch("cv2.imread", return_value=mock_image)
+        mocker.patch("cv2.resize", return_value=mock_image)
+        mocker.patch("img_classifier_data.image_loader.tqdm", side_effect=lambda x, **kwargs: x)
+
+        x, y = self.loader._process_images(test_path)
+
+        assert self.loader.num_categories == 3
+        assert len(self.loader.categories) == 3
+        assert set(y) == {0, 1, 2}  # Labels should be 0, 1, 2
+
+
+@pytest.mark.unit
+class TestImageDataLoaderLoadMethods:
+    """Tests for load_train_data and load_test_data methods."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, isolated_tmp_dir, mock_config):
+        """Set up test fixtures."""
+        self.temp_dir = isolated_tmp_dir
+        self.config = mock_config
+        self.loader = ImageDataLoader(self.config)
+        yield
+
+    def test_load_train_data_from_cache(self, mocker):
+        """Test load_train_data loads from cache when available."""
+        # Mock _load_from_cache to return data
+        mock_x = np.random.rand(10, 128, 128, 3).astype("float32")
+        mock_y = np.array([0, 1, 0, 1, 0, 1, 0, 1, 0, 1])
+        mocker.patch.object(self.loader, "_load_from_cache", return_value=(mock_x, mock_y))
+
+        X, y = self.loader.load_train_data()
+
+        np.testing.assert_array_equal(X, mock_x)
+        np.testing.assert_array_equal(y, mock_y)
+
+    def test_load_train_data_processes_images(self, mocker):
+        """Test load_train_data processes images when cache not available."""
+        # Create directory structure
+        self.config.train_path.mkdir(parents=True, exist_ok=True)
+        (self.config.train_path / "class1").mkdir()
+        (self.config.train_path / "class1" / "img.jpg").write_text("fake")
+
+        # Mock methods
+        mock_x = np.random.rand(5, 128, 128, 3).astype("float32")
+        mock_y = np.array([0, 1, 0, 1, 0])
+
+        mocker.patch.object(self.loader, "_load_from_cache", return_value=None)
+        mocker.patch.object(self.loader, "_process_images", return_value=(mock_x, mock_y))
+        mock_save = mocker.patch.object(self.loader, "_save_to_cache")
+
+        x, y = self.loader.load_train_data()
+
+        np.testing.assert_array_equal(x, mock_x)
+        np.testing.assert_array_equal(y, mock_y)
+        mock_save.assert_called_once_with(mock_x, mock_y, train=True)
+
+    def test_load_test_data_from_cache(self, mocker):
+        """Test load_test_data loads from cache when available."""
+        mock_x = np.random.rand(5, 128, 128, 3).astype("float32")
+        mock_y = np.array([0, 1, 2, 0, 1])
+        mocker.patch.object(self.loader, "_load_from_cache", return_value=(mock_x, mock_y))
+
+        x, y = self.loader.load_test_data()
+
+        np.testing.assert_array_equal(x, mock_x)
+        np.testing.assert_array_equal(y, mock_y)
+
+    def test_load_test_data_processes_images(self, mocker):
+        """Test load_test_data processes images when cache not available."""
+        self.config.test_path.mkdir(parents=True, exist_ok=True)
+        (self.config.test_path / "class1").mkdir()
+        (self.config.test_path / "class1" / "img.jpg").write_text("fake")
+
+        mock_x = np.random.rand(3, 128, 128, 3).astype("float32")
+        mock_y = np.array([0, 1, 2])
+
+        mocker.patch.object(self.loader, "_load_from_cache", return_value=None)
+        mocker.patch.object(self.loader, "_process_images", return_value=(mock_x, mock_y))
+        mock_save = mocker.patch.object(self.loader, "_save_to_cache")
+
+        x, y = self.loader.load_test_data()
+
+        np.testing.assert_array_equal(x, mock_x)
+        np.testing.assert_array_equal(y, mock_y)
+        mock_save.assert_called_once_with(mock_x, mock_y, train=False)
+
+
+@pytest.mark.unit
+class TestImageDataLoaderCacheErrors:
+    """Tests for cache error handling."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, isolated_tmp_dir, mock_config):
+        """Set up test fixtures."""
+        self.temp_dir = isolated_tmp_dir
+        self.config = mock_config
+        self.loader = ImageDataLoader(self.config)
+        yield
+
+    def test_save_to_cache_handles_write_errors(self, mocker):
+        """Test _save_to_cache handles write errors gracefully."""
+        x = np.random.rand(5, 128, 128, 3).astype("float32")
+        y = np.array([0, 1, 2, 0, 1])
+
+        # Mock pickle.dump to raise an exception
+        mocker.patch("pickle.dump", side_effect=Exception("Write error"))
+
+        # Should not raise, just print error
+        self.loader._save_to_cache(x, y, train=True)
+
+        # Verify cache files were not created or are incomplete
+        x_path, y_path = self.loader._get_cache_path(train=True)
+        # Files might exist but be incomplete/corrupted
+
+    def test_save_to_cache_creates_directory(self):
+        """Test _save_to_cache creates cache directory if it doesn't exist."""
+        import shutil
+
+        if self.config.cache_dir.exists():
+            shutil.rmtree(self.config.cache_dir)
+
+        x = np.random.rand(2, 128, 128, 3).astype("float32")
+        y = np.array([0, 1])
+
+        self.loader._save_to_cache(x, y, train=True)
+
+        assert self.config.cache_dir.exists()
+
+
+@pytest.mark.unit
+class TestImageDataLoaderDownloadSuccess:
+    """Tests for successful download scenarios."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, isolated_tmp_dir, mock_config):
+        """Set up test fixtures."""
+        self.temp_dir = isolated_tmp_dir
+        self.config = mock_config
+        self.loader = ImageDataLoader(self.config)
+        yield
+
+    def test_download_dataset_success(self, mocker):
+        """Test successful download from Google Drive."""
+        self.config.dataset_zip_id = "test_id_123"
+
+        # Mock download_from_google_drive to return True
+        mocker.patch(
+            "img_classifier_data.image_loader.download_from_google_drive", return_value=True
+        )
+
+        result = self.loader.download_dataset()
+
+        assert result is True
+
+    def test_download_dataset_failure(self, mocker):
+        """Test failed download from Google Drive."""
+        self.config.dataset_zip_id = "test_id_123"
+
+        # Mock download_from_google_drive to return False
+        mocker.patch(
+            "img_classifier_data.image_loader.download_from_google_drive", return_value=False
+        )
+
+        result = self.loader.download_dataset()
+
+        assert result is False
+
+
+@pytest.mark.unit
+class TestImageDataLoaderPrepareExtraction:
+    """Tests for dataset extraction scenarios."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, isolated_tmp_dir, mock_config):
+        """Set up test fixtures."""
+        self.temp_dir = isolated_tmp_dir
+        self.config = mock_config
+        self.loader = ImageDataLoader(self.config)
+        yield
+
+    def test_prepare_dataset_extracts_archive(self, mocker):
+        """Test prepare_dataset extracts archive when needed."""
+        # Create zip file
+        zip_path = self.config.data_path / f"{self.config.dataset_name}.zip"
+        zip_path.parent.mkdir(parents=True, exist_ok=True)
+        zip_path.write_text("fake zip content")
+
+        # Mock extract_archive and organize_dataset
+        mocker.patch("img_classifier_data.image_loader.extract_archive", return_value=True)
+        mocker.patch("img_classifier_data.image_loader.organize_dataset")
+
+        # Create extracted path after "extraction"
+        extracted_path = self.config.data_path / self.config.dataset_name
+        extracted_path.mkdir(parents=True, exist_ok=True)
+
+        result = self.loader.prepare_dataset()
+
+        assert result is True
+
+    def test_prepare_dataset_extraction_fails(self, mocker):
+        """Test prepare_dataset returns False when extraction fails."""
+        zip_path = self.config.data_path / f"{self.config.dataset_name}.zip"
+        zip_path.parent.mkdir(parents=True, exist_ok=True)
+        zip_path.write_text("fake zip content")
+
+        # Mock extract_archive to return False
+        mocker.patch("img_classifier_data.image_loader.extract_archive", return_value=False)
+
+        result = self.loader.prepare_dataset()
+
+        assert result is False
+
+    def test_prepare_dataset_organizes_when_extracted(self, mocker):
+        """Test prepare_dataset organizes dataset when already extracted."""
+        # Create extracted directory
+        extracted_path = self.config.data_path / self.config.dataset_name
+        extracted_path.mkdir(parents=True, exist_ok=True)
+
+        # Mock organize_dataset
+        mock_organize = mocker.patch("img_classifier_data.image_loader.organize_dataset")
+
+        result = self.loader.prepare_dataset()
+
+        # organize_dataset should be called
+        mock_organize.assert_called_once_with(extracted_path, self.config.data_path)
+        assert result is True

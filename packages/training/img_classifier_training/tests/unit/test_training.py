@@ -119,6 +119,11 @@ class TestTrainer:
         self.mock_config.use_early_stopping = True
         self.mock_config.use_model_checkpoint = True
         self.mock_config.use_accuracy_threshold_stopping = True
+        self.mock_config.project_name = "test_project"
+        self.mock_config.learning_rate = 0.001
+        self.mock_config.min_accuracy_to_save = 0.0
+        self.mock_config.test_split = 0.5
+        self.mock_config.logs_dir = self.temp_dir / "logs"
         self.mock_config.models_dir = self.temp_dir / "models"
 
         # Mock the model
@@ -251,9 +256,10 @@ class TestTrainer:
 
     def test_save_model_calls_model_save(self):
         """Test that save_model delegates to model.save."""
-        save_path = self.temp_dir / "model.keras"
+        path = self.trainer.save_model(acc=0.95, loss=0.3, elapsed_time=100.0, force_save=True)
 
-        self.trainer.save_model(save_path, loss=0.3, elapsed_time=100.0)
-
-        # Verify model.save was called
-        self.mock_model.save.assert_called_once_with(save_path)
+        assert path is not None
+        # Verify model.save was called with the generated path
+        self.mock_model.save.assert_called_once()
+        saved_path = self.mock_model.save.call_args[0][0]
+        assert saved_path.parent == self.mock_config.models_dir

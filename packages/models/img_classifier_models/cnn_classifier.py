@@ -1,5 +1,7 @@
 """CNN classifier model for image classification."""
 
+from typing import Any, Optional
+
 import tensorflow as tf
 from img_classifier_config import BaseConfig
 from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
@@ -26,39 +28,49 @@ class CnnClassifier(BaseModel):
         self.seed = seed
         tf.random.set_seed(seed)
 
-    def build(self) -> tf.keras.Model:
+    def build(self, complexity: Optional[str] = None, seed: Optional[int] = None) -> tf.keras.Model:
         """Build the CNN architecture.
+
+        Args:
+            complexity: Optional complexity hint ('simple', 'medium', 'deep')
+            seed: Optional random seed override
 
         Returns:
             Keras Sequential model
         """
-        model = Sequential(
+        if seed is not None:
+            tf.random.set_seed(seed)
+            self.seed = seed
+
+        complexity_key = (
+            complexity or getattr(self.config, "architecture_complexity", "medium") or "medium"
+        ).lower()
+        filters_by_complexity = {
+            "simple": [32, 64, 64, 128],
+            "medium": [64, 64, 64, 128],
+            "deep": [64, 64, 128, 256],
+        }
+        filters = filters_by_complexity.get(complexity_key, filters_by_complexity["medium"])
+
+        layers = []
+        for idx, filters_count in enumerate(filters):
+            kwargs: dict[str, Any] = {"activation": "relu", "padding": "same"}
+            if idx == 0:
+                kwargs["input_shape"] = self.config.input_shape
+            layers.append(Conv2D(filters_count, (3, 3), **kwargs))
+            layers.append(MaxPooling2D())
+            if filters_count >= 128:
+                layers.append(Dropout(self.config.dropout_rate))
+
+        layers.extend(
             [
-                # First conv block
-                Conv2D(
-                    64,
-                    (5, 5),
-                    activation="relu",
-                    padding="same",
-                    input_shape=self.config.input_shape,
-                ),
-                MaxPooling2D(),
-                # Second conv block
-                Conv2D(64, (3, 3), activation="relu", padding="same"),
-                MaxPooling2D(),
-                # Third conv block
-                Conv2D(64, (3, 3), activation="relu", padding="same"),
-                MaxPooling2D(),
-                # Fourth conv block with dropout
-                Conv2D(128, (3, 3), activation="relu", padding="same"),
-                Dropout(self.config.dropout_rate),
-                MaxPooling2D(),
-                # Flatten and dense layers
                 Flatten(),
                 Dense(self.config.image_size[0], activation="relu"),
                 Dense(self.config.num_classes, activation="softmax"),
             ]
         )
+
+        model = Sequential(layers)
 
         self.model = model
         return model

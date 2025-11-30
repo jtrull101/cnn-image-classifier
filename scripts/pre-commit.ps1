@@ -34,7 +34,7 @@ $ErrorCount = 0
 
 # Format code
 Write-Host "[1/4] Formatting code with ruff..." -ForegroundColor Yellow
-npx nx run-many --target=format --all
+& $uvCommand run ruff format apps packages scripts tests
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[ERROR] Formatting failed" -ForegroundColor Red
     $ErrorCount++
@@ -45,7 +45,7 @@ Write-Host ""
 
 # Lint code
 Write-Host "[2/4] Linting code with ruff..." -ForegroundColor Yellow
-npx nx run-many --target=lint --all
+& $uvCommand run ruff check apps packages scripts tests
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[ERROR] Linting failed" -ForegroundColor Red
     $ErrorCount++
@@ -67,7 +67,7 @@ Write-Host ""
 
 # Run tests
 Write-Host "[4/4] Running tests..." -ForegroundColor Yellow
-npx nx run-many --target=test --all
+& $uvCommand run python -m pytest -c pyproject.toml --rootdir . -v -n auto --maxfail=3 --cov=packages --cov=apps --cov-report=term-missing
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[ERROR] Tests failed" -ForegroundColor Red
     $ErrorCount++

@@ -36,10 +36,8 @@ if ($Parallel) {
     Write-Host "Running sequentially" -ForegroundColor Yellow
 }
 
-if ($Coverage) {
-    $pytestCmd += " --cov=packages --cov=apps --cov-report=term-missing --cov-report=html --cov-report=xml"
-    Write-Host "Coverage reporting enabled" -ForegroundColor Green
-}
+# Coverage will be added per-target to scope it correctly
+$coverageAdded = $false
 
 if ($UnitOnly) {
     $pytestCmd += " -m unit"
@@ -66,10 +64,106 @@ switch ($Target) {
     "all" {
         Write-Host "Running all tests" -ForegroundColor Cyan
         $pytestCmd += " tests/"
+        if ($Coverage) {
+            $pytestCmd += " --cov=packages --cov=apps --cov-report=term-missing --cov-report=html --cov-report=xml"
+            Write-Host "Coverage enabled for all packages and apps" -ForegroundColor Green
+            $coverageAdded = $true
+        }
+    }
+    "config" {
+        Write-Host "Running config package tests" -ForegroundColor Cyan
+        $pytestCmd += " packages/config/img_classifier_config/tests/ tests/unit/ tests/integration/"
+        if ($Coverage) {
+            $pytestCmd += " --cov=packages/config/img_classifier_config --cov-report=term-missing --cov-report=html --cov-report=xml"
+            Write-Host "Coverage enabled for config package" -ForegroundColor Green
+            $coverageAdded = $true
+        }
+    }
+    "data" {
+        Write-Host "Running data package tests" -ForegroundColor Cyan
+        $pytestCmd += " packages/data/img_classifier_data/tests/ tests/unit/ tests/integration/"
+        if ($Coverage) {
+            $pytestCmd += " --cov=packages/data/img_classifier_data --cov-report=term-missing --cov-report=html --cov-report=xml"
+            Write-Host "Coverage enabled for data package" -ForegroundColor Green
+            $coverageAdded = $true
+        }
+    }
+    "models" {
+        Write-Host "Running models package tests" -ForegroundColor Cyan
+        $pytestCmd += " packages/models/img_classifier_models/tests/ tests/unit/ tests/integration/"
+        if ($Coverage) {
+            $pytestCmd += " --cov=packages/models/img_classifier_models --cov-report=term-missing --cov-report=html --cov-report=xml"
+            Write-Host "Coverage enabled for models package" -ForegroundColor Green
+            $coverageAdded = $true
+        }
+    }
+    "training" {
+        Write-Host "Running training package tests" -ForegroundColor Cyan
+        $pytestCmd += " packages/training/img_classifier_training/tests/ tests/unit/ tests/integration/"
+        if ($Coverage) {
+            $pytestCmd += " --cov=packages/training/img_classifier_training --cov-report=term-missing --cov-report=html --cov-report=xml"
+            Write-Host "Coverage enabled for training package" -ForegroundColor Green
+            $coverageAdded = $true
+        }
+    }
+    "utils" {
+        Write-Host "Running utils package tests" -ForegroundColor Cyan
+        $pytestCmd += " packages/utils/img_classifier_utils/tests/ tests/unit/ tests/integration/"
+        if ($Coverage) {
+            $pytestCmd += " --cov=packages/utils/img_classifier_utils --cov-report=term-missing --cov-report=html --cov-report=xml"
+            Write-Host "Coverage enabled for utils package" -ForegroundColor Green
+            $coverageAdded = $true
+        }
+    }
+    "cli" {
+        Write-Host "Running CLI package tests" -ForegroundColor Cyan
+        $pytestCmd += " packages/cli/img_classifier_cli/tests/ tests/unit/ tests/integration/"
+        if ($Coverage) {
+            $pytestCmd += " --cov=packages/cli/img_classifier_cli --cov-report=term-missing --cov-report=html --cov-report=xml"
+            Write-Host "Coverage enabled for CLI package" -ForegroundColor Green
+            $coverageAdded = $true
+        }
+    }
+    "api" {
+        Write-Host "Running API app tests" -ForegroundColor Cyan
+        $pytestCmd += " apps/api/tests/ tests/unit/ tests/integration/"
+        if ($Coverage) {
+            $pytestCmd += " --cov=apps/api/img_classifier_api --cov-report=term-missing --cov-report=html --cov-report=xml"
+            Write-Host "Coverage enabled for API app" -ForegroundColor Green
+            $coverageAdded = $true
+        }
+    }
+    "integration" {
+        Write-Host "Running integration tests only" -ForegroundColor Cyan
+        $pytestCmd += " tests/integration/"
+        if ($Coverage) {
+            $pytestCmd += " --cov=packages --cov=apps --cov-report=term-missing --cov-report=html --cov-report=xml"
+            Write-Host "Coverage enabled for integration tests" -ForegroundColor Green
+            $coverageAdded = $true
+        }
+    }
+    "unit" {
+        Write-Host "Running unit tests only" -ForegroundColor Cyan
+        $pytestCmd += " tests/unit/"
+        if ($Coverage) {
+            $pytestCmd += " --cov=packages --cov=apps --cov-report=term-missing --cov-report=html --cov-report=xml"
+            Write-Host "Coverage enabled for unit tests" -ForegroundColor Green
+            $coverageAdded = $true
+        }
     }
     default {
         Write-Host "Unknown target: $Target" -ForegroundColor Red
-        Write-Host "Valid targets: all, config, data, models, training, utils, integration" -ForegroundColor Yellow
+        Write-Host "Valid targets:" -ForegroundColor Yellow
+        Write-Host "  all          - Run all tests" -ForegroundColor Yellow
+        Write-Host "  config       - Run config package tests" -ForegroundColor Yellow
+        Write-Host "  data         - Run data package tests" -ForegroundColor Yellow
+        Write-Host "  models       - Run models package tests" -ForegroundColor Yellow
+        Write-Host "  training     - Run training package tests" -ForegroundColor Yellow
+        Write-Host "  utils        - Run utils package tests" -ForegroundColor Yellow
+        Write-Host "  cli          - Run CLI package tests" -ForegroundColor Yellow
+        Write-Host "  api          - Run API app tests" -ForegroundColor Yellow
+        Write-Host "  integration  - Run integration tests only" -ForegroundColor Yellow
+        Write-Host "  unit         - Run unit tests only" -ForegroundColor Yellow
         exit 1
     }
 }

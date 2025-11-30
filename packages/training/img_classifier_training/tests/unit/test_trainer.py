@@ -9,7 +9,9 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
-from tensorflow.keras.callbacks import EarlyStopping
+
+pytest.importorskip("tensorflow", reason="TensorFlow not available")
+from tensorflow.keras.callbacks import EarlyStopping  # type: ignore[reportMissingImports]
 
 # TODO remove these depenencies... no longer unit tests...
 from img_classifier_config import BaseConfig
@@ -40,10 +42,16 @@ class TestTrainer:
         self.mock_config.use_early_stopping = True
         self.mock_config.use_model_checkpoint = True
         self.mock_config.use_accuracy_threshold_stopping = True
+        self.mock_config.project_name = "test_project"
+        self.mock_config.learning_rate = 0.001
+        self.mock_config.min_accuracy_to_save = 0.0
+        self.mock_config.test_split = 0.5
         self.mock_config.early_stopping_patience = 5
         self.mock_config.accuracy_threshold = 0.995
         self.mock_config.models_dir = self.temp_dir / "models"
+        self.mock_config.logs_dir = self.temp_dir / "logs"
         self.mock_config.models_dir.mkdir(parents=True, exist_ok=True)
+        self.config = self.mock_config
 
         # Create mock model
         self.mock_model = Mock()
@@ -54,12 +62,8 @@ class TestTrainer:
         # Create mock data loader
         self.mock_loader = Mock()
 
-        # Import Trainer with mocked dependencies
-        with patch("img_classifier_training.trainer.keras"):
-            from img_classifier_training import Trainer
-
-            self.Trainer = Trainer
-            self.trainer = Trainer(self.mock_config, self.mock_model, self.mock_loader)
+        # Create trainer instance
+        self.trainer = Trainer(self.mock_config, self.mock_model, self.mock_loader)
 
         yield
 
@@ -467,7 +471,7 @@ class TestTrainer:
         lines = content.split("\n")
 
         # Should have header + 2 data lines
-        assert len([l for l in lines if l and not l.startswith("Training")]) >= 3
+        assert len([line for line in lines if line and not line.startswith("Training")]) >= 3
 
     def test_log_results_format(self):
         """Test log results format."""

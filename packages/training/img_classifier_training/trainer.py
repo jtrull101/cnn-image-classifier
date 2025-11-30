@@ -197,7 +197,7 @@ class Trainer:
 
         fig, axes = plt.subplots(1, 2, figsize=(18, 6))
 
-        for ax, metric in zip(axes.flat, ["loss", "acc"]):
+        for ax, metric in zip(np.ravel(axes), ["loss", "acc"]):
             ax.set_title(f"{metric.title()} Plot")
             df_metric = df[df["variable"].str.contains(metric)]
             sns.lineplot(data=df_metric, x="epoch", y="value", hue="variable", ax=ax)  # type: ignore[arg-type]

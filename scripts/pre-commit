@@ -30,7 +30,7 @@ ERROR_COUNT=0
 
 # Format code
 echo "[1/4] Formatting code with ruff..."
-npx nx run-many --target=format --all
+"$UV_CMD" run ruff format apps packages scripts tests
 if [ $? -ne 0 ]; then
     echo "[ERROR] Formatting failed"
     ERROR_COUNT=$((ERROR_COUNT + 1))
@@ -41,7 +41,7 @@ echo ""
 
 # Lint code
 echo "[2/4] Linting code with ruff..."
-npx nx run-many --target=lint --all
+"$UV_CMD" run ruff check apps packages scripts tests
 if [ $? -ne 0 ]; then
     echo "[ERROR] Linting failed"
     ERROR_COUNT=$((ERROR_COUNT + 1))
@@ -63,7 +63,7 @@ echo ""
 
 # Run tests
 echo "[4/4] Running tests..."
-npx nx run-many --target=test --all
+"$UV_CMD" run python -m pytest -c pyproject.toml --rootdir . -v -n auto --maxfail=3 --cov=packages --cov=apps --cov-report=term-missing
 if [ $? -ne 0 ]; then
     echo "[ERROR] Tests failed"
     ERROR_COUNT=$((ERROR_COUNT + 1))

@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import tensorflow as tf
 from img_classifier_config import BaseConfig
@@ -35,9 +35,10 @@ class BaseModel(ABC):
 
     def compile(
         self,
-        optimizer: Optional[tf.keras.optimizers.Optimizer] = None,
+        optimizer: Optional[Union[str, tf.keras.optimizers.Optimizer]] = None,
         loss: Optional[str] = None,
         metrics: Optional[list] = None,
+        learning_rate: Optional[float] = None,
     ):
         """Compile the model.
 
@@ -45,12 +46,27 @@ class BaseModel(ABC):
             optimizer: Keras optimizer (default: Adam with config learning rate)
             loss: Loss function (default: categorical_crossentropy)
             metrics: List of metrics (default: ['acc'])
+            learning_rate: Optional override for optimizer learning rate
         """
         if self.model is None:
             self.model = self.build()
 
+        lr = learning_rate if learning_rate is not None else self.config.learning_rate
+
         if optimizer is None:
-            optimizer = tf.keras.optimizers.Adam(learning_rate=self.config.learning_rate)
+            optimizer_obj = tf.keras.optimizers.Adam(learning_rate=lr)
+        elif isinstance(optimizer, str):
+            opt_name = optimizer.lower()
+            if opt_name == "adam":
+                optimizer_obj = tf.keras.optimizers.Adam(learning_rate=lr)
+            elif opt_name == "sgd":
+                optimizer_obj = tf.keras.optimizers.SGD(learning_rate=lr)
+            elif opt_name == "rmsprop":
+                optimizer_obj = tf.keras.optimizers.RMSprop(learning_rate=lr)
+            else:
+                raise ValueError(f"Unsupported optimizer: {optimizer}")
+        else:
+            optimizer_obj = optimizer
 
         if loss is None:
             loss = "categorical_crossentropy"
@@ -59,7 +75,7 @@ class BaseModel(ABC):
             metrics = ["acc"]
 
         assert self.model is not None, "Model must be built before compile"
-        self.model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+        self.model.compile(optimizer=optimizer_obj, loss=loss, metrics=metrics)
 
     def summary(self):
         """Print model summary."""
@@ -81,9 +97,8 @@ class BaseModel(ABC):
         self.model.save(filepath)
         print(f"Model saved to {filepath}")
 
-    @classmethod
-    def load(cls, filepath: Path) -> tf.keras.Model:
-        """Load a saved model.
+    def load(self, filepath: Path) -> tf.keras.Model:
+        """Load a saved model and attach it to this instance.
 
         Args:
             filepath: Path to saved model
@@ -91,4 +106,5 @@ class BaseModel(ABC):
         Returns:
             Loaded Keras model
         """
-        return tf.keras.models.load_model(filepath)
+        self.model = tf.keras.models.load_model(filepath)
+        return self.model

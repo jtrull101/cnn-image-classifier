@@ -31,9 +31,12 @@ class TestTrainingOrchestrator:
         self.mock_config.input_shape = (128, 128, 3)
         self.mock_config.models_dir = self.temp_dir / "models"
 
+        # Real config for scenarios that require concrete behavior
+        self.config = BaseConfig(working_dir=self.temp_dir)
+
         # Mock data loader
         self.mock_loader = Mock()
-        self.mock_loader.config = self.mock_config
+        self.mock_loader.config = self.config
 
         yield
 
@@ -397,6 +400,7 @@ class TestTrainingOrchestrator:
         """Test run method without hyperparameter optimization."""
         mock_prepare.return_value = True
         mock_model = Mock()
+        mock_run_single.return_value = {"model": mock_model}
 
         orchestrator = TrainingOrchestrator(
             self.config, data_loader=self.mock_loader, optimize_hyperparameters=False
@@ -407,7 +411,7 @@ class TestTrainingOrchestrator:
 
         mock_prepare.assert_called_once()
         mock_run_single.assert_called_once_with(plot=False)
-        assert result == mock_model
+        assert result["model"] == mock_model
 
     @patch.object(TrainingOrchestrator, "_prepare_dataset")
     @patch.object(TrainingOrchestrator, "_run_optimization")
@@ -415,6 +419,7 @@ class TestTrainingOrchestrator:
         """Test run method with hyperparameter optimization."""
         mock_prepare.return_value = True
         mock_model = Mock()
+        mock_run_opt.return_value = {"model": mock_model}
 
         orchestrator = TrainingOrchestrator(
             self.config, data_loader=self.mock_loader, optimize_hyperparameters=True
@@ -425,7 +430,7 @@ class TestTrainingOrchestrator:
 
         mock_prepare.assert_called_once()
         mock_run_opt.assert_called_once_with(plot=True)
-        assert result == mock_model
+        assert result["model"] == mock_model
 
     @patch.object(TrainingOrchestrator, "_prepare_dataset")
     def test_run_preparation_failure(self, mock_prepare):

@@ -39,7 +39,7 @@ class BaseConfig(BaseSettings):
     color_channels: int = Field(default=3, ge=1, le=4)
 
     # Class settings
-    num_classes: int = Field(default=4, ge=2)
+    num_classes: int = Field(default=4, ge=0)
     class_names: List[str] = Field(default_factory=list)
 
     # Training hyperparameters

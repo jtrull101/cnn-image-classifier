@@ -36,6 +36,7 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 
 # Pydantic models for request/response
+# TODO extract to models class
 class PredictionResponse(BaseModel):
     """Response model for predictions."""
 
@@ -64,6 +65,7 @@ class AvailableModelsResponse(BaseModel):
 
 
 # Global model cache
+# TODO separate class?
 class ModelManager:
     """Manages multiple loaded models."""
 
@@ -110,19 +112,28 @@ class ModelManager:
         filename = model_path.name
         if "%" in filename:
             try:
-                acc_str = filename[filename.rfind("_") + 1 : filename.find("%")]
-                accuracy = float(acc_str) / 100.0
+                # Find the percentage sign position
+                percent_pos = filename.find("%")
+                # Find the underscore before the percentage
+                before_percent = filename[:percent_pos]
+                if "_" in before_percent:
+                    acc_str = before_percent[before_percent.rfind("_") + 1 :]
+                    accuracy = float(acc_str) / 100.0
             except (ValueError, IndexError):
                 pass
 
         # Check for metadata file
         metadata_path = model_path.with_suffix(".json")
         if metadata_path.exists():
-            with open(metadata_path, "r") as f:
-                metadata = json.load(f)
-                class_names = metadata.get("class_names", class_names)
-                if "accuracy" in metadata:
-                    accuracy = metadata["accuracy"]
+            try:
+                with open(metadata_path, "r") as f:
+                    metadata = json.load(f)
+                    class_names = metadata.get("class_names", class_names)
+                    if "accuracy" in metadata:
+                        accuracy = metadata["accuracy"]
+            except (FileNotFoundError, json.JSONDecodeError, OSError):
+                # Metadata file doesn't exist or is invalid, use defaults
+                pass
 
         # Store model and info
         self.models[model_name] = model
@@ -188,11 +199,16 @@ class ModelManager:
             filename = model_path.name
             if "%" in filename:
                 try:
-                    acc_str = filename[filename.rfind("_") + 1 : filename.find("%")]
-                    accuracy = int(acc_str)
-                    if accuracy > best_accuracy:
-                        best_accuracy = accuracy
-                        best_model = model_path
+                    # Find the percentage sign position
+                    percent_pos = filename.find("%")
+                    # Find the underscore before the percentage
+                    before_percent = filename[:percent_pos]
+                    if "_" in before_percent:
+                        acc_str = before_percent[before_percent.rfind("_") + 1 :]
+                        accuracy = int(acc_str)
+                        if accuracy > best_accuracy:
+                            best_accuracy = accuracy
+                            best_model = model_path
                 except (ValueError, IndexError):
                     pass
 
@@ -209,6 +225,7 @@ class ModelManager:
 model_manager = ModelManager()
 
 
+# TODO deprecated
 @app.on_event("startup")
 async def startup_event():
     """Load models on startup."""
@@ -311,6 +328,8 @@ async def predict_image(
             model_name=info.name,
         )
 
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(500, f"Prediction error: {str(e)}")
 

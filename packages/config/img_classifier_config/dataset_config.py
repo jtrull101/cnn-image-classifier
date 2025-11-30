@@ -42,14 +42,38 @@ class DatasetConfig(BaseConfig):
         default=10, description="Minimum number of images required per class"
     )
 
+    def model_post_init(self, __context) -> None:
+        """Post-init hook to manage path defaults."""
+        fields_set = getattr(self, "__pydantic_fields_set__", set())
+        explicit_none_data = "data_path" in fields_set and self.data_path is None
+        explicit_none_train = "train_path" in fields_set and self.train_path is None
+        explicit_none_test = "test_path" in fields_set and self.test_path is None
+
+        super().model_post_init(__context)
+
+        # If caller explicitly set a path to None, preserve that instead of deriving defaults
+        if explicit_none_data:
+            self.data_path = None
+            if not explicit_none_train:
+                self.train_path = None
+            if not explicit_none_test:
+                self.test_path = None
+
+        if explicit_none_train:
+            self.train_path = None
+
+        if explicit_none_test:
+            self.test_path = None
+
     @field_validator("architecture_complexity")
     @classmethod
     def validate_complexity(cls, v: str) -> str:
         """Validate architecture complexity value."""
         allowed = ["auto", "simple", "medium", "deep", "custom"]
-        if v not in allowed:
+        normalized = v.lower()
+        if normalized not in allowed:
             raise ValueError(f"architecture_complexity must be one of {allowed}")
-        return v
+        return normalized
 
     @classmethod
     def from_yaml(cls, yaml_path: Path) -> "DatasetConfig":
@@ -80,8 +104,8 @@ class DatasetConfig(BaseConfig):
         """
         yaml_path.parent.mkdir(parents=True, exist_ok=True)
         with open(yaml_path, "w") as f:
-            # Convert to dict and remove None values
-            config_dict = self.model_dump(exclude_none=True, mode="json")
+            # Convert to dict and keep None values so explicit nulls roundtrip
+            config_dict = self.model_dump(exclude_none=False, mode="json")
 
             # Convert Path objects to strings for YAML serialization
             def convert_paths(obj):

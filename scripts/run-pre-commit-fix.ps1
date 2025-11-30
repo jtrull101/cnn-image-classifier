@@ -6,11 +6,11 @@ Write-Host ""
 Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host "Attempting to auto-fix issues..." -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host ""
+Write-Host "" 
 
 # Auto-fix format issues
 Write-Host "[1/3] Auto-fixing format issues..." -ForegroundColor Yellow
-npx nx run-many --target=format --all
+uv run ruff format apps packages scripts tests
 if ($LASTEXITCODE -eq 0) {
     Write-Host "[OK] Formatting applied" -ForegroundColor Green
 } else {

@@ -97,14 +97,14 @@ class TrainingOrchestrator:
 
         return cls(config, **kwargs)
 
-    def run(self, plot: bool = False) -> BaseModel:
+    def run(self, plot: bool = False) -> dict:
         """Run the complete training pipeline.
 
         Args:
             plot: Whether to plot training history
 
         Returns:
-            Best trained model
+            Dictionary containing model, history, and metrics
         """
         print(f"\n{'=' * 60}")
         print("Starting Training Orchestrator")
@@ -121,11 +121,8 @@ class TrainingOrchestrator:
 
         # Run optimization or single training
         if self.optimize_hyperparameters:
-            self._run_optimization(plot=plot)
-        else:
-            self._run_single_training(plot=plot)
-
-        return self.best_model  # type: ignore
+            return self._run_optimization(plot=plot)
+        return self._run_single_training(plot=plot)
 
     def _prepare_dataset(self) -> bool:
         """Prepare the dataset for training.
@@ -145,7 +142,7 @@ class TrainingOrchestrator:
 
         return True
 
-    def _run_single_training(self, plot: bool = False):
+    def _run_single_training(self, plot: bool = False) -> dict:
         """Run a single training session.
 
         Args:
@@ -180,8 +177,13 @@ class TrainingOrchestrator:
         print("\nTraining completed!")
         print(f"Final accuracy: {acc:.4f}")
         print(f"Final loss: {loss:.4f}")
+        return {
+            "model": model,
+            "history": trainer.history,
+            "metrics": {"accuracy": acc, "loss": loss},
+        }
 
-    def _run_optimization(self, plot: bool = False):
+    def _run_optimization(self, plot: bool = False) -> dict:
         """Run hyperparameter optimization.
 
         Args:
@@ -232,6 +234,20 @@ class TrainingOrchestrator:
 
         # Print final summary
         print(self.optimizer.get_summary())
+
+        metrics = {}
+        if self.optimizer and self.optimizer.best_result:
+            best = self.optimizer.best_result
+            metrics = {
+                "train_accuracy": best.train_accuracy,
+                "val_accuracy": best.val_accuracy,
+                "test_accuracy": best.test_accuracy,
+                "train_loss": best.train_loss,
+                "val_loss": best.val_loss,
+                "test_loss": best.test_loss,
+            }
+
+        return {"model": self.best_model, "history": None, "metrics": metrics}
 
     def _create_trial_config(self, hyperparams: dict) -> BaseConfig:
         """Create configuration for a trial.

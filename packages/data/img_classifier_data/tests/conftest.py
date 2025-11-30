@@ -1,31 +1,18 @@
 """Shared pytest configuration for data package tests."""
 
-import os
-import shutil
+import sys
 from pathlib import Path
 
-import pytest
+# Reuse the repository-level pytest configuration (markers, fixtures).
+REPO_ROOT = Path(__file__).resolve().parents[4]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-
-@pytest.fixture(scope="function")
-def isolated_tmp_dir(tmp_path_factory, worker_id) -> Path:
-    """
-    Provide an isolated temporary directory for each test, safe for parallel execution.
-
-    This fixture uses pytest-xdist's worker_id to ensure each worker process
-    gets its own isolated directory space.
-    """
-    if worker_id == "master":
-        # Single process - use standard tmp_path
-        temp_dir = tmp_path_factory.mktemp("test")
-    else:
-        # Multiple workers - create worker-specific directories
-        root_tmp = tmp_path_factory.getbasetemp().parent
-        temp_dir = root_tmp / f"worker_{worker_id}" / f"test_{os.getpid()}"
-        temp_dir.mkdir(parents=True, exist_ok=True)
-
-    yield temp_dir
-
-    # Cleanup
-    if temp_dir.exists():
-        shutil.rmtree(temp_dir, ignore_errors=True)
+from conftest import (  # noqa: E402,F401
+    isolated_tmp_dir,
+    mock_config,
+    mock_config_paths,
+    mock_data_loader,
+    mock_model,
+    test_data_dir,
+)

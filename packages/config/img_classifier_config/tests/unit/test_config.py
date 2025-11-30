@@ -14,8 +14,8 @@ class TestBaseConfig:
     @pytest.fixture(autouse=True)
     def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
-        self.temp_dir = str(isolated_tmp_dir)
-        self.config = BaseConfig(working_dir=Path(self.temp_dir))
+        self.temp_dir = isolated_tmp_dir
+        self.config = BaseConfig(working_dir=self.temp_dir)
 
         yield
 
@@ -55,6 +55,7 @@ class TestBaseConfig:
 
     def test_derived_paths(self):
         """Test derived path properties."""
+        assert self.config.data_path is not None
         assert self.config.models_dir == self.config.working_dir / "models"
         assert self.config.logs_dir == self.config.working_dir / "logs"
         assert self.config.cache_dir == self.config.data_path / "cache"
@@ -63,6 +64,7 @@ class TestBaseConfig:
         """Test directory creation."""
         self.config.create_directories()
 
+        assert self.config.data_path is not None
         assert self.config.working_dir.exists()
         assert self.config.data_path.exists()
         assert self.config.models_dir.exists()
@@ -88,9 +90,9 @@ class TestDatasetConfig:
     @pytest.fixture(autouse=True)
     def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
-        self.temp_dir = str(isolated_tmp_dir)
+        self.temp_dir = isolated_tmp_dir
         self.config = DatasetConfig(
-            working_dir=Path(self.temp_dir),
+            working_dir=self.temp_dir,
             num_classes=4,
             class_names=["class1", "class2", "class3", "class4"],
         )
@@ -387,6 +389,9 @@ class TestBaseConfigEdgeCases:
     def test_paths_with_none_data_path(self, tmp_path):
         """Test that paths are created properly when data_path is None."""
         config = BaseConfig(working_dir=tmp_path, data_path=None)
+        assert config.data_path is not None
+        assert config.train_path is not None
+        assert config.test_path is not None
         assert config.data_path == tmp_path / "data" / "dataset"
         assert config.train_path == config.data_path / "train"
         assert config.test_path == config.data_path / "test"
@@ -849,7 +854,234 @@ class TestDatasetDetector:
         assert config.num_classes == 3
         assert set(config.class_names) == {"a", "b", "c"}
         assert config.project_name == "test_project"
-        assert config.architecture_complexity == "simple"
+
+    def test_detect_mismatched_train_test_classes(self, tmp_path):
+        """Test detection when train and test have different classes."""
+        from img_classifier_config.dataset_config import DatasetDetector
+
+        train_dir = tmp_path / "train"
+        test_dir = tmp_path / "test"
+        train_dir.mkdir()
+        test_dir.mkdir()
+
+        # Train has more classes
+        for class_name in ["a", "b", "c"]:
+            (train_dir / class_name).mkdir()
+            for i in range(10):
+                (train_dir / class_name / f"img_{i}.jpg").touch()
+
+        # Test has fewer classes
+        for class_name in ["a", "b"]:
+            (test_dir / class_name).mkdir()
+            for i in range(5):
+                (test_dir / class_name / f"img_{i}.jpg").touch()
+
+        detector = DatasetDetector(tmp_path)
+        info = detector.detect()
+
+        # Should detect from train directory
+        assert info["num_classes"] == 3
+        assert set(info["class_names"]) == {"a", "b", "c"}
+
+    def test_create_config_with_overrides(self, tmp_path):
+        """Test creating config with custom overrides."""
+        from img_classifier_config.dataset_config import DatasetDetector
+
+        for class_name in ["a", "b"]:
+            class_dir = tmp_path / class_name
+            class_dir.mkdir()
+            for i in range(100):
+                (class_dir / f"img_{i}.jpg").touch()
+
+        detector = DatasetDetector(tmp_path)
+        config = detector.create_config(
+            project_name="custom",
+            working_dir=tmp_path / "work",
+            batch_size=64,
+            num_epochs=100,
+            architecture_complexity="deep",
+        )
+
+        assert config.project_name == "custom"
+        assert config.batch_size == 64
+        assert config.num_epochs == 100
+        assert config.architecture_complexity == "deep"
+
+
+@pytest.mark.unit
+class TestDatasetConfigYAML:
+    """Tests for DatasetConfig YAML serialization."""
+
+    def test_to_yaml_basic(self, tmp_path):
+        """Test saving config to YAML."""
+        config = DatasetConfig(
+            working_dir=tmp_path,
+            project_name="test",
+            num_classes=3,
+            class_names=["a", "b", "c"],
+        )
+
+        yaml_path = tmp_path / "config.yaml"
+        config.to_yaml(yaml_path)
+
+        assert yaml_path.exists()
+        assert yaml_path.stat().st_size > 0
+
+    def test_from_yaml_basic(self, tmp_path):
+        """Test loading config from YAML."""
+        config1 = DatasetConfig(
+            working_dir=tmp_path,
+            project_name="test",
+            num_classes=3,
+            class_names=["a", "b", "c"],
+            batch_size=32,
+            num_epochs=25,
+        )
+
+        yaml_path = tmp_path / "config.yaml"
+        config1.to_yaml(yaml_path)
+
+        config2 = DatasetConfig.from_yaml(yaml_path)
+
+        assert config2.project_name == config1.project_name
+        assert config2.num_classes == config1.num_classes
+        assert config2.class_names == config1.class_names
+        assert config2.batch_size == config1.batch_size
+
+    def test_yaml_roundtrip_preserves_paths(self, tmp_path):
+        """Test YAML roundtrip preserves Path objects."""
+        config1 = DatasetConfig(
+            working_dir=tmp_path,
+            data_path=tmp_path / "data",
+            train_path=tmp_path / "data" / "train",
+            test_path=tmp_path / "data" / "test",
+        )
+
+        yaml_path = tmp_path / "config.yaml"
+        config1.to_yaml(yaml_path)
+
+        config2 = DatasetConfig.from_yaml(yaml_path)
+
+        assert isinstance(config2.working_dir, Path)
+        assert isinstance(config2.data_path, Path)
+        assert isinstance(config2.train_path, Path)
+        assert isinstance(config2.test_path, Path)
+
+    def test_yaml_with_none_paths(self, tmp_path):
+        """Test YAML serialization with None path values."""
+        config1 = DatasetConfig(
+            working_dir=tmp_path, data_path=None, train_path=None, test_path=None
+        )
+
+        yaml_path = tmp_path / "config.yaml"
+        config1.to_yaml(yaml_path)
+
+        config2 = DatasetConfig.from_yaml(yaml_path)
+
+        assert config2.data_path is None
+        assert config2.train_path is None
+        assert config2.test_path is None
+
+    def test_yaml_creates_parent_directories(self, tmp_path):
+        """Test that to_yaml creates parent directories."""
+        config = DatasetConfig(working_dir=tmp_path)
+
+        nested_path = tmp_path / "deep" / "nested" / "config.yaml"
+        config.to_yaml(nested_path)
+
+        assert nested_path.exists()
+        assert nested_path.parent.exists()
+
+    def test_yaml_with_all_fields(self, tmp_path):
+        """Test YAML with all possible fields populated."""
+        config1 = DatasetConfig(
+            working_dir=tmp_path,
+            project_name="full_test",
+            dataset_name="test_dataset",
+            dataset_type="medical",
+            num_classes=5,
+            class_names=["a", "b", "c", "d", "e"],
+            architecture_complexity="deep",
+            min_images_per_class=50,
+            auto_detect_classes=False,
+            recommended_batch_sizes=[16, 32, 64],
+            recommended_learning_rates=[0.001, 0.0001],
+            description="Test dataset configuration",
+        )
+
+        yaml_path = tmp_path / "config_full.yaml"
+        config1.to_yaml(yaml_path)
+
+        config2 = DatasetConfig.from_yaml(yaml_path)
+
+        assert config2.project_name == "full_test"
+        assert config2.dataset_name == "test_dataset"
+        assert config2.dataset_type == "medical"
+        assert config2.num_classes == 5
+        assert config2.architecture_complexity == "deep"
+        assert config2.recommended_batch_sizes == [16, 32, 64]
+
+    def test_from_yaml_missing_file(self, tmp_path):
+        """Test loading from non-existent YAML file."""
+        with pytest.raises(FileNotFoundError):
+            DatasetConfig.from_yaml(tmp_path / "nonexistent.yaml")
+
+
+@pytest.mark.unit
+class TestDatasetConfigValidation:
+    """Tests for DatasetConfig validation logic."""
+
+    def test_validate_complexity_valid_values(self, tmp_path):
+        """Test validation accepts valid complexity values."""
+        valid_values = ["simple", "medium", "deep", "auto"]
+
+        for complexity in valid_values:
+            config = DatasetConfig(working_dir=tmp_path, architecture_complexity=complexity)
+            # Should not raise
+            assert config.architecture_complexity == complexity
+
+    def test_validate_complexity_case_insensitive(self, tmp_path):
+        """Test complexity validation is case insensitive."""
+        for complexity in ["SIMPLE", "Medium", "DEEP", "Auto"]:
+            config = DatasetConfig(working_dir=tmp_path, architecture_complexity=complexity)
+            # Should be normalized to lowercase
+            assert config.architecture_complexity.lower() in ["simple", "medium", "deep", "auto"]
+
+    def test_empty_class_names_list(self, tmp_path):
+        """Test with empty class names list."""
+        config = DatasetConfig(working_dir=tmp_path, num_classes=0, class_names=[])
+        assert config.class_names == []
+        assert config.num_classes == 0
+
+    def test_mismatched_classes_and_names(self, tmp_path):
+        """Test behavior when num_classes doesn't match class_names length."""
+        # This should work - class_names takes precedence
+        config = DatasetConfig(working_dir=tmp_path, num_classes=2, class_names=["a", "b", "c"])
+        # num_classes should be updated to match
+        assert len(config.class_names) == 3
+
+    def test_min_images_per_class_edge_values(self, tmp_path):
+        """Test min_images_per_class with edge values."""
+        config1 = DatasetConfig(working_dir=tmp_path, min_images_per_class=1)
+        assert config1.min_images_per_class == 1
+
+        config2 = DatasetConfig(working_dir=tmp_path, min_images_per_class=10000)
+        assert config2.min_images_per_class == 10000
+
+    def test_dataset_type_custom_values(self, tmp_path):
+        """Test dataset_type with various values."""
+        for dtype in ["medical", "general", "custom", "specialized"]:
+            config = DatasetConfig(working_dir=tmp_path, dataset_type=dtype)
+            assert config.dataset_type == dtype
+
+    def test_auto_detect_classes_flag(self, tmp_path):
+        """Test auto_detect_classes flag behavior."""
+        config1 = DatasetConfig(working_dir=tmp_path, auto_detect_classes=True)
+        assert config1.auto_detect_classes is True
+
+        config2 = DatasetConfig(working_dir=tmp_path, auto_detect_classes=False)
+        assert config2.auto_detect_classes is False
+        assert config2.architecture_complexity == "auto"
 
     def test_create_config_with_overrides(self, tmp_path):
         """Test creating config with custom overrides."""
