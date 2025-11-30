@@ -3,14 +3,9 @@
 # Platform detection
 ifeq ($(OS),Windows_NT)
 	DETECTED_OS := Windows
-	SHELL := pwsh.exe
-	.SHELLFLAGS := -NoProfile -Command
-	SCRIPT_EXT := .ps1
-	SCRIPT_RUNNER := powershell -NoProfile -ExecutionPolicy Bypass -File
+	SHELL := cmd.exe
 else
 	DETECTED_OS := $(shell uname -s)
-	SCRIPT_EXT := .sh
-	SCRIPT_RUNNER := bash
 endif
 
 
@@ -65,11 +60,19 @@ help:
 # Install UV and dependencies
 install:
 	@echo "Checking UV installation..."
-	@$(SCRIPT_RUNNER) scripts/install_uv$(SCRIPT_EXT)
+ifeq ($(OS),Windows_NT)
+	@powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install_uv.ps1
+else
+	@bash scripts/install_uv.sh
+endif
 	@echo "Syncing UV workspace (including dev deps)..."
 	@uv sync --all-groups
 	@echo "Installing Git hooks..."
-	@$(SCRIPT_RUNNER) scripts/install_hooks$(SCRIPT_EXT)
+ifeq ($(OS),Windows_NT)
+	@powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install_hooks.ps1
+else
+	@bash scripts/install_hooks.sh
+endif
 
 # Sync UV dependencies across workspace
 sync:
@@ -87,7 +90,11 @@ test:
 
 # Test with coverage reports/combination helper
 test-coverage:
-	@$(SCRIPT_RUNNER) scripts/run_coverage$(SCRIPT_EXT)
+ifeq ($(OS),Windows_NT)
+	@powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_coverage.ps1
+else
+	@bash scripts/run_coverage.sh
+endif
 
 # Test with specific number of workers
 test-parallel:
@@ -126,7 +133,11 @@ typecheck:
 
 # Clean build artifacts
 clean:
-	@$(SCRIPT_RUNNER) scripts/clean$(SCRIPT_EXT)
+ifeq ($(OS),Windows_NT)
+	@powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/clean.ps1
+else
+	@bash scripts/clean.sh
+endif
 
 # Package-specific builds
 build-config:
@@ -157,15 +168,27 @@ serve-api:
 # Git hooks
 install-hooks:
 	@echo "Installing Git hooks..."
-	@$(SCRIPT_RUNNER) scripts/install_hooks$(SCRIPT_EXT)
+ifeq ($(OS),Windows_NT)
+	@powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install_hooks.ps1
+else
+	@bash scripts/install_hooks.sh
+endif
 
 # Pre-commit checks (same as git hooks)
 pre-commit:
-	@$(SCRIPT_RUNNER) scripts/run-pre-commit$(SCRIPT_EXT)
+ifeq ($(OS),Windows_NT)
+	@powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run-pre-commit.ps1
+else
+	@bash scripts/run-pre-commit.sh
+endif
 
 # Pre-commit auto-fix
 pre-commit-fix:
-	@$(SCRIPT_RUNNER) scripts/run-pre-commit-fix$(SCRIPT_EXT)
+ifeq ($(OS),Windows_NT)
+	@powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run-pre-commit-fix.ps1
+else
+	@bash scripts/run-pre-commit-fix.sh
+endif
 
 # Package-specific tests
 test-config:

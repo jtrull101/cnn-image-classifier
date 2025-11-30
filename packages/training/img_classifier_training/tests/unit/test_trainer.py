@@ -4,15 +4,23 @@ These tests verify Trainer behavior with mocked dependencies to ensure
 fast execution and isolation from other packages.
 """
 
+from typing import TYPE_CHECKING
 from unittest.mock import Mock, MagicMock, patch
 
 import numpy as np
 import pytest
 
 pytest.importorskip("tensorflow", reason="TensorFlow not available")
-from tensorflow.keras.callbacks import EarlyStopping
 
 from img_classifier_training.trainer import Trainer
+
+if TYPE_CHECKING:
+    from keras.callbacks import EarlyStopping
+else:
+    try:
+        from keras.callbacks import EarlyStopping
+    except ImportError:
+        EarlyStopping = None  # type: ignore[assignment, misc]
 
 pytestmark = pytest.mark.unit
 
