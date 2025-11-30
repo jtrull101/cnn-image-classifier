@@ -28,7 +28,7 @@ def example_1_simple_training():
     )
 
     # Run training
-    model = orchestrator.run(plot=True)
+    _model = orchestrator.run(plot=True)
 
     print(f"Training completed! Model saved in {orchestrator.config.models_dir}")
 
@@ -63,7 +63,7 @@ def example_2_custom_config():
     orchestrator = TrainingOrchestrator(config)
 
     # Run training
-    model = orchestrator.run(plot=True)
+    _model = orchestrator.run(plot=True)
 
 
 def example_3_hyperparameter_optimization():
@@ -94,7 +94,7 @@ def example_3_hyperparameter_optimization():
     )
 
     # Run optimization
-    model = orchestrator.run()
+    _model = orchestrator.run()
 
     # Print results
     if orchestrator.optimizer:
@@ -224,8 +224,8 @@ def example_6_using_yaml_config():
     print(f"  Epochs: {loaded_config.num_epochs}")
 
     # Use loaded config for training
-    orchestrator = TrainingOrchestrator(loaded_config)
-    # model = orchestrator.run()
+    _orchestrator = TrainingOrchestrator(loaded_config)
+    # _model = _orchestrator.run()
 
 
 def example_7_quick_experiment():
@@ -260,7 +260,7 @@ def example_7_quick_experiment():
         max_trials=5,  # Just 5 trials
     )
 
-    model = orchestrator.run()
+    _model = orchestrator.run()
 
     print("\nQuick experiment completed!")
     if orchestrator.optimizer:
@@ -272,9 +272,9 @@ if __name__ == "__main__":
     ╔════════════════════════════════════════════════════════════╗
     ║     Generalized Image Classification System Examples      ║
     ╚════════════════════════════════════════════════════════════╝
-    
+
     Choose an example to run:
-    
+
     1. Simple training with auto-detection
     2. Training with custom configuration
     3. Hyperparameter optimization
@@ -282,7 +282,7 @@ if __name__ == "__main__":
     5. Creating custom architecture
     6. Loading configuration from YAML
     7. Quick experiment with small dataset
-    
+
     Note: Update the dataset paths in the examples before running!
     """)
 
