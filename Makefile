@@ -56,9 +56,9 @@ install:
 	@echo "Checking UV installation..."
 	@powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install_uv.ps1
 	@echo "Syncing UV workspace (including dev deps)..."
-	uv sync --all-groups
+	@uv sync --all-groups
 	@echo "Installing Git hooks..."
-	.\scripts\install_hooks.ps1
+	@powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install_hooks.ps1
 
 # Sync UV dependencies across workspace
 sync:
@@ -176,7 +176,7 @@ serve-api:
 # Git hooks
 install-hooks:
 	@echo "Installing Git hooks..."
-	.\scripts\install_hooks.ps1
+	@powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install_hooks.ps1
 
 # Pre-commit checks (same as git hooks)
 pre-commit:
