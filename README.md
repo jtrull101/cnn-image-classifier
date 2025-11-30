@@ -521,12 +521,6 @@ uv pip install tensorflow-cpu  # CPU only
 
 ---
 
-## License
-
-MIT License - see [LICENSE](LICENSE) file.
-
----
-
 ## Contact
 
 **Jonathan Trull** - jttrull0@gmail.com

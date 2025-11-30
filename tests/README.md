@@ -1,4 +1,3 @@
-
 # Testing Guide
 
 This document explains the testing structure and philosophy for the alz-mri-neural-network monorepo.
