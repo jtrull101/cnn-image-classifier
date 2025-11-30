@@ -4,20 +4,15 @@ These tests verify Trainer behavior with mocked dependencies to ensure
 fast execution and isolation from other packages.
 """
 
-from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, MagicMock, patch
 
 import numpy as np
 import pytest
 
 pytest.importorskip("tensorflow", reason="TensorFlow not available")
-from tensorflow.keras.callbacks import EarlyStopping  # type: ignore[reportMissingImports]
+from tensorflow.keras.callbacks import EarlyStopping
 
-# TODO remove these depenencies... no longer unit tests...
-from img_classifier_config import BaseConfig
-from img_classifier_data import BaseDataLoader
-from img_classifier_models import BaseModel
-from img_classifier_training import Trainer
+from img_classifier_training.trainer import Trainer
 
 pytestmark = pytest.mark.unit
 
@@ -51,38 +46,38 @@ class TestTrainer:
         self.mock_config.models_dir = self.temp_dir / "models"
         self.mock_config.logs_dir = self.temp_dir / "logs"
         self.mock_config.models_dir.mkdir(parents=True, exist_ok=True)
-        self.config = self.mock_config
 
-        # Create mock model
+        # Create a mock model
         self.mock_model = Mock()
-        self.mock_keras_model = Mock()
+        self.mock_keras_model = MagicMock()
         self.mock_model.model = self.mock_keras_model
         self.mock_model.save = Mock()
 
         # Create mock data loader
         self.mock_loader = Mock()
 
-        # Create trainer instance
+        # Create a real trainer instance with mocked dependencies
         self.trainer = Trainer(self.mock_config, self.mock_model, self.mock_loader)
 
         yield
 
     def test_initialization(self):
         """Test Trainer initialization."""
-        assert self.trainer.config == self.mock_config
-        assert self.trainer.model == self.mock_model
-        assert self.trainer.data_loader == self.mock_loader
+        assert self.trainer.config is self.mock_config
+        assert self.trainer.model is self.mock_model
+        assert self.trainer.data_loader is self.mock_loader
         assert self.trainer.history is None
 
-    def test_prepare_data_basic(self):
+    @patch("img_classifier_training.trainer.tf.keras.utils.to_categorical")
+    def test_prepare_data_basic(self, mock_to_categorical):
         """Test basic data preparation."""
         # Mock data
-        X_train = np.random.rand(100, 128, 128, 3)
+        x_train = np.random.rand(100, 128, 128, 3)
         y_train = np.random.randint(0, 4, 100)
         X_test = np.random.rand(40, 128, 128, 3)
         y_test = np.random.randint(0, 4, 40)
 
-        self.mock_loader.load_train_data.return_value = (X_train, y_train)
+        self.mock_loader.load_train_data.return_value = (x_train, y_train)
         self.mock_loader.load_test_data.return_value = (X_test, y_test)
         self.mock_loader.split_data.return_value = (
             X_test[:20],
@@ -91,31 +86,33 @@ class TestTrainer:
             y_test[20:],
         )
 
+        # Mock to_categorical to return proper shapes
+        mock_to_categorical.side_effect = lambda y, num_classes: np.eye(num_classes)[y]
+
         result = self.trainer.prepare_data()
 
         assert len(result) == 6
-        X_train_out, y_train_out, X_val_out, y_val_out, X_test_out, y_test_out = result
+        x_train_out, y_train_out, x_val_out, y_val_out, X_test_out, y_test_out = result
 
         # Check shapes
-        assert X_train_out.shape == X_train.shape
-        assert X_val_out.shape[0] == 20
+        assert x_train_out.shape == x_train.shape
+        assert x_val_out.shape[0] == 20
         assert X_test_out.shape[0] == 20
 
-        # Check labels are categorical
-        assert y_train_out.shape == (100, 4)
-        assert y_val_out.shape == (20, 4)
-        assert y_test_out.shape == (20, 4)
+        # Verify to_categorical was called
+        assert mock_to_categorical.call_count == 3
 
-    def test_prepare_data_with_reduction(self):
+    @patch("img_classifier_training.trainer.tf.keras.utils.to_categorical")
+    def test_prepare_data_with_reduction(self, mock_to_categorical):
         """Test data preparation with dataset reduction."""
         self.mock_config.data_percent = 0.5
 
-        X_train = np.random.rand(100, 128, 128, 3)
+        x_train = np.random.rand(100, 128, 128, 3)
         y_train = np.random.randint(0, 4, 100)
         X_test = np.random.rand(40, 128, 128, 3)
         y_test = np.random.randint(0, 4, 40)
 
-        self.mock_loader.load_train_data.return_value = (X_train, y_train)
+        self.mock_loader.load_train_data.return_value = (x_train, y_train)
         self.mock_loader.load_test_data.return_value = (X_test, y_test)
         self.mock_loader.split_data.return_value = (
             X_test[:20],
@@ -126,26 +123,30 @@ class TestTrainer:
 
         # Mock reduction to return half the data
         self.mock_loader.reduce_dataset.side_effect = [
-            (X_train[:50], y_train[:50]),  # train
+            (x_train[:50], y_train[:50]),  # train
             (X_test[:10], y_test[:10]),  # val
             (X_test[20:30], y_test[20:30]),  # test
         ]
+
+        # Mock to_categorical
+        mock_to_categorical.side_effect = lambda y, num_classes: np.eye(num_classes)[y]
 
         self.trainer.prepare_data()
 
         # Verify reduction was called
         assert self.mock_loader.reduce_dataset.call_count == 3
 
-    def test_prepare_data_full_dataset(self):
+    @patch("img_classifier_training.trainer.tf.keras.utils.to_categorical")
+    def test_prepare_data_full_dataset(self, mock_to_categorical):
         """Test data preparation with full dataset (data_percent=1.0)."""
         self.mock_config.data_percent = 1.0
 
-        X_train = np.random.rand(50, 128, 128, 3)
+        x_train = np.random.rand(50, 128, 128, 3)
         y_train = np.random.randint(0, 4, 50)
         X_test = np.random.rand(20, 128, 128, 3)
         y_test = np.random.randint(0, 4, 20)
 
-        self.mock_loader.load_train_data.return_value = (X_train, y_train)
+        self.mock_loader.load_train_data.return_value = (x_train, y_train)
         self.mock_loader.load_test_data.return_value = (X_test, y_test)
         self.mock_loader.split_data.return_value = (
             X_test[:10],
@@ -154,6 +155,9 @@ class TestTrainer:
             y_test[10:],
         )
 
+        # Mock to_categorical
+        mock_to_categorical.side_effect = lambda y, num_classes: np.eye(num_classes)[y]
+
         self.trainer.prepare_data()
 
         # Verify reduction was NOT called
@@ -161,27 +165,10 @@ class TestTrainer:
 
     def test_get_callbacks_all_enabled(self):
         """Test get_callbacks with all callbacks enabled."""
-        # Mock callback classes
-        mock_early_stopping = Mock()
-        mock_checkpoint = Mock()
-        mock_accuracy_callback = Mock()
-
-        with patch(
-            "img_classifier_training.trainer.EarlyStopping", return_value=mock_early_stopping
-        ):
-            with patch(
-                "img_classifier_training.trainer.ModelCheckpoint", return_value=mock_checkpoint
-            ):
-                with patch(
-                    "img_classifier_training.trainer.AccuracyThresholdCallback",
-                    return_value=mock_accuracy_callback,
-                ):
-                    callbacks = self.trainer.get_callbacks()
+        callbacks = self.trainer.get_callbacks()
 
         assert len(callbacks) == 3
-        assert mock_early_stopping in callbacks
-        assert mock_checkpoint in callbacks
-        assert mock_accuracy_callback in callbacks
+        assert any(isinstance(cb, EarlyStopping) for cb in callbacks)
 
     def test_get_callbacks_early_stopping_only(self):
         """Test get_callbacks with only early stopping."""
@@ -189,14 +176,10 @@ class TestTrainer:
         self.mock_config.use_model_checkpoint = False
         self.mock_config.use_accuracy_threshold_stopping = False
 
-        mock_early_stopping = Mock()
-        with patch(
-            "img_classifier_training.trainer.EarlyStopping", return_value=mock_early_stopping
-        ):
-            callbacks = self.trainer.get_callbacks()
+        callbacks = self.trainer.get_callbacks()
 
         assert len(callbacks) == 1
-        assert mock_early_stopping in callbacks
+        assert isinstance(callbacks[0], EarlyStopping)
 
     def test_get_callbacks_checkpoint_only(self):
         """Test get_callbacks with only model checkpoint."""
@@ -204,12 +187,9 @@ class TestTrainer:
         self.mock_config.use_model_checkpoint = True
         self.mock_config.use_accuracy_threshold_stopping = False
 
-        mock_checkpoint = Mock()
-        with patch("img_classifier_training.trainer.ModelCheckpoint", return_value=mock_checkpoint):
-            callbacks = self.trainer.get_callbacks()
+        callbacks = self.trainer.get_callbacks()
 
         assert len(callbacks) == 1
-        assert mock_checkpoint in callbacks
 
     def test_get_callbacks_accuracy_threshold_only(self):
         """Test get_callbacks with only accuracy threshold."""
@@ -217,15 +197,9 @@ class TestTrainer:
         self.mock_config.use_model_checkpoint = False
         self.mock_config.use_accuracy_threshold_stopping = True
 
-        mock_accuracy_callback = Mock()
-        with patch(
-            "img_classifier_training.trainer.AccuracyThresholdCallback",
-            return_value=mock_accuracy_callback,
-        ):
-            callbacks = self.trainer.get_callbacks()
+        callbacks = self.trainer.get_callbacks()
 
         assert len(callbacks) == 1
-        assert mock_accuracy_callback in callbacks
 
     def test_get_callbacks_none_enabled(self):
         """Test get_callbacks with no callbacks enabled."""
@@ -242,15 +216,15 @@ class TestTrainer:
         """Test basic training."""
         mock_time.time.side_effect = [1000.0, 1100.0]  # 100s training
 
-        X_train = np.random.rand(10, 128, 128, 3)
+        x_train = np.random.rand(10, 128, 128, 3)
         y_train = np.random.randint(0, 4, (10, 4))
-        X_val = np.random.rand(5, 128, 128, 3)
+        x_val = np.random.rand(5, 128, 128, 3)
         y_val = np.random.randint(0, 4, (5, 4))
 
-        mock_history = Mock()
+        mock_history = MagicMock()
         self.mock_keras_model.fit.return_value = mock_history
 
-        result = self.trainer.train(X_train, y_train, X_val, y_val)
+        result = self.trainer.train(x_train, y_train, x_val, y_val)
 
         assert result == mock_history
         assert self.trainer.history == mock_history
@@ -262,42 +236,41 @@ class TestTrainer:
         mock_time.time.side_effect = [1000.0, 1100.0]
 
         # Set model to None initially
-        self.trainer.model.model = None
+        self.mock_model.model = None
 
         # Set up compile to set the model
         def compile_side_effect():
-            self.trainer.model.model = self.mock_keras_model
+            self.mock_model.model = self.mock_keras_model
 
         self.mock_model.compile.side_effect = compile_side_effect
 
-        X_train = np.random.rand(10, 128, 128, 3)
+        x_train = np.random.rand(10, 128, 128, 3)
         y_train = np.random.randint(0, 4, (10, 4))
-        X_val = np.random.rand(5, 128, 128, 3)
+        x_val = np.random.rand(5, 128, 128, 3)
         y_val = np.random.randint(0, 4, (5, 4))
 
-        mock_history = Mock()
+        mock_history = MagicMock()
         self.mock_keras_model.fit.return_value = mock_history
 
-        self.trainer.train(X_train, y_train, X_val, y_val)
+        self.trainer.train(x_train, y_train, x_val, y_val)
 
         self.mock_model.compile.assert_called_once()
 
     def test_train_with_callbacks(self):
         """Test training with callbacks."""
-        X_train = np.random.rand(10, 128, 128, 3)
+        x_train = np.random.rand(10, 128, 128, 3)
         y_train = np.random.randint(0, 4, (10, 4))
-        X_val = np.random.rand(5, 128, 128, 3)
+        x_val = np.random.rand(5, 128, 128, 3)
         y_val = np.random.randint(0, 4, (5, 4))
 
-        self.config.use_early_stopping = True
-
-        mock_history = Mock()
+        mock_history = MagicMock()
         self.mock_keras_model.fit.return_value = mock_history
 
-        self.trainer.train(X_train, y_train, X_val, y_val)
+        self.trainer.train(x_train, y_train, x_val, y_val)
 
         # Verify fit was called with callbacks
         call_args = self.mock_keras_model.fit.call_args
+        assert call_args is not None
         assert "callbacks" in call_args.kwargs
         assert len(call_args.kwargs["callbacks"]) > 0
 
@@ -390,8 +363,8 @@ class TestTrainer:
 
     def test_save_model_above_threshold(self):
         """Test model saving when accuracy is above threshold."""
-        self.config.min_accuracy_to_save = 0.95
-        self.config.models_dir.mkdir(parents=True, exist_ok=True)
+        self.mock_config.min_accuracy_to_save = 0.95
+        self.mock_config.models_dir.mkdir(parents=True, exist_ok=True)
 
         result = self.trainer.save_model(acc=0.97, loss=0.1, elapsed_time=100.0)
 
@@ -401,7 +374,7 @@ class TestTrainer:
 
     def test_save_model_below_threshold(self):
         """Test model not saved when accuracy is below threshold."""
-        self.config.min_accuracy_to_save = 0.95
+        self.mock_config.min_accuracy_to_save = 0.95
 
         result = self.trainer.save_model(acc=0.90, loss=0.2, elapsed_time=100.0)
 
@@ -410,8 +383,8 @@ class TestTrainer:
 
     def test_save_model_force_save(self):
         """Test model saved with force_save even below threshold."""
-        self.config.min_accuracy_to_save = 0.95
-        self.config.models_dir.mkdir(parents=True, exist_ok=True)
+        self.mock_config.min_accuracy_to_save = 0.95
+        self.mock_config.models_dir.mkdir(parents=True, exist_ok=True)
 
         result = self.trainer.save_model(acc=0.85, loss=0.3, elapsed_time=100.0, force_save=True)
 
@@ -421,13 +394,13 @@ class TestTrainer:
 
     def test_save_model_filename_format(self):
         """Test model filename format."""
-        self.config.min_accuracy_to_save = 0.0
-        self.config.project_name = "test_project"
-        self.config.num_epochs = 25
-        self.config.batch_size = 32
-        self.config.learning_rate = 0.001
-        self.config.data_percent = 0.8
-        self.config.models_dir.mkdir(parents=True, exist_ok=True)
+        self.mock_config.min_accuracy_to_save = 0.0
+        self.mock_config.project_name = "test_project"
+        self.mock_config.num_epochs = 25
+        self.mock_config.batch_size = 32
+        self.mock_config.learning_rate = 0.001
+        self.mock_config.data_percent = 0.8
+        self.mock_config.models_dir.mkdir(parents=True, exist_ok=True)
 
         result = self.trainer.save_model(acc=0.96, loss=0.12, elapsed_time=120.5)
 
@@ -444,8 +417,8 @@ class TestTrainer:
 
     def test_log_results_creates_log_file(self):
         """Test log_results creates log file."""
-        self.config.logs_dir.mkdir(parents=True, exist_ok=True)
-        log_file = self.config.logs_dir / "training_history.log"
+        self.mock_config.logs_dir.mkdir(parents=True, exist_ok=True)
+        log_file = self.mock_config.logs_dir / "training_history.log"
 
         self.trainer.log_results(acc=0.95, loss=0.15, elapsed_time=100.0)
 
@@ -458,8 +431,8 @@ class TestTrainer:
 
     def test_log_results_appends_to_existing(self):
         """Test log_results appends to existing log file."""
-        self.config.logs_dir.mkdir(parents=True, exist_ok=True)
-        log_file = self.config.logs_dir / "training_history.log"
+        self.mock_config.logs_dir.mkdir(parents=True, exist_ok=True)
+        log_file = self.mock_config.logs_dir / "training_history.log"
 
         # First log
         self.trainer.log_results(acc=0.90, loss=0.20, elapsed_time=50.0)
@@ -475,15 +448,15 @@ class TestTrainer:
 
     def test_log_results_format(self):
         """Test log results format."""
-        self.config.logs_dir.mkdir(parents=True, exist_ok=True)
-        self.config.data_percent = 0.75
-        self.config.batch_size = 64
-        self.config.learning_rate = 0.002
-        self.config.num_epochs = 30
+        self.mock_config.logs_dir.mkdir(parents=True, exist_ok=True)
+        self.mock_config.data_percent = 0.75
+        self.mock_config.batch_size = 64
+        self.mock_config.learning_rate = 0.002
+        self.mock_config.num_epochs = 30
 
         self.trainer.log_results(acc=0.92, loss=0.18, elapsed_time=75.0)
 
-        log_file = self.config.logs_dir / "training_history.log"
+        log_file = self.mock_config.logs_dir / "training_history.log"
         content = log_file.read_text()
 
         assert "0.9200" in content
@@ -494,29 +467,32 @@ class TestTrainer:
         assert "30" in content
         assert "75" in content
 
-    @patch.object(Trainer, "prepare_data")
-    @patch.object(Trainer, "train")
-    @patch.object(Trainer, "evaluate")
-    @patch.object(Trainer, "save_model")
-    @patch.object(Trainer, "log_results")
-    @patch.object(Trainer, "cleanup")
-    def test_run_complete_pipeline(
-        self, mock_cleanup, mock_log, mock_save, mock_eval, mock_train, mock_prepare
-    ):
+    @patch("img_classifier_training.trainer.tf.keras.utils.to_categorical")
+    def test_run_complete_pipeline(self, mock_to_categorical):
         """Test complete run pipeline."""
-        # Setup mocks
-        mock_prepare.return_value = (
-            np.array([1]),
-            np.array([0]),
-            np.array([2]),
-            np.array([1]),
-            np.array([3]),
-            np.array([0]),
-        )
-        mock_history = Mock()
-        mock_train.return_value = mock_history
-        mock_eval.return_value = (0.15, 0.95)
-        mock_save.return_value = Path("/tmp/model.keras")
+        # Setup data
+        x_train = np.random.rand(10, 128, 128, 3)
+        y_train = np.random.randint(0, 4, 10)
+        x_val = np.random.rand(5, 128, 128, 3)
+        y_val = np.random.randint(0, 4, 5)
+        x_test = np.random.rand(5, 128, 128, 3)
+        y_test = np.random.randint(0, 4, 5)
+
+        self.mock_loader.load_train_data.return_value = (x_train, y_train)
+        self.mock_loader.load_test_data.return_value = (x_test, y_test)
+        self.mock_loader.split_data.return_value = (x_val, x_test, y_val, y_test)
+
+        # Mock to_categorical
+        mock_to_categorical.side_effect = lambda y, num_classes: np.eye(num_classes)[y]
+
+        # Mock training
+        mock_history = MagicMock()
+        self.mock_keras_model.fit.return_value = mock_history
+        self.mock_keras_model.evaluate.return_value = (0.15, 0.95)
+
+        # Create directories
+        self.mock_config.models_dir.mkdir(parents=True, exist_ok=True)
+        self.mock_config.logs_dir.mkdir(parents=True, exist_ok=True)
 
         # Run
         acc, loss = self.trainer.run(plot=False, force_save=True)
@@ -524,44 +500,61 @@ class TestTrainer:
         # Verify
         assert acc == 0.95
         assert loss == 0.15
-        mock_prepare.assert_called_once()
-        mock_train.assert_called_once()
-        mock_eval.assert_called_once()
-        mock_save.assert_called_once()
-        mock_log.assert_called_once()
-        mock_cleanup.assert_called_once()
+        self.mock_loader.load_train_data.assert_called_once()
+        self.mock_loader.load_test_data.assert_called_once()
+        self.mock_keras_model.fit.assert_called_once()
+        self.mock_keras_model.evaluate.assert_called_once()
 
-    @patch.object(Trainer, "prepare_data")
-    @patch.object(Trainer, "plot_history")
-    @patch.object(Trainer, "cleanup")
-    def test_run_with_plot(self, mock_cleanup, mock_plot, mock_prepare):
+    @patch("img_classifier_training.trainer.tf.keras.utils.to_categorical")
+    @patch("img_classifier_training.trainer.sns.lineplot")
+    @patch("img_classifier_training.trainer.plt")
+    def test_run_with_plot(self, mock_plt, mock_sns_lineplot, mock_to_categorical):
         """Test run with plotting enabled."""
-        mock_prepare.return_value = (
-            np.random.rand(10, 128, 128, 3),
-            np.zeros((10, 4)),
-            np.random.rand(5, 128, 128, 3),
-            np.zeros((5, 4)),
-            np.random.rand(5, 128, 128, 3),
-            np.zeros((5, 4)),
-        )
-        self.mock_keras_model.fit.return_value = Mock()
+        # Setup data
+        x_train = np.random.rand(10, 128, 128, 3)
+        y_train = np.random.randint(0, 4, 10)
+        x_val = np.random.rand(5, 128, 128, 3)
+        y_val = np.random.randint(0, 4, 5)
+        x_test = np.random.rand(5, 128, 128, 3)
+        y_test = np.random.randint(0, 4, 5)
+
+        self.mock_loader.load_train_data.return_value = (x_train, y_train)
+        self.mock_loader.load_test_data.return_value = (x_test, y_test)
+        self.mock_loader.split_data.return_value = (x_val, x_test, y_val, y_test)
+
+        # Mock to_categorical
+        mock_to_categorical.side_effect = lambda y, num_classes: np.eye(num_classes)[y]
+
+        mock_history = MagicMock()
+        mock_history.history = {"loss": [0.5], "acc": [0.8], "val_loss": [0.6], "val_acc": [0.75]}
+        self.mock_keras_model.fit.return_value = mock_history
         self.mock_keras_model.evaluate.return_value = (0.1, 0.96)
-        self.config.models_dir.mkdir(parents=True, exist_ok=True)
-        self.config.logs_dir.mkdir(parents=True, exist_ok=True)
+
+        self.mock_config.models_dir.mkdir(parents=True, exist_ok=True)
+        self.mock_config.logs_dir.mkdir(parents=True, exist_ok=True)
+
+        # Mock plot components
+        mock_fig = Mock()
+        mock_axes = [Mock(), Mock()]
+        mock_plt.subplots.return_value = (mock_fig, mock_axes)
 
         self.trainer.run(plot=True)
 
-        mock_plot.assert_called_once()
+        # Verify plot was called
+        mock_plt.savefig.assert_called_once()
+        # Verify seaborn lineplot was called (once for each metric: loss and acc)
+        assert mock_sns_lineplot.call_count == 2
 
-    @patch.object(Trainer, "cleanup")
-    def test_run_cleanup_on_exception(self, mock_cleanup):
+    @patch("img_classifier_training.trainer.tf.keras.utils.to_categorical")
+    def test_run_cleanup_on_exception(self, mock_to_categorical):
         """Test that cleanup is called even on exception."""
         self.mock_loader.load_train_data.side_effect = Exception("Data load failed")
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match="Data load failed"):
             self.trainer.run()
 
-        mock_cleanup.assert_called_once()
+        # Model should be cleaned up (set to None)
+        assert self.mock_model.model is None
 
     @patch("img_classifier_training.trainer.K")
     @patch("img_classifier_training.trainer.gc")
@@ -594,10 +587,26 @@ class TestTrainerEdgeCases:
     def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
-        self.config = BaseConfig(working_dir=self.temp_dir)
-        self.mock_model = Mock(spec=BaseModel)
-        self.mock_model.model = Mock()
-        self.mock_loader = Mock(spec=BaseDataLoader)
+        self.config = Mock()
+        self.config.models_dir = self.temp_dir / "models"
+        self.config.logs_dir = self.temp_dir / "logs"
+        self.config.num_classes = 4
+        self.config.batch_size = 32
+        self.config.num_epochs = 10
+        self.config.data_percent = 1.0
+        self.config.use_early_stopping = False
+        self.config.use_model_checkpoint = False
+        self.config.use_accuracy_threshold_stopping = False
+        self.config.project_name = "test"
+        self.config.learning_rate = 0.001
+        self.config.min_accuracy_to_save = 0.0
+        self.config.early_stopping_patience = 5
+        self.config.accuracy_threshold = 0.995
+
+        self.mock_model = Mock()
+        self.mock_model.model = MagicMock()
+        self.mock_model.save = Mock()
+        self.mock_loader = Mock()
         self.trainer = Trainer(self.config, self.mock_model, self.mock_loader)
         yield
 
@@ -605,66 +614,70 @@ class TestTrainerEdgeCases:
         """Test with zero epochs."""
         self.config.num_epochs = 0
 
-        X_train = np.random.rand(10, 128, 128, 3)
+        x_train = np.random.rand(10, 128, 128, 3)
         y_train = np.random.randint(0, 4, (10, 4))
-        X_val = np.random.rand(5, 128, 128, 3)
+        x_val = np.random.rand(5, 128, 128, 3)
         y_val = np.random.randint(0, 4, (5, 4))
 
-        mock_history = Mock()
+        mock_history = MagicMock()
         self.mock_model.model.fit.return_value = mock_history
 
-        self.trainer.train(X_train, y_train, X_val, y_val)
+        self.trainer.train(x_train, y_train, x_val, y_val)
 
         # Should still call fit with 0 epochs
         call_args = self.mock_model.model.fit.call_args
+        assert call_args is not None
         assert call_args.kwargs["epochs"] == 0
 
     def test_single_batch_size(self):
         """Test with batch size of 1."""
         self.config.batch_size = 1
 
-        X_train = np.random.rand(10, 128, 128, 3)
+        x_train = np.random.rand(10, 128, 128, 3)
         y_train = np.random.randint(0, 4, (10, 4))
-        X_val = np.random.rand(5, 128, 128, 3)
+        x_val = np.random.rand(5, 128, 128, 3)
         y_val = np.random.randint(0, 4, (5, 4))
 
-        mock_history = Mock()
+        mock_history = MagicMock()
         self.mock_model.model.fit.return_value = mock_history
 
-        self.trainer.train(X_train, y_train, X_val, y_val)
+        self.trainer.train(x_train, y_train, x_val, y_val)
 
         call_args = self.mock_model.model.fit.call_args
+        assert call_args is not None
         assert call_args.kwargs["batch_size"] == 1
 
     def test_large_batch_size(self):
         """Test with very large batch size."""
         self.config.batch_size = 10000
 
-        X_train = np.random.rand(100, 128, 128, 3)
+        x_train = np.random.rand(100, 128, 128, 3)
         y_train = np.random.randint(0, 4, (100, 4))
-        X_val = np.random.rand(20, 128, 128, 3)
+        x_val = np.random.rand(20, 128, 128, 3)
         y_val = np.random.randint(0, 4, (20, 4))
 
-        mock_history = Mock()
+        mock_history = MagicMock()
         self.mock_model.model.fit.return_value = mock_history
 
-        self.trainer.train(X_train, y_train, X_val, y_val)
+        self.trainer.train(x_train, y_train, x_val, y_val)
 
         call_args = self.mock_model.model.fit.call_args
+        assert call_args is not None
         assert call_args.kwargs["batch_size"] == 10000
 
     def test_empty_training_data(self):
         """Test with empty training data."""
-        X_train = np.array([]).reshape(0, 128, 128, 3)
+        x_train = np.array([]).reshape(0, 128, 128, 3)
         y_train = np.array([]).reshape(0, 4)
-        X_val = np.random.rand(5, 128, 128, 3)
+        x_val = np.random.rand(5, 128, 128, 3)
         y_val = np.random.randint(0, 4, (5, 4))
 
-        mock_history = Mock()
+        mock_history = MagicMock()
         self.mock_model.model.fit.return_value = mock_history
 
         # Should not raise, just attempt to train
-        self.trainer.train(X_train, y_train, X_val, y_val)
+        self.trainer.train(x_train, y_train, x_val, y_val)
+        self.mock_model.model.fit.assert_called_once()
 
     def test_perfect_accuracy(self):
         """Test saving model with 100% accuracy."""

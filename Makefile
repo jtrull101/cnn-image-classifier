@@ -1,12 +1,23 @@
 ﻿.PHONY: help install sync clean test test-coverage test-parallel test-unit test-integration test-slow test-config test-data test-models test-training test-utils test-cli test-api lint format typecheck build build-config build-utils build-data build-models build-training build-cli build-api serve-api install-hooks pre-commit pre-commit-fix ci
 
-# Default shell for Windows
-SHELL := pwsh.exe
-.SHELLFLAGS := -NoProfile -Command
+# Platform detection
+ifeq ($(OS),Windows_NT)
+	DETECTED_OS := Windows
+	SHELL := pwsh.exe
+	.SHELLFLAGS := -NoProfile -Command
+	SCRIPT_EXT := .ps1
+	SCRIPT_RUNNER := powershell -NoProfile -ExecutionPolicy Bypass -File
+else
+	DETECTED_OS := $(shell uname -s)
+	SCRIPT_EXT := .sh
+	SCRIPT_RUNNER := bash
+endif
+
 
 PY_PACKAGES = "packages/config","packages/utils","packages/data","packages/models","packages/training","packages/cli","apps/api"
 
 help:
+	@echo "Detected OS: $(DETECTED_OS)"
 	@echo "Alzheimer's MRI CNN - Python/UV Monorepo"
 	@echo ""
 	@echo "Available commands:"
@@ -54,11 +65,11 @@ help:
 # Install UV and dependencies
 install:
 	@echo "Checking UV installation..."
-	@powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install_uv.ps1
+	@$(SCRIPT_RUNNER) scripts/install_uv$(SCRIPT_EXT)
 	@echo "Syncing UV workspace (including dev deps)..."
 	@uv sync --all-groups
 	@echo "Installing Git hooks..."
-	@powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install_hooks.ps1
+	@$(SCRIPT_RUNNER) scripts/install_hooks$(SCRIPT_EXT)
 
 # Sync UV dependencies across workspace
 sync:
@@ -66,9 +77,8 @@ sync:
 	uv sync --all-groups
 
 # Build all packages/apps
-build:
-	@echo "Building all packages and apps with uv..."
-	@pwsh -NoProfile -Command "foreach ($$pkg in @($(PY_PACKAGES))) { Write-Host \"[build] $$pkg\" -ForegroundColor Cyan; Push-Location $$pkg; uv build; if ($$LASTEXITCODE -ne 0) { exit $$LASTEXITCODE }; Pop-Location }"
+build: build-config build-utils build-data build-models build-training build-cli build-api
+	@echo "All packages and apps built successfully!"
 
 # Test all packages with coverage
 test:
@@ -77,56 +87,27 @@ test:
 
 # Test with coverage reports/combination helper
 test-coverage:
-	@powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run_coverage.ps1
+	@$(SCRIPT_RUNNER) scripts/run_coverage$(SCRIPT_EXT)
 
 # Test with specific number of workers
 test-parallel:
 	@echo "Running tests in parallel with custom workers..."
-	.\scripts\run_tests.ps1 -Workers 4
+	@uv run python -m pytest -c pyproject.toml --rootdir . -v -n 4 --maxfail=3 --cov=packages --cov=apps --cov-report=term-missing
 
 # Test unit tests only (fast)
 test-unit:
 	@echo "Running unit tests only..."
-	.\scripts\run_tests.ps1 -UnitOnly
+	@uv run python -m pytest -c pyproject.toml --rootdir . tests/unit -v -n auto --maxfail=3
 
 # Test integration tests only (slower)
 test-integration:
 	@echo "Running integration tests only..."
-	.\scripts\run_tests.ps1 -IntegrationOnly
+	@uv run python -m pytest -c pyproject.toml --rootdir . tests/integration -v -n auto --maxfail=3
 
 # Show slowest tests
 test-slow:
 	@echo "Running tests and showing slowest..."
-	.\scripts\run_tests.ps1 -ShowSlowest
-
-# Package-specific test commands
-test-config:
-	@echo "Running config package tests..."
-	.\scripts\run_tests.ps1 -Target config -Coverage
-
-test-data:
-	@echo "Running data package tests..."
-	.\scripts\run_tests.ps1 -Target data -Coverage
-
-test-models:
-	@echo "Running models package tests..."
-	.\scripts\run_tests.ps1 -Target models -Coverage
-
-test-training:
-	@echo "Running training package tests..."
-	.\scripts\run_tests.ps1 -Target training -Coverage
-
-test-utils:
-	@echo "Running utils package tests..."
-	.\scripts\run_tests.ps1 -Target utils -Coverage
-
-test-cli:
-	@echo "Running CLI package tests..."
-	.\scripts\run_tests.ps1 -Target cli -Coverage
-
-test-api:
-	@echo "Running API app tests..."
-	.\scripts\run_tests.ps1 -Target api -Coverage
+	@uv run python -m pytest -c pyproject.toml --rootdir . -v -n auto --maxfail=3 --durations=10
 
 # Lint all packages
 lint:
@@ -145,7 +126,7 @@ typecheck:
 
 # Clean build artifacts
 clean:
-	@powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean.ps1
+	@$(SCRIPT_RUNNER) scripts/clean$(SCRIPT_EXT)
 
 # Package-specific builds
 build-config:
@@ -176,15 +157,44 @@ serve-api:
 # Git hooks
 install-hooks:
 	@echo "Installing Git hooks..."
-	@powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install_hooks.ps1
+	@$(SCRIPT_RUNNER) scripts/install_hooks$(SCRIPT_EXT)
 
 # Pre-commit checks (same as git hooks)
 pre-commit:
-	@.\scripts\run-pre-commit.ps1
+	@$(SCRIPT_RUNNER) scripts/run-pre-commit$(SCRIPT_EXT)
 
 # Pre-commit auto-fix
 pre-commit-fix:
-	@.\scripts\run-pre-commit-fix.ps1
+	@$(SCRIPT_RUNNER) scripts/run-pre-commit-fix$(SCRIPT_EXT)
+
+# Package-specific tests
+test-config:
+	@echo "Running config package tests..."
+	@uv run python -m pytest -c pyproject.toml --rootdir . packages/config/img_classifier_config/tests -v
+
+test-utils:
+	@echo "Running utils package tests..."
+	@uv run python -m pytest -c pyproject.toml --rootdir . packages/utils/img_classifier_utils/tests -v
+
+test-data:
+	@echo "Running data package tests..."
+	@uv run python -m pytest -c pyproject.toml --rootdir . packages/data/img_classifier_data/tests -v
+
+test-models:
+	@echo "Running models package tests..."
+	@uv run python -m pytest -c pyproject.toml --rootdir . packages/models/img_classifier_models/tests -v
+
+test-training:
+	@echo "Running training package tests..."
+	@uv run python -m pytest -c pyproject.toml --rootdir . packages/training/img_classifier_training/tests -v
+
+test-cli:
+	@echo "Running CLI package tests..."
+	@uv run python -m pytest -c pyproject.toml --rootdir . packages/cli/img_classifier_cli/tests -v
+
+test-api:
+	@echo "Running API app tests..."
+	@uv run python -m pytest -c pyproject.toml --rootdir . apps/api/img_classifier_api/tests -v
 
 # CI workflow
 ci: lint typecheck test build
