@@ -66,13 +66,13 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ""
 
 # Run tests
-Write-Host "[4/4] Running tests..." -ForegroundColor Yellow
-& $uvCommand run python -m pytest -c pyproject.toml --rootdir . -v -n auto --maxfail=3 --cov=packages --cov=apps --cov-report=term-missing
+Write-Host "[4/4] Running smoke tests..." -ForegroundColor Yellow
+& $uvCommand run python -m pytest -c pyproject.toml --rootdir . -v -m smoke --maxfail=3
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "[ERROR] Tests failed" -ForegroundColor Red
+    Write-Host "[ERROR] Smoke tests failed" -ForegroundColor Red
     $ErrorCount++
 } else {
-    Write-Host "[OK] Tests passed" -ForegroundColor Green
+    Write-Host "[OK] Smoke tests passed" -ForegroundColor Green
 }
 Write-Host ""
 

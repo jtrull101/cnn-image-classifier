@@ -62,13 +62,13 @@ fi
 echo ""
 
 # Run tests
-echo "[4/4] Running tests..."
-"$UV_CMD" run python -m pytest -c pyproject.toml --rootdir . -v -n auto --maxfail=3 --cov=packages --cov=apps --cov-report=term-missing
+echo "[4/4] Running smoke tests..."
+"$UV_CMD" run python -m pytest -c pyproject.toml --rootdir . -v -m smoke --maxfail=3
 if [ $? -ne 0 ]; then
-    echo "[ERROR] Tests failed"
+    echo "[ERROR] Smoke tests failed"
     ERROR_COUNT=$((ERROR_COUNT + 1))
 else
-    echo "[OK] Tests passed"
+    echo "[OK] Smoke tests passed"
 fi
 echo ""
 

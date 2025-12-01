@@ -22,6 +22,7 @@ def pytest_configure(config):
         "markers", "integration: marks tests as integration tests (slow, use real dependencies)"
     )
     config.addinivalue_line("markers", "unit: marks tests as unit tests (fast, use mocking)")
+    config.addinivalue_line("markers", "smoke: marks tests as smoke tests (critical path validation)")
     config.addinivalue_line("markers", "requires_gpu: marks tests that require GPU")
     config.addinivalue_line("markers", "requires_data: marks tests that require dataset download")
 

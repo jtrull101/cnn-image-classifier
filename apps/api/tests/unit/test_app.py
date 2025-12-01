@@ -13,7 +13,8 @@ from img_classifier_api.app import ModelManager, PredictionResponse, app
 pytestmark = pytest.mark.unit
 
 
-class BaseTests:
+@pytest.mark.smoke
+class TestSmoke:
     def test_app_starts(self):
         """Ensure the FastAPI application can be instantiated."""
         from fastapi.testclient import TestClient
@@ -34,6 +35,7 @@ class TestModelManager:
         """Create a fresh ModelManager for each test."""
         return ModelManager()
 
+    @pytest.mark.smoke
     def test_initialization(self, manager):
         """Test ModelManager initializes with empty state."""
         assert manager.models == {}
@@ -311,6 +313,7 @@ class TestApiEndpoints:
         """Create a test client."""
         return TestClient(app)
 
+    @pytest.mark.smoke
     def test_health_check(self, client):
         """Test /health endpoint."""
         response = client.get("/health")
@@ -548,6 +551,7 @@ class TestApiEndpoints:
 class TestPredictionResponse:
     """Test the PredictionResponse model."""
 
+    @pytest.mark.smoke
     def test_prediction_response_creation(self):
         """Test creating a PredictionResponse."""
         response = PredictionResponse(

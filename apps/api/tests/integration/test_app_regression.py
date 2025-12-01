@@ -22,6 +22,7 @@ class TestModelManagerWorkflows:
     """Test complete ModelManager workflows."""
 
     @patch("tensorflow.keras.models.load_model")
+    @pytest.mark.smoke
     def test_workflow_load_and_predict_with_metadata(self, mock_load):
         """Test workflow: load model with metadata, then retrieve."""
         manager = ModelManager()
@@ -86,7 +87,7 @@ class TestModelManagerWorkflows:
         assert manager.get_model("detector_v2") is not None
 
 
-class TestAPIPredictionWorkflow:
+class TestApiPredictionWorkflow:
     """Test complete prediction workflows through API."""
 
     @pytest.fixture
@@ -97,6 +98,7 @@ class TestAPIPredictionWorkflow:
     @patch("img_classifier_api.app.model_manager.get_info")
     @patch("cv2.imdecode")
     @patch("cv2.resize")
+    @pytest.mark.smoke
     def test_full_prediction_workflow(
         self, mock_resize, mock_decode, mock_info, mock_get_model, client
     ):
@@ -191,6 +193,7 @@ class TestErrorRecoveryWorkflows:
         return TestClient(app)
 
     @patch("img_classifier_api.app.model_manager.get_model")
+    @pytest.mark.smoke
     def test_recover_from_missing_model_error(self, mock_get_model, client):
         """Test API gracefully handles missing model during prediction."""
         mock_get_model.side_effect = ValueError("No model loaded")
@@ -229,7 +232,7 @@ class TestErrorRecoveryWorkflows:
         assert response.status_code == 404
 
 
-class TestAPIStateManagement:
+class TestApiStateManagement:
     """Test API state management across requests."""
 
     @pytest.fixture
@@ -239,6 +242,7 @@ class TestAPIStateManagement:
     @patch("img_classifier_api.app.model_manager.current_model_name", None)
     @patch("img_classifier_api.app.model_manager.models", {})
     @patch("img_classifier_api.app.model_manager.model_info", {})
+    @pytest.mark.smoke
     def test_state_empty_on_startup(self, client):
         """Test API starts with no models loaded."""
         response = client.get("/api/models")
@@ -285,6 +289,7 @@ class TestImageProcessingEdgeCases:
     @patch("img_classifier_api.app.model_manager.get_info")
     @patch("cv2.imdecode")
     @patch("cv2.resize")
+    @pytest.mark.smoke
     def test_predict_very_small_image(
         self, mock_resize, mock_decode, mock_info, mock_get_model, client
     ):

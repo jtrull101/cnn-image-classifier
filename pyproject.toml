@@ -83,6 +83,7 @@ python_functions = ["test_*"]
 markers = [
     "unit: Fast unit tests using mocks and no I/O (default)",
     "integration: Slower integration tests using real dependencies and I/O",
+    "smoke: Critical path validation tests (run in pre-commit hooks)",
     "slow: Slow tests that take significant time to run",
     "serial: Tests that must run serially, not in parallel",
     "requires_gpu: Tests that require GPU access",

@@ -10,6 +10,7 @@ from img_classifier_models import ArchitectureFactory, BaseModel  # noqa: E402
 
 pytestmark = pytest.mark.unit
 
+
 class TestBaseModel:
     """Tests for BaseModel abstract class."""
 
