@@ -10,8 +10,6 @@ from img_classifier_models import ArchitectureFactory, BaseModel  # noqa: E402
 
 pytestmark = pytest.mark.unit
 
-
-@pytest.mark.unit
 class TestBaseModel:
     """Tests for BaseModel abstract class."""
 
@@ -23,6 +21,7 @@ class TestBaseModel:
 
         yield
 
+    @pytest.mark.smoke
     def test_base_model_has_required_methods(self):
         """Test that BaseModel has required abstract methods."""
         assert hasattr(BaseModel, "build")
@@ -31,7 +30,6 @@ class TestBaseModel:
         assert hasattr(BaseModel, "load")
 
 
-@pytest.mark.unit
 class TestArchitectureFactory:
     """Tests for ArchitectureFactory."""
 
@@ -48,6 +46,7 @@ class TestArchitectureFactory:
 
         yield
 
+    @pytest.mark.smoke
     def test_create_simple_architecture(self):
         """Test creating simple architecture."""
         model = ArchitectureFactory.create(self.config, complexity="simple")
@@ -146,6 +145,7 @@ class TestCnnClassifier:
 
         yield
 
+    @pytest.mark.smoke
     def test_initialization(self):
         """Test CnnClassifier initialization."""
         from img_classifier_models import CnnClassifier
@@ -252,7 +252,6 @@ class TestCnnClassifier:
         assert "loss" in history.history
 
 
-@pytest.mark.unit
 class TestArchitectureFactoryEdgeCasesAdditional:
     """Additional edge case tests for ArchitectureFactory."""
 
@@ -262,6 +261,7 @@ class TestArchitectureFactoryEdgeCasesAdditional:
         self.temp_dir = isolated_tmp_dir
         yield
 
+    @pytest.mark.smoke
     def test_invalid_complexity_raises_error(self):
         """Test that invalid complexity raises appropriate error."""
         config = DatasetConfig(
@@ -361,7 +361,6 @@ class TestArchitectureFactoryEdgeCasesAdditional:
         assert model2 is not None
 
 
-@pytest.mark.unit
 class TestCnnClassifierEdgeCases:
     """Edge case tests for CnnClassifier."""
 
@@ -372,6 +371,7 @@ class TestCnnClassifierEdgeCases:
         self.config = BaseConfig(working_dir=self.temp_dir)
         yield
 
+    @pytest.mark.smoke
     def test_multiple_builds_replace_model(self):
         """Test that building multiple times replaces the model."""
         from img_classifier_models import CnnClassifier
@@ -494,7 +494,6 @@ class TestCnnClassifierEdgeCases:
         assert model1.count_params() == model2.count_params()
 
 
-@pytest.mark.unit
 class TestArchitectureFactoryEdgeCases:
     """Edge case tests for ArchitectureFactory."""
 
@@ -504,6 +503,7 @@ class TestArchitectureFactoryEdgeCases:
         self.temp_dir = isolated_tmp_dir
         yield
 
+    @pytest.mark.smoke
     def test_create_with_binary_classification(self):
         """Test creating model for binary classification."""
         config = DatasetConfig(
@@ -766,7 +766,6 @@ class TestArchitectureFactoryEdgeCases:
         assert types1 == types2
 
 
-@pytest.mark.unit
 class TestArchitectureFactoryCustomSpec:
     """Tests for ArchitectureFactory with custom specifications."""
 
@@ -782,6 +781,7 @@ class TestArchitectureFactoryCustomSpec:
         )
         yield
 
+    @pytest.mark.smoke
     def test_create_with_custom_spec(self):
         """Test creating model with custom architecture specification."""
         from img_classifier_models.architecture_generator import ArchitectureSpec
@@ -929,7 +929,6 @@ class TestArchitectureFactoryCustomSpec:
         assert model is not None
 
 
-@pytest.mark.unit
 class TestArchitectureFactoryAutoSelection:
     """Tests for ArchitectureFactory auto-selection logic."""
 
@@ -939,6 +938,7 @@ class TestArchitectureFactoryAutoSelection:
         self.temp_dir = isolated_tmp_dir
         yield
 
+    @pytest.mark.smoke
     def test_auto_selects_simple_for_binary(self):
         """Test auto complexity selects appropriately for binary classification."""
         config = DatasetConfig(
@@ -999,7 +999,6 @@ class TestArchitectureFactoryAutoSelection:
         assert model.output_shape[-1] == 4
 
 
-@pytest.mark.unit
 class TestCnnClassifierAdvanced:
     """Advanced tests for CnnClassifier."""
 
@@ -1015,6 +1014,7 @@ class TestCnnClassifierAdvanced:
         )
         yield
 
+    @pytest.mark.smoke
     def test_build_with_different_complexities(self):
         """Test building with different complexity levels."""
         from img_classifier_models import CnnClassifier
