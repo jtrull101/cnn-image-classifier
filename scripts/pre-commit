@@ -30,7 +30,7 @@ ERROR_COUNT=0
 
 # Format code
 echo "[1/4] Formatting code with ruff..."
-"$UV_CMD" run ruff format apps packages scripts tests
+"$UV_CMD" run ruff format .
 if [ $? -ne 0 ]; then
     echo "[ERROR] Formatting failed"
     ERROR_COUNT=$((ERROR_COUNT + 1))

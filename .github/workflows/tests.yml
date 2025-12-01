@@ -35,5 +35,15 @@ jobs:
         pip install -r requirements_dev.txt
         chmod +x start_front_end.sh
 
+    # Add Ruff formatting and lint checks to mirror pre-commit/CI steps
+    - name: Install ruff
+      run: pip install ruff
+
+    - name: Check formatting with ruff
+      run: ruff format --check .
+
+    - name: Lint with ruff
+      run: ruff check .
+
     - name: Test with tox
       run: tox
