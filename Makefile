@@ -60,19 +60,19 @@ help:
 # Install UV and dependencies
 install:
 	@echo "Checking UV installation..."
-ifeq ($(OS),Windows_NT)
-	@powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install_uv.ps1
-else
-	@bash scripts/install_uv.sh
-endif
+	@if [ "$(DETECTED_OS)" = "Windows" ]; then \
+		powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install_uv.ps1; \
+	else \
+		bash scripts/install_uv.sh; \
+	fi
 	@echo "Syncing UV workspace (including dev deps)..."
 	@uv sync --all-groups
 	@echo "Installing Git hooks..."
-ifeq ($(OS),Windows_NT)
-	@powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install_hooks.ps1
-else
-	@bash scripts/install_hooks.sh
-endif
+	@if [ "$(DETECTED_OS)" = "Windows" ]; then \
+		powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install_hooks.ps1; \
+	else \
+		bash scripts/install_hooks.sh; \
+	fi
 
 # Sync UV dependencies across workspace
 sync:
@@ -90,11 +90,11 @@ test:
 
 # Test with coverage reports/combination helper
 test-coverage:
-ifeq ($(OS),Windows_NT)
-	@powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_coverage.ps1
-else
-	@bash scripts/run_coverage.sh
-endif
+	@if [ "$(DETECTED_OS)" = "Windows" ]; then \
+		powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_coverage.ps1; \
+	else \
+		bash scripts/run_coverage.sh; \
+	fi
 
 # Test with specific number of workers
 test-parallel:
@@ -133,11 +133,11 @@ typecheck:
 
 # Clean build artifacts
 clean:
-ifeq ($(OS),Windows_NT)
-	@powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/clean.ps1
-else
-	@bash scripts/clean.sh
-endif
+	@if [ "$(DETECTED_OS)" = "Windows" ]; then \
+		powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/clean.ps1; \
+	else \
+		bash scripts/clean.sh; \
+	fi
 
 # Package-specific builds
 build-config:
@@ -168,27 +168,27 @@ serve-api:
 # Git hooks
 install-hooks:
 	@echo "Installing Git hooks..."
-ifeq ($(OS),Windows_NT)
-	@powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install_hooks.ps1
-else
-	@bash scripts/install_hooks.sh
-endif
+	@if [ "$(DETECTED_OS)" = "Windows" ]; then \
+		powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install_hooks.ps1; \
+	else \
+		bash scripts/install_hooks.sh; \
+	fi
 
 # Pre-commit checks (same as git hooks)
 pre-commit:
-ifeq ($(OS),Windows_NT)
-	@powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run-pre-commit.ps1
-else
-	@bash scripts/run-pre-commit.sh
-endif
+	@if [ "$(DETECTED_OS)" = "Windows" ]; then \
+		powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run-pre-commit.ps1; \
+	else \
+		bash scripts/run-pre-commit.sh; \
+	fi
 
 # Pre-commit auto-fix
 pre-commit-fix:
-ifeq ($(OS),Windows_NT)
-	@powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run-pre-commit-fix.ps1
-else
-	@bash scripts/run-pre-commit-fix.sh
-endif
+	@if [ "$(DETECTED_OS)" = "Windows" ]; then \
+		powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run-pre-commit-fix.ps1; \
+	else \
+		bash scripts/run-pre-commit-fix.sh; \
+	fi
 
 # Package-specific tests
 test-config:

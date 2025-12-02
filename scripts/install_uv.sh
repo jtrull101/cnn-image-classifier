@@ -1,29 +1,27 @@
 #!/usr/bin/env bash
-exit 0
-
-fi
-    echo "UV is already installed: $(uv --version)"
-else
-    echo "You may need to restart your terminal or run: source ~/.bashrc (or ~/.zshrc)"
-
-    fi
-        export PATH="$HOME/.cargo/bin:$PATH"
-    if [ -d "$HOME/.cargo/bin" ]; then
-    fi
-        export PATH="$HOME/.local/bin:$PATH"
-    if [ -d "$HOME/.local/bin" ]; then
-    # Add common UV installation paths
-
-    fi
-        source "$HOME/.cargo/env"
-    if [ -f "$HOME/.cargo/env" ]; then
-    # Try to add UV to PATH for current session
-
-    echo "UV installation complete."
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    echo "UV not found. Installing UV..."
-if ! command -v uv &> /dev/null; then
-
-set -e
 # Script to check and install UV if needed
 
+set -e
+
+if ! command -v uv &> /dev/null; then
+    echo "UV not found. Installing UV..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    echo "UV installation complete."
+
+    # Try to add UV to PATH for current session
+    if [ -f "$HOME/.cargo/env" ]; then
+        source "$HOME/.cargo/env"
+    fi
+
+    # Add common UV installation paths
+    if [ -d "$HOME/.local/bin" ]; then
+        export PATH="$HOME/.local/bin:$PATH"
+    fi
+    if [ -d "$HOME/.cargo/bin" ]; then
+        export PATH="$HOME/.cargo/bin:$PATH"
+    fi
+
+    echo "You may need to restart your terminal or run: source ~/.bashrc (or ~/.zshrc)"
+else
+    echo "UV is already installed: $(uv --version)"
+fi
