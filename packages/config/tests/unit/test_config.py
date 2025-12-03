@@ -107,7 +107,7 @@ class TestDatasetConfig:
             working_dir=self.temp_dir,
             num_classes=2,
             class_names=["a", "b"],
-            data_path=None  # Explicitly None
+            data_path=None,  # Explicitly None
         )
         # When data_path is explicitly None and train_path is not set, train_path should be None
         assert config.train_path is None
@@ -120,7 +120,7 @@ class TestDatasetConfig:
             working_dir=self.temp_dir,
             num_classes=2,
             class_names=["a", "b"],
-            data_path=None  # Explicitly None
+            data_path=None,  # Explicitly None
         )
         # When data_path is explicitly None and test_path is not set, test_path should be None
         assert config.test_path is None
@@ -1228,11 +1228,7 @@ class TestDatasetConfigValidation:
         """Test to_yaml path conversion with lists."""
         from img_classifier_config import DatasetConfig
 
-        config = DatasetConfig(
-            working_dir=tmp_path,
-            num_classes=2,
-            class_names=["a", "b"]
-        )
+        config = DatasetConfig(working_dir=tmp_path, num_classes=2, class_names=["a", "b"])
 
         yaml_path = tmp_path / "test_config.yaml"
         config.to_yaml(yaml_path)

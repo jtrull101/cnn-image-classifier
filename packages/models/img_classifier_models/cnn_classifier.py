@@ -1,6 +1,6 @@
 """CNN classifier model for image classification."""
 
-from typing import Any, Optional
+from typing import Optional
 
 import tensorflow as tf
 from img_classifier_config import BaseConfig

@@ -794,5 +794,5 @@ class TestFileUtilsEdgeCases:
             # Restore permissions for cleanup
             try:
                 os.chmod(test_file, stat.S_IWUSR | stat.S_IRUSR)
-            except:
+            except Exception:
                 pass

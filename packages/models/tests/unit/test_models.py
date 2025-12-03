@@ -1072,7 +1072,9 @@ class TestModelScaler:
         """Test recommend_depth with medium dataset."""
         from img_classifier_models.architecture_generator import ModelScaler
 
-        depth = ModelScaler.recommend_depth(image_size=(128, 128), num_classes=10, dataset_size=3000)
+        depth = ModelScaler.recommend_depth(
+            image_size=(128, 128), num_classes=10, dataset_size=3000
+        )
 
         # Medium dataset should get around 4 blocks
         assert depth >= 2
@@ -1082,7 +1084,9 @@ class TestModelScaler:
         """Test recommend_depth with large dataset."""
         from img_classifier_models.architecture_generator import ModelScaler
 
-        depth = ModelScaler.recommend_depth(image_size=(224, 224), num_classes=20, dataset_size=10000)
+        depth = ModelScaler.recommend_depth(
+            image_size=(224, 224), num_classes=20, dataset_size=10000
+        )
 
         # Large dataset should get around 5 blocks
         assert depth >= 2
@@ -1092,7 +1096,9 @@ class TestModelScaler:
         """Test recommend_depth adjusts for many classes."""
         from img_classifier_models.architecture_generator import ModelScaler
 
-        depth = ModelScaler.recommend_depth(image_size=(128, 128), num_classes=50, dataset_size=10000)
+        depth = ModelScaler.recommend_depth(
+            image_size=(128, 128), num_classes=50, dataset_size=10000
+        )
 
         # Many classes should increase depth
         assert depth >= 3
@@ -1120,7 +1126,9 @@ class TestModelScaler:
         """Test recommend_depth with non-square images."""
         from img_classifier_models.architecture_generator import ModelScaler
 
-        depth = ModelScaler.recommend_depth(image_size=(256, 128), num_classes=10, dataset_size=5000)
+        depth = ModelScaler.recommend_depth(
+            image_size=(256, 128), num_classes=10, dataset_size=5000
+        )
 
         # Should use max dimension (256) for calculation
         assert depth >= 2
@@ -1254,6 +1262,7 @@ class TestBaseModelEdgeCases:
         output = buffer.getvalue()
         sys.stdout = old_stdout
 
+        assert len(result) > 0
         assert len(output) > 0
         assert "Total params" in output
 
