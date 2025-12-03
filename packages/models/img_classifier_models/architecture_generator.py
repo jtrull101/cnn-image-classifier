@@ -12,6 +12,7 @@ from keras.layers import (
     Dropout,
     Flatten,
     GlobalAveragePooling2D,
+    Input,
     MaxPooling2D,
 )
 from keras.models import Sequential
@@ -193,30 +194,18 @@ class ArchitectureFactory:
         Returns:
             Keras Sequential model
         """
-        layers = []
+        layers = [Input(shape=config.input_shape)]
 
         # Add convolutional blocks
         for i, block in enumerate(spec.conv_blocks):
-            # First layer needs input_shape
-            if i == 0:
-                layers.append(
-                    Conv2D(
-                        filters=block["filters"],
-                        kernel_size=block["kernel_size"],
-                        activation=block["activation"],
-                        padding="same",
-                        input_shape=config.input_shape,
-                    )
+            layers.append(
+                Conv2D(
+                    filters=block["filters"],
+                    kernel_size=block["kernel_size"],
+                    activation=block["activation"],
+                    padding="same",
                 )
-            else:
-                layers.append(
-                    Conv2D(
-                        filters=block["filters"],
-                        kernel_size=block["kernel_size"],
-                        activation=block["activation"],
-                        padding="same",
-                    )
-                )
+            )
 
             # Add batch normalization if enabled
             if spec.use_batch_norm:
@@ -279,7 +268,10 @@ class ModelScaler:
 
         scaled = int(base_filters * multiplier * scale_factor)
         # Round to nearest power of 2
-        return 2 ** round(tf.math.log(float(scaled)) / tf.math.log(2.0))
+        import math
+
+        log_val = math.log2(float(scaled))
+        return 2 ** round(log_val)
 
     @staticmethod
     def recommend_depth(
@@ -297,11 +289,13 @@ class ModelScaler:
         Returns:
             Recommended number of conv blocks
         """
+        import math
+
         max_dimension = max(image_size)
 
         # Calculate maximum useful depth based on image size
         # Each pooling layer reduces dimension by 2
-        max_depth = int(tf.math.log(float(max_dimension)) / tf.math.log(2.0)) - 2
+        max_depth = int(math.log2(float(max_dimension))) - 2
 
         # Adjust based on dataset size and complexity
         if dataset_size < 1000:

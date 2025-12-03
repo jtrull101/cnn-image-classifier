@@ -9,6 +9,7 @@ This API provides endpoints for:
 """
 
 import json
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -21,18 +22,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
-# Initialize FastAPI app
-app = FastAPI(
-    title="Image Classification API",
-    description="Generic CNN-based image classification system with multi-model support",
-    version="0.2.0",
-)
-
+# This will be defined after ModelManager is initialized
 # Setup templates and static files
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 static_dir = Path(__file__).parent / "static"
 static_dir.mkdir(exist_ok=True)
-app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 
 # Pydantic models for request/response
@@ -225,11 +219,27 @@ class ModelManager:
 model_manager = ModelManager()
 
 
-# TODO deprecated
-@app.on_event("startup")
-async def startup_event():
-    """Load models on startup."""
+# Define lifespan context manager for startup/shutdown
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
+    # Startup
     model_manager.auto_load_best_model()
+    yield
+    # Shutdown (if needed)
+    # Add cleanup code here
+
+
+# Initialize FastAPI app with lifespan
+app = FastAPI(
+    title="Image Classification API",
+    description="Generic CNN-based image classification system with multi-model support",
+    version="0.2.0",
+    lifespan=lifespan,
+)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 
 # API Endpoints
@@ -241,9 +251,9 @@ async def home(request: Request):
     try:
         info = model_manager.get_info()
         return templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
+            request=request,
+            name="index.html",
+            context={
                 "model_name": info.name,
                 "class_names": info.class_names,
                 "accuracy": info.accuracy,
@@ -252,9 +262,9 @@ async def home(request: Request):
         )
     except ValueError:
         return templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
+            request=request,
+            name="index.html",
+            context={
                 "model_name": "No model loaded",
                 "class_names": [],
                 "accuracy": None,

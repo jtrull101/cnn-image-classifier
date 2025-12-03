@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 import tensorflow as tf
 from img_classifier_config import BaseConfig
-from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
+from keras.layers import Conv2D, Dense, Dropout, Flatten, Input, MaxPooling2D
 from keras.models import Sequential
 
 from .base_model import BaseModel
@@ -52,12 +52,9 @@ class CnnClassifier(BaseModel):
         }
         filters = filters_by_complexity.get(complexity_key, filters_by_complexity["medium"])
 
-        layers = []
-        for idx, filters_count in enumerate(filters):
-            kwargs: dict[str, Any] = {"activation": "relu", "padding": "same"}
-            if idx == 0:
-                kwargs["input_shape"] = self.config.input_shape
-            layers.append(Conv2D(filters_count, (3, 3), **kwargs))
+        layers = [Input(shape=self.config.input_shape)]
+        for filters_count in filters:
+            layers.append(Conv2D(filters_count, (3, 3), activation="relu", padding="same"))
             layers.append(MaxPooling2D())
             if filters_count >= 128:
                 layers.append(Dropout(self.config.dropout_rate))
@@ -101,8 +98,9 @@ class SimpleCnn(BaseModel):
         """
         model = Sequential(
             [
+                Input(shape=self.config.input_shape),
                 # First conv block
-                Conv2D(32, (3, 3), activation="relu", input_shape=self.config.input_shape),
+                Conv2D(32, (3, 3), activation="relu"),
                 MaxPooling2D(),
                 # Second conv block
                 Conv2D(64, (3, 3), activation="relu"),

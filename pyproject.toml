@@ -91,9 +91,28 @@ markers = [
 ]
 
 filterwarnings = [
-    "ignore::DeprecationWarning",
+    # System/infrastructure warnings we cannot control
     "ignore::ResourceWarning",
     "ignore::pytest.PytestUnhandledThreadExceptionWarning",
+
+    # External library compatibility warnings (NOT our code to fix):
+
+    # 1. Keras optimizer loading warning - EXPECTED and BENIGN behavior
+    #    When loading saved models, Keras warns that optimizer state differs.
+    #    This is intentional - we save models for inference/transfer learning only.
+    #    Root cause: Not saving/loading optimizer state (correct for checkpointing).
+    #    Action: Suppress - this is proper model serialization practice.
+    "ignore:Skipping variable loading for optimizer:UserWarning:keras.src.saving.saving_lib",
+
+    # 2. NumPy 2.0 compatibility in TensorFlow/Keras backend
+    #    Warning originates from inside keras/tensorflow, not our code.
+    #    Root cause: TensorFlow/Keras not yet fully compatible with NumPy 2.0.
+    #    Action: Suppress - waiting for upstream fix.
+    #    Tracking: https://github.com/tensorflow/tensorflow/issues/62003
+    #    Alternative: Pin numpy<2.0 in dependencies if this becomes critical.
+    "ignore:__array__ implementation doesn't accept a copy keyword:DeprecationWarning:keras.src.backend",
+
+    # All other deprecation warnings should be surfaced and fixed in our code
 ]
 
 log_cli = true

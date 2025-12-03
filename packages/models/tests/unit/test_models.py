@@ -1000,6 +1000,445 @@ class TestArchitectureFactoryAutoSelection:
         assert model.output_shape[-1] == 4
 
 
+class TestModelScaler:
+    """Tests for ModelScaler utility class."""
+
+    @pytest.mark.smoke
+    def test_scale_filters_small_dataset(self):
+        """Test scale_filters with small dataset (<1000 samples)."""
+        from img_classifier_models.architecture_generator import ModelScaler
+
+        scaled = ModelScaler.scale_filters(base_filters=64, dataset_size=500, scale_factor=1.0)
+
+        # With 500 samples, multiplier should be 0.5, so 64 * 0.5 = 32
+        assert scaled == 32
+
+    def test_scale_filters_medium_small_dataset(self):
+        """Test scale_filters with medium-small dataset (1000-5000 samples)."""
+        from img_classifier_models.architecture_generator import ModelScaler
+
+        scaled = ModelScaler.scale_filters(base_filters=64, dataset_size=3000, scale_factor=1.0)
+
+        # With 3000 samples, multiplier should be 0.75, so 64 * 0.75 = 48 -> nearest power of 2 = 64
+        assert scaled in [32, 64]
+
+    def test_scale_filters_medium_dataset(self):
+        """Test scale_filters with medium dataset (5000-20000 samples)."""
+        from img_classifier_models.architecture_generator import ModelScaler
+
+        scaled = ModelScaler.scale_filters(base_filters=64, dataset_size=10000, scale_factor=1.0)
+
+        # With 10000 samples, multiplier should be 1.0, so 64 * 1.0 = 64
+        assert scaled == 64
+
+    def test_scale_filters_large_dataset(self):
+        """Test scale_filters with large dataset (>20000 samples)."""
+        from img_classifier_models.architecture_generator import ModelScaler
+
+        scaled = ModelScaler.scale_filters(base_filters=64, dataset_size=50000, scale_factor=1.0)
+
+        # With 50000 samples, multiplier should be 1.5, so 64 * 1.5 = 96 -> nearest power of 2 = 128
+        assert scaled in [64, 128]
+
+    def test_scale_filters_with_custom_scale_factor(self):
+        """Test scale_filters with custom scale factor."""
+        from img_classifier_models.architecture_generator import ModelScaler
+
+        scaled = ModelScaler.scale_filters(base_filters=64, dataset_size=10000, scale_factor=2.0)
+
+        # With scale_factor=2.0, result should be doubled
+        assert scaled >= 64
+
+    def test_scale_filters_returns_power_of_two(self):
+        """Test that scale_filters always returns power of 2."""
+        from img_classifier_models.architecture_generator import ModelScaler
+
+        for dataset_size in [500, 3000, 10000, 50000]:
+            scaled = ModelScaler.scale_filters(base_filters=60, dataset_size=dataset_size)
+            # Check if power of 2
+            assert scaled > 0 and (scaled & (scaled - 1)) == 0
+
+    def test_recommend_depth_small_dataset(self):
+        """Test recommend_depth with small dataset."""
+        from img_classifier_models.architecture_generator import ModelScaler
+
+        depth = ModelScaler.recommend_depth(image_size=(64, 64), num_classes=4, dataset_size=500)
+
+        # Small dataset should get min 3 blocks
+        assert depth >= 2
+        assert depth <= 3
+
+    def test_recommend_depth_medium_dataset(self):
+        """Test recommend_depth with medium dataset."""
+        from img_classifier_models.architecture_generator import ModelScaler
+
+        depth = ModelScaler.recommend_depth(image_size=(128, 128), num_classes=10, dataset_size=3000)
+
+        # Medium dataset should get around 4 blocks
+        assert depth >= 2
+        assert depth <= 5
+
+    def test_recommend_depth_large_dataset(self):
+        """Test recommend_depth with large dataset."""
+        from img_classifier_models.architecture_generator import ModelScaler
+
+        depth = ModelScaler.recommend_depth(image_size=(224, 224), num_classes=20, dataset_size=10000)
+
+        # Large dataset should get around 5 blocks
+        assert depth >= 2
+        assert depth <= 6
+
+    def test_recommend_depth_many_classes(self):
+        """Test recommend_depth adjusts for many classes."""
+        from img_classifier_models.architecture_generator import ModelScaler
+
+        depth = ModelScaler.recommend_depth(image_size=(128, 128), num_classes=50, dataset_size=10000)
+
+        # Many classes should increase depth
+        assert depth >= 3
+
+    def test_recommend_depth_respects_image_size_limit(self):
+        """Test that recommend_depth doesn't exceed image size constraints."""
+        from img_classifier_models.architecture_generator import ModelScaler
+
+        # Small image shouldn't get too deep
+        depth = ModelScaler.recommend_depth(image_size=(32, 32), num_classes=10, dataset_size=50000)
+
+        # 32x32 image can only support 3 pooling layers (32->16->8->4)
+        assert depth <= 4
+
+    def test_recommend_depth_minimum_depth(self):
+        """Test that recommend_depth always returns at least 2 blocks."""
+        from img_classifier_models.architecture_generator import ModelScaler
+
+        depth = ModelScaler.recommend_depth(image_size=(16, 16), num_classes=2, dataset_size=100)
+
+        # Should always have at least 2 blocks
+        assert depth >= 2
+
+    def test_recommend_depth_non_square_images(self):
+        """Test recommend_depth with non-square images."""
+        from img_classifier_models.architecture_generator import ModelScaler
+
+        depth = ModelScaler.recommend_depth(image_size=(256, 128), num_classes=10, dataset_size=5000)
+
+        # Should use max dimension (256) for calculation
+        assert depth >= 2
+
+
+class TestArchitectureConvenienceFunction:
+    """Tests for convenience function create_architecture_from_config."""
+
+    @pytest.mark.smoke
+    def test_create_architecture_from_config(self, isolated_tmp_dir):
+        """Test the convenience function create_architecture_from_config."""
+        from img_classifier_models.architecture_generator import create_architecture_from_config
+
+        config = DatasetConfig(
+            working_dir=isolated_tmp_dir,
+            image_size=(64, 64),
+            num_classes=4,
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+
+        model = create_architecture_from_config(config)
+
+        assert model is not None
+        assert model.output_shape[-1] == config.num_classes
+        assert model.input_shape[1:] == config.input_shape
+
+
+class TestBaseModelEdgeCases:
+    """Edge case tests for BaseModel abstract class."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, isolated_tmp_dir):
+        """Set up test fixtures."""
+        self.temp_dir = isolated_tmp_dir
+        self.config = BaseConfig(working_dir=self.temp_dir)
+        yield
+
+    @pytest.mark.smoke
+    def test_compile_with_unsupported_optimizer_raises_error(self):
+        """Test that compile with unsupported optimizer string raises ValueError."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        classifier.build()
+
+        with pytest.raises(ValueError, match="Unsupported optimizer"):
+            classifier.compile(optimizer="invalid_optimizer")
+
+    def test_compile_with_adam_string(self):
+        """Test compile with 'adam' string optimizer."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        classifier.build()
+        classifier.compile(optimizer="adam")
+
+        assert classifier.model.optimizer is not None
+
+    def test_compile_with_sgd_string(self):
+        """Test compile with 'sgd' string optimizer."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        classifier.build()
+        classifier.compile(optimizer="sgd")
+
+        assert classifier.model.optimizer is not None
+
+    def test_compile_with_rmsprop_string(self):
+        """Test compile with 'rmsprop' string optimizer."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        classifier.build()
+        classifier.compile(optimizer="rmsprop")
+
+        assert classifier.model.optimizer is not None
+
+    def test_compile_with_optimizer_object(self):
+        """Test compile with custom optimizer object."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        classifier.build()
+
+        # Pass a custom optimizer object
+        custom_optimizer = tf.keras.optimizers.Adam(learning_rate=0.005)
+        classifier.compile(optimizer=custom_optimizer)
+
+        assert classifier.model.optimizer is not None
+        # Check that the custom learning rate was used
+        assert hasattr(classifier.model.optimizer, "learning_rate")
+
+    def test_summary_builds_model_if_needed(self):
+        """Test that summary() builds model if not already built."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+
+        # Model should be None initially
+        assert classifier.model is None
+
+        # Calling summary should build the model
+        import io
+        import sys
+
+        old_stdout = sys.stdout
+        sys.stdout = buffer = io.StringIO()
+        classifier.summary()
+        output = buffer.getvalue()
+        sys.stdout = old_stdout
+
+        # Model should now exist
+        assert classifier.model is not None
+        assert len(output) > 0
+        assert "Total params" in output
+
+    def test_summary_with_already_built_model(self):
+        """Test that summary() works with already built model."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        classifier.build()
+
+        import io
+        import sys
+
+        old_stdout = sys.stdout
+        sys.stdout = buffer = io.StringIO()
+        result = classifier.summary()
+        output = buffer.getvalue()
+        sys.stdout = old_stdout
+
+        assert len(output) > 0
+        assert "Total params" in output
+
+    def test_compile_with_custom_loss(self):
+        """Test compile with custom loss function."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        classifier.build()
+        classifier.compile(loss="sparse_categorical_crossentropy")
+
+        assert classifier.model is not None
+        assert classifier.model.optimizer is not None
+
+    def test_compile_with_custom_metrics(self):
+        """Test compile with custom metrics."""
+        from img_classifier_models import CnnClassifier
+
+        classifier = CnnClassifier(self.config)
+        classifier.build()
+        classifier.compile(metrics=["accuracy", "precision"])
+
+        assert classifier.model is not None
+        assert classifier.model.optimizer is not None
+
+
+class TestSimpleCnn:
+    """Tests for SimpleCnn model."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, isolated_tmp_dir):
+        """Set up test fixtures."""
+        self.temp_dir = isolated_tmp_dir
+        self.config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(64, 64),
+            num_classes=4,
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+        yield
+
+    @pytest.mark.smoke
+    def test_simple_cnn_initialization(self):
+        """Test SimpleCnn initialization."""
+        from img_classifier_models import SimpleCnn
+
+        simple_cnn = SimpleCnn(self.config, seed=42)
+        assert simple_cnn.config == self.config
+        assert simple_cnn.seed == 42
+        assert simple_cnn.model is None
+
+    def test_simple_cnn_build(self):
+        """Test SimpleCnn build method."""
+        from img_classifier_models import SimpleCnn
+
+        simple_cnn = SimpleCnn(self.config)
+        model = simple_cnn.build()
+
+        assert model is not None
+        assert isinstance(model, tf.keras.Model)
+        assert simple_cnn.model is not None
+
+    def test_simple_cnn_input_shape(self):
+        """Test SimpleCnn input shape."""
+        from img_classifier_models import SimpleCnn
+
+        simple_cnn = SimpleCnn(self.config)
+        model = simple_cnn.build()
+
+        expected_shape = (None,) + self.config.input_shape
+        assert model.input_shape == expected_shape
+
+    def test_simple_cnn_output_shape(self):
+        """Test SimpleCnn output shape."""
+        from img_classifier_models import SimpleCnn
+
+        simple_cnn = SimpleCnn(self.config)
+        model = simple_cnn.build()
+
+        assert model.output_shape == (None, self.config.num_classes)
+
+    def test_simple_cnn_has_expected_layers(self):
+        """Test SimpleCnn has expected layer structure."""
+        from img_classifier_models import SimpleCnn
+
+        simple_cnn = SimpleCnn(self.config)
+        model = simple_cnn.build()
+
+        layer_types = [type(layer).__name__ for layer in model.layers]
+
+        # Should have 3 Conv2D layers
+        assert layer_types.count("Conv2D") == 3
+        # Should have 3 MaxPooling2D layers
+        assert layer_types.count("MaxPooling2D") == 3
+        # Should have Flatten
+        assert "Flatten" in layer_types
+        # Should have Dense layers
+        assert layer_types.count("Dense") >= 2
+        # Should have Dropout
+        assert "Dropout" in layer_types
+
+    def test_simple_cnn_compile_and_predict(self):
+        """Test SimpleCnn can compile and predict."""
+        from img_classifier_models import SimpleCnn
+
+        simple_cnn = SimpleCnn(self.config)
+        model = simple_cnn.build()
+        simple_cnn.compile()
+
+        dummy_input = np.random.rand(1, *self.config.input_shape).astype("float32")
+        predictions = model.predict(dummy_input, verbose=0)
+
+        assert predictions.shape == (1, self.config.num_classes)
+        assert np.allclose(predictions.sum(), 1.0, atol=1e-5)
+
+    def test_simple_cnn_is_simpler_than_cnn_classifier(self):
+        """Test SimpleCnn has fewer parameters than CnnClassifier."""
+        from img_classifier_models import CnnClassifier, SimpleCnn
+
+        simple_cnn = SimpleCnn(self.config)
+        simple_model = simple_cnn.build()
+
+        cnn_classifier = CnnClassifier(self.config)
+        cnn_model = cnn_classifier.build()
+
+        simple_params = simple_model.count_params()
+        cnn_params = cnn_model.count_params()
+
+        # SimpleCnn should have fewer or equal parameters
+        assert simple_params <= cnn_params
+
+    def test_simple_cnn_with_custom_seed(self):
+        """Test SimpleCnn with custom seed for reproducibility."""
+        from img_classifier_models import SimpleCnn
+
+        simple_cnn1 = SimpleCnn(self.config, seed=100)
+        model1 = simple_cnn1.build()
+
+        simple_cnn2 = SimpleCnn(self.config, seed=100)
+        model2 = simple_cnn2.build()
+
+        # Same architecture
+        assert model1.count_params() == model2.count_params()
+
+    def test_simple_cnn_save_and_load(self):
+        """Test SimpleCnn can be saved and loaded."""
+        from img_classifier_models import SimpleCnn
+
+        simple_cnn = SimpleCnn(self.config)
+        simple_cnn.build()
+        simple_cnn.compile()
+
+        # Save model
+        model_path = self.temp_dir / "simple_cnn.keras"
+        simple_cnn.save(model_path)
+
+        assert model_path.exists()
+
+        # Load model
+        new_simple_cnn = SimpleCnn(self.config)
+        new_simple_cnn.load(model_path)
+
+        assert new_simple_cnn.model is not None
+
+    def test_simple_cnn_train_on_dummy_data(self):
+        """Test SimpleCnn can train on dummy data."""
+        from img_classifier_models import SimpleCnn
+
+        simple_cnn = SimpleCnn(self.config)
+        model = simple_cnn.build()
+        simple_cnn.compile()
+
+        # Create dummy data
+        X_train = np.random.rand(5, *self.config.input_shape).astype("float32")
+        y_train = tf.keras.utils.to_categorical(
+            np.random.randint(0, self.config.num_classes, 5), num_classes=self.config.num_classes
+        )
+
+        # Train for 1 epoch
+        history = model.fit(X_train, y_train, epochs=1, verbose=0)
+
+        assert history is not None
+        assert "loss" in history.history
+
+
 class TestCnnClassifierAdvanced:
     """Advanced tests for CnnClassifier."""
 

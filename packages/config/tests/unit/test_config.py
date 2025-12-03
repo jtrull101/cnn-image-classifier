@@ -99,6 +99,32 @@ class TestDatasetConfig:
 
         yield
 
+    def test_explicit_none_data_path_with_train_path(self):
+        """Test explicit None data_path sets train_path to None when train not explicitly set."""
+        from img_classifier_config import DatasetConfig
+
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            num_classes=2,
+            class_names=["a", "b"],
+            data_path=None  # Explicitly None
+        )
+        # When data_path is explicitly None and train_path is not set, train_path should be None
+        assert config.train_path is None
+
+    def test_explicit_none_data_path_with_test_path(self):
+        """Test explicit None data_path sets test_path to None when test not explicitly set."""
+        from img_classifier_config import DatasetConfig
+
+        config = DatasetConfig(
+            working_dir=self.temp_dir,
+            num_classes=2,
+            class_names=["a", "b"],
+            data_path=None  # Explicitly None
+        )
+        # When data_path is explicitly None and test_path is not set, test_path should be None
+        assert config.test_path is None
+
     def test_project_specific_values(self):
         """Test dataset-specific configuration."""
         config = DatasetConfig(
@@ -1127,3 +1153,114 @@ class TestDatasetConfigValidation:
         # Should include all classes
         assert info["num_classes"] == 4
         assert set(info["class_names"]) == {"a", "b", "c", "d"}
+
+    def test_detect_nonexistent_path(self, tmp_path):
+        """Test detecting from nonexistent path returns empty results."""
+        from img_classifier_config.dataset_config import DatasetDetector
+
+        fake_path = tmp_path / "nonexistent"
+        detector = DatasetDetector(fake_path)
+
+        classes, counts = detector._detect_classes(fake_path / "train")
+        assert classes == []
+        assert counts == {}
+
+    def test_create_config_with_large_images(self, tmp_path):
+        """Test create_config standardizes large images to 128x128."""
+        from img_classifier_config.dataset_config import DatasetDetector
+        import numpy as np
+
+        try:
+            import cv2
+
+            # Create dataset with large image
+            class_dir = tmp_path / "class1"
+            class_dir.mkdir()
+
+            # Create a large image (512x512)
+            img_path = class_dir / "large.jpg"
+            large_img = np.random.randint(0, 255, (512, 512, 3), dtype=np.uint8)
+            cv2.imwrite(str(img_path), large_img)
+
+            detector = DatasetDetector(tmp_path)
+            config = detector.create_config(working_dir=tmp_path)
+
+            # Should standardize to 128x128 for large images
+            assert config.image_size == (128, 128)
+        except ImportError:
+            pytest.skip("OpenCV not available")
+
+    def test_recommend_complexity_edge_cases(self, tmp_path):
+        """Test _recommend_complexity with various dataset sizes."""
+        from img_classifier_config.dataset_config import DatasetDetector
+
+        detector = DatasetDetector(tmp_path)
+
+        # Test different scenarios
+        assert detector._recommend_complexity(500, 2) == "simple"  # Small dataset, few classes
+        assert detector._recommend_complexity(5000, 5) == "medium"  # Medium dataset
+        assert detector._recommend_complexity(15000, 15) == "deep"  # Large dataset
+
+    def test_check_balance_empty_distribution(self, tmp_path):
+        """Test _check_balance with empty class distribution."""
+        from img_classifier_config.dataset_config import DatasetDetector
+
+        detector = DatasetDetector(tmp_path)
+
+        # Empty distribution should return True
+        assert detector._check_balance({}) is True
+
+    def test_detect_image_properties_no_images(self, tmp_path):
+        """Test _detect_image_properties when no images found."""
+        from img_classifier_config.dataset_config import DatasetDetector
+
+        # Create empty directory
+        empty_dir = tmp_path / "empty"
+        empty_dir.mkdir()
+
+        detector = DatasetDetector(empty_dir)
+        result = detector._detect_image_properties()
+
+        # Should return None when no images found
+        assert result is None
+
+    def test_convert_paths_with_list(self, tmp_path):
+        """Test to_yaml path conversion with lists."""
+        from img_classifier_config import DatasetConfig
+
+        config = DatasetConfig(
+            working_dir=tmp_path,
+            num_classes=2,
+            class_names=["a", "b"]
+        )
+
+        yaml_path = tmp_path / "test_config.yaml"
+        config.to_yaml(yaml_path)
+
+        # Should successfully write without errors
+        assert yaml_path.exists()
+
+    def test_create_config_small_image_size(self, tmp_path):
+        """Test create_config with small images keeps original size."""
+        from img_classifier_config.dataset_config import DatasetDetector
+        import numpy as np
+
+        try:
+            import cv2
+
+            # Create dataset with small image
+            class_dir = tmp_path / "class1"
+            class_dir.mkdir()
+
+            # Create a small image (64x64)
+            img_path = class_dir / "small.jpg"
+            small_img = np.random.randint(0, 255, (64, 64, 3), dtype=np.uint8)
+            cv2.imwrite(str(img_path), small_img)
+
+            detector = DatasetDetector(tmp_path)
+            config = detector.create_config(working_dir=tmp_path)
+
+            # Should keep original size for small images
+            assert config.image_size == (64, 64)
+        except ImportError:
+            pytest.skip("OpenCV not available")

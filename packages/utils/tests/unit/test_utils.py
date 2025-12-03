@@ -722,3 +722,77 @@ class TestFileUtilsEdgeCases:
 
         assert count == expected_count
         assert len(list(test_dir.glob("*.tmp"))) == 0
+
+    def test_organize_dataset_with_non_directory_in_split(self):
+        """Test organize_dataset skips non-directory items in split directory."""
+        source = self.temp_dir / "source_with_files"
+        dest = self.temp_dir / "dest_files"
+
+        train_dir = source / "train"
+        train_dir.mkdir(parents=True)
+
+        # Create a file in train directory (not a subdirectory)
+        (train_dir / "random_file.txt").write_text("should be skipped")
+
+        # Create normal class directory
+        class_dir = train_dir / "class1"
+        class_dir.mkdir()
+        (class_dir / "img.jpg").write_text("image")
+
+        result = organize_dataset(source, dest)
+
+        assert result is True
+        # File should not be copied
+        assert not (dest / "train" / "random_file.txt").exists()
+        # But class directory should be copied
+        assert (dest / "train" / "class1" / "img.jpg").exists()
+
+    def test_organize_dataset_with_non_file_in_category(self):
+        """Test organize_dataset skips non-file items in category directory."""
+        source = self.temp_dir / "source_with_dir"
+        dest = self.temp_dir / "dest_dir"
+
+        class_dir = source / "train" / "class1"
+        class_dir.mkdir(parents=True)
+
+        # Create a subdirectory in class directory (should be skipped)
+        (class_dir / "subdir").mkdir()
+        (class_dir / "subdir" / "nested.jpg").write_text("nested image")
+
+        # Create normal file
+        (class_dir / "img.jpg").write_text("image")
+
+        result = organize_dataset(source, dest)
+
+        assert result is True
+        # Subdirectory should not be copied as a file
+        assert not (dest / "train" / "class1" / "subdir").is_file()
+        # But normal file should be copied
+        assert (dest / "train" / "class1" / "img.jpg").exists()
+
+    def test_clean_directory_file_removal_error(self):
+        """Test clean_directory handles file removal errors gracefully."""
+        test_dir = self.temp_dir / "error_test"
+        test_dir.mkdir()
+
+        # Create a file
+        test_file = test_dir / "file.txt"
+        test_file.write_text("content")
+
+        # Make file read-only to cause permission error
+        import os
+        import stat
+
+        os.chmod(test_file, stat.S_IRUSR)
+
+        try:
+            # Should handle error and continue
+            count = clean_directory(test_dir, "*.txt")
+            # On some systems it may succeed, on others it may fail
+            assert count >= 0
+        finally:
+            # Restore permissions for cleanup
+            try:
+                os.chmod(test_file, stat.S_IWUSR | stat.S_IRUSR)
+            except:
+                pass

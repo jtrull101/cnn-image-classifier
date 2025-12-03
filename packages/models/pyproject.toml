@@ -9,8 +9,8 @@ license = { text = "MIT" }
 
 dependencies = [
     "img-classifier-config",
-    "tensorflow>=2.13.0",
-    "keras>=2.13.0",
+    "tensorflow>=2.20.0",
+    "keras>=2.20.0",
     "numpy>=1.24.0",
 ]
 

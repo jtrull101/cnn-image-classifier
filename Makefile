@@ -83,10 +83,10 @@ sync:
 build: build-config build-utils build-data build-models build-training build-cli build-api
 	@echo "All packages and apps built successfully!"
 
-# Test all packages with coverage
+# Test all packages
 test:
-	@echo "Running tests with coverage..."
-	uv run python -m pytest -c pyproject.toml --rootdir . -v -n auto --maxfail=3 --cov=packages --cov=apps --cov-report=term-missing
+	@echo "Running tests"
+	uv run python -m pytest -c pyproject.toml --rootdir . -v -n auto --maxfail=3
 
 # Test with coverage reports/combination helper
 test-coverage:
