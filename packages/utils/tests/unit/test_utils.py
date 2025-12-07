@@ -26,6 +26,7 @@ class TestFileUtils:
 
         yield
 
+    @pytest.mark.smoke
     def test_ensure_directory_exists_creates_directory(self):
         """Test that ensure_directory_exists creates a new directory."""
         new_dir = self.temp_dir / "test_dir"
@@ -58,6 +59,7 @@ class TestFileUtils:
         assert nested_dir.exists()
         assert result == nested_dir
 
+    @pytest.mark.smoke
     def test_clean_directory_removes_files(self):
         """Test that clean_directory removes files matching pattern."""
         # Create test files

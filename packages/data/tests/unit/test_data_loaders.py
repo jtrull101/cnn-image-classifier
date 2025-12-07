@@ -204,6 +204,7 @@ class TestImageDataLoader:
 
         yield
 
+    @pytest.mark.smoke
     def test_initialization(self):
         """Test ImageDataLoader initialization."""
         assert isinstance(self.loader, BaseDataLoader)
@@ -236,6 +237,7 @@ class TestImageDataLoader:
         result = self.loader.prepare_dataset()
         assert result is True
 
+    @pytest.mark.smoke
     def test_get_cache_path(self):
         """Test _get_cache_path method."""
         x_path, y_path = self.loader._get_cache_path(train=True)

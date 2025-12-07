@@ -59,6 +59,7 @@ class TestHyperparameterSpace:
         assert "deep" in space.architectures
         assert len(space.num_epochs) == 4
 
+    @pytest.mark.smoke
     def test_quick_space(self):
         """Test quick hyperparameter space."""
         space = HyperparameterSpace.quick()

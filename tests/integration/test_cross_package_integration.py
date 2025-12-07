@@ -27,17 +27,20 @@ pytestmark = pytest.mark.integration
 class TestModuleImports:
     """Tests for verifying all modules can be imported correctly."""
 
+    @pytest.mark.smoke
     def test_config_imports(self):
         """Test that all config classes can be imported."""
         assert BaseConfig is not None
         assert DatasetConfig is not None
         assert DatasetDetector is not None
 
+    @pytest.mark.smoke
     def test_data_loader_imports(self):
         """Test that all data loader classes can be imported."""
         assert BaseDataLoader is not None
         assert ImageDataLoader is not None
 
+    @pytest.mark.smoke
     def test_utils_imports(self):
         """Test that all utility functions can be imported."""
         assert download_from_google_drive is not None
@@ -46,6 +49,7 @@ class TestModuleImports:
         assert clean_directory is not None
         assert ensure_directory_exists is not None
 
+    @pytest.mark.smoke
     def test_models_imports(self):
         """Test that model components can be imported."""
         try:
@@ -56,6 +60,7 @@ class TestModuleImports:
         except ImportError:
             pytest.skip("TensorFlow not available")
 
+    @pytest.mark.smoke
     def test_training_imports(self):
         """Test that training components can be imported."""
         try:

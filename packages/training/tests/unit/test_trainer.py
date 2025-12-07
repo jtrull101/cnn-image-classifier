@@ -69,6 +69,7 @@ class TestTrainer:
 
         yield
 
+    @pytest.mark.smoke
     def test_initialization(self):
         """Test Trainer initialization."""
         assert self.trainer.config is self.mock_config

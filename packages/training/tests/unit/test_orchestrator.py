@@ -40,6 +40,7 @@ class TestTrainingOrchestrator:
 
         yield
 
+    @pytest.mark.smoke
     def test_initialization_default(self):
         """Test orchestrator initialization with defaults."""
         with patch("img_classifier_training.orchestrator.ImageDataLoader"):

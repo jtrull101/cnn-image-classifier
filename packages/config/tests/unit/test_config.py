@@ -19,6 +19,7 @@ class TestBaseConfig:
 
         yield
 
+    @pytest.mark.smoke
     def test_default_values(self):
         """Test default configuration values."""
         config = BaseConfig()
@@ -60,6 +61,7 @@ class TestBaseConfig:
         assert self.config.logs_dir == self.config.working_dir / "logs"
         assert self.config.cache_dir == self.config.data_path / "cache"
 
+    @pytest.mark.smoke
     def test_create_directories(self):
         """Test directory creation."""
         self.config.create_directories()
