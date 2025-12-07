@@ -78,11 +78,22 @@ class BaseModel(ABC):
         self.model.compile(optimizer=optimizer_obj, loss=loss, metrics=metrics)
 
     def summary(self):
-        """Print model summary."""
+        """Print and return model summary as a string.
+
+        Returns:
+            str: The textual summary of the model.
+        """
         if self.model is None:
             self.model = self.build()
         assert self.model is not None, "Model build should return a valid model"
-        return self.model.summary()
+
+        # Capture Keras summary into a string and also print it to stdout
+        lines = []
+        self.model.summary(print_fn=lines.append)
+        summary_text = "\n".join(lines)
+        # Ensure existing behavior of printing to stdout for tests capturing output
+        print(summary_text)
+        return summary_text
 
     def save(self, filepath: Path):
         """Save the model.
