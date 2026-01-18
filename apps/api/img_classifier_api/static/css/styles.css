@@ -407,3 +407,24 @@
         display: none !important;
     }
 }
+
+/* Training page specific styles */
+.training-form input[type="number"],
+.training-form input[type="text"],
+.training-form select {
+    @apply focus:outline-none focus:ring-2;
+}
+
+.training-job-card {
+    @apply transition-all duration-200;
+}
+
+.training-job-card:hover {
+    @apply transform scale-105;
+}
+
+/* Badge variations */
+.badge-sm {
+    @apply px-2 py-0.5 text-xs;
+}
+

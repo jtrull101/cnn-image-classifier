@@ -3,7 +3,8 @@
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -30,14 +31,17 @@ class ModelPerformanceResponse(BaseModel):
 router = APIRouter()
 
 
-@router.get("/analytics/summary", response_model=AnalyticsSummaryResponse)
+@router.get("/analytics/summary")
 async def get_summary(
+    request: Request,
     start_date: Optional[datetime] = Query(None, description="Filter start date"),
     end_date: Optional[datetime] = Query(None, description="Filter end date"),
     db: Session = Depends(get_db),
 ):
     """
     Get overall analytics summary.
+
+    Returns HTML for HTMX requests, JSON for API requests.
 
     Provides aggregated statistics including:
     - Total predictions count
@@ -46,15 +50,65 @@ async def get_summary(
     - Average confidence scores overall and by model
 
     Args:
+        request: FastAPI request object
         start_date: Optional start date for filtering
         end_date: Optional end date for filtering
         db: Database session
 
     Returns:
-        AnalyticsSummaryResponse: Analytics summary
+        HTMLResponse or AnalyticsSummaryResponse: Analytics summary
     """
     summary = get_analytics_summary(db, start_date=start_date, end_date=end_date)
 
+    # Check if this is an HTMX request
+    is_htmx = request.headers.get("HX-Request") == "true"
+
+    if is_htmx:
+        # Return HTML for HTMX
+        predictions_by_model = summary.get("predictions_by_model", {})
+        predictions_by_class = summary.get("predictions_by_class", {})
+
+        model_rows = []
+        for model, count in list(predictions_by_model.items())[:3]:
+            model_rows.append(
+                f"""
+                <div class="flex justify-between text-sm py-1">
+                    <span class="text-gray-600">{model}</span>
+                    <span class="font-semibold">{count}</span>
+                </div>
+                """
+            )
+
+        class_rows = []
+        for cls, count in list(predictions_by_class.items())[:3]:
+            class_rows.append(
+                f"""
+                <div class="flex justify-between text-sm py-1">
+                    <span class="text-gray-600">{cls}</span>
+                    <span class="font-semibold">{count}</span>
+                </div>
+                """
+            )
+
+        html = f"""
+        <div class="space-y-4">
+            <div>
+                <p class="text-sm font-medium text-gray-700 mb-2">By Model</p>
+                <div class="space-y-1">
+                    {"".join(model_rows) if model_rows else '<p class="text-sm text-gray-500">No data</p>'}
+                </div>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-700 mb-2">By Class</p>
+                <div class="space-y-1">
+                    {"".join(class_rows) if class_rows else '<p class="text-sm text-gray-500">No data</p>'}
+                </div>
+            </div>
+        </div>
+        """
+        return HTMLResponse(html)
+
+    # Return JSON for API requests
     return AnalyticsSummaryResponse(
         total_predictions=summary["total_predictions"],
         predictions_by_model=summary["predictions_by_model"],

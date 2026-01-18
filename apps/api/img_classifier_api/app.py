@@ -25,7 +25,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .database import init_db
-from .routers import analytics, history, models, predictions
+from .routers import analytics, history, models, predictions, training
 from .schemas import ModelInfo
 from .websocket_manager import manager as ws_manager
 
@@ -229,6 +229,7 @@ app.include_router(models.router, prefix="/api", tags=["models"])
 app.include_router(predictions.router, prefix="/api", tags=["predictions"])
 app.include_router(history.router, prefix="/api", tags=["history"])
 app.include_router(analytics.router, prefix="/api", tags=["analytics"])
+app.include_router(training.router, prefix="/api", tags=["training"])
 
 
 # API Endpoints
@@ -271,6 +272,16 @@ async def health_check():
         "current_model": model_manager.current_model_name,
         "websocket_connections": ws_manager.get_connection_count(),
     }
+
+
+@app.get("/train", response_class=HTMLResponse)
+async def training_page(request: Request):
+    """Serve the training interface."""
+    return templates.TemplateResponse(
+        request=request,
+        name="training.html",
+        context={},
+    )
 
 
 @app.websocket("/ws")

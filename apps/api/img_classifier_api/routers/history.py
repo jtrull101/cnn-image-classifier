@@ -3,8 +3,8 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional, cast
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import Response, HTMLResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
@@ -54,8 +54,9 @@ class SyncRequest(BaseModel):
 router = APIRouter()
 
 
-@router.get("/history", response_model=PredictionHistoryResponse)
+@router.get("/history")
 async def get_history(
+    request: Request,
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum records to return"),
     model_name: Optional[str] = Query(None, description="Filter by model name"),
@@ -65,7 +66,10 @@ async def get_history(
     """
     Get paginated prediction history with optional filters.
 
+    Returns HTML for HTMX requests, JSON for API requests.
+
     Args:
+        request: FastAPI request object
         skip: Number of records to skip (for pagination)
         limit: Maximum number of records to return
         model_name: Filter by model name
@@ -73,7 +77,7 @@ async def get_history(
         db: Database session
 
     Returns:
-        PredictionHistoryResponse: Paginated list of predictions
+        HTMLResponse or PredictionHistoryResponse: History data
     """
     predictions = get_predictions(
         db, skip=skip, limit=limit, model_name=model_name, user_session=user_session
@@ -89,6 +93,46 @@ async def get_history(
         query = query.filter(PHModel.user_session == user_session)
     total = query.count()
 
+    # Check if this is an HTMX request
+    is_htmx = request.headers.get("HX-Request") == "true"
+
+    if is_htmx:
+        # Return HTML for HTMX
+        if not predictions:
+            return HTMLResponse(
+                """
+                <div class="text-center text-gray-500 py-4">
+                    <p>No predictions yet</p>
+                </div>
+                """
+            )
+
+        html_parts = []
+        for p in predictions:
+            timestamp_str = p.timestamp.strftime("%b %d, %Y %I:%M %p") if p.timestamp else "Unknown"
+            confidence_pct = f"{p.confidence * 100:.1f}%" if p.confidence else "N/A"
+
+            html_parts.append(
+                f"""
+                <div class="flex items-center justify-between p-3 border-b border-gray-200 hover:bg-gray-50 transition">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <p class="font-semibold text-gray-900">{p.predicted_class}</p>
+                            <span class="badge badge-sm badge-success">{confidence_pct}</span>
+                        </div>
+                        <p class="text-xs text-gray-500">{p.image_name}</p>
+                        <p class="text-xs text-gray-400">{timestamp_str}</p>
+                    </div>
+                    <div class="text-xs text-gray-600">
+                        {p.model_name}
+                    </div>
+                </div>
+                """
+            )
+
+        return HTMLResponse("".join(html_parts))
+
+    # Return JSON for API requests
     return PredictionHistoryResponse(
         predictions=[
             PredictionHistoryItem(
