@@ -8,7 +8,8 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-from img_classifier_api.app import ModelManager, PredictionResponse, app
+from img_classifier_api.app import ModelManager, app
+from img_classifier_api.schemas import PredictionResponse
 
 pytestmark = pytest.mark.unit
 
@@ -521,7 +522,7 @@ class TestApiEndpoints:
         mock_load.return_value = "loaded_model"
 
         response = client.post(
-            "/api/models/load", params={"model_path": "/path/to/model.keras", "model_name": "test"}
+            "/api/models/load", json={"model_path": "/path/to/model.keras", "model_name": "test"}
         )
 
         assert response.status_code == 200
@@ -533,7 +534,7 @@ class TestApiEndpoints:
         """Test /api/models/load endpoint with nonexistent file."""
         mock_load.side_effect = FileNotFoundError("File not found")
 
-        response = client.post("/api/models/load", params={"model_path": "/nonexistent.keras"})
+        response = client.post("/api/models/load", json={"model_path": "/nonexistent.keras"})
 
         assert response.status_code == 404
 
@@ -542,7 +543,7 @@ class TestApiEndpoints:
         """Test /api/models/load endpoint with general error."""
         mock_load.side_effect = Exception("Load failed")
 
-        response = client.post("/api/models/load", params={"model_path": "/path/to/model.keras"})
+        response = client.post("/api/models/load", json={"model_path": "/path/to/model.keras"})
 
         assert response.status_code == 500
         assert "Error loading model" in response.json()["detail"]

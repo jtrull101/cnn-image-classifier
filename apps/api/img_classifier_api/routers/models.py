@@ -6,23 +6,7 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-
-class ModelInfo(BaseModel):
-    """Information about a loaded model."""
-
-    name: str
-    path: str
-    num_classes: int
-    class_names: List[str]
-    input_shape: List[int]
-    accuracy: Optional[float] = None
-
-
-class AvailableModelsResponse(BaseModel):
-    """Response listing available models."""
-
-    models: List[ModelInfo]
-    current_model: Optional[str] = None
+from ..schemas import AvailableModelsResponse, ModelInfo
 
 
 class DiscoveredModelsResponse(BaseModel):

@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from img_classifier_api.crud.predictions import (
@@ -20,6 +20,8 @@ from img_classifier_api.database import get_db
 class PredictionHistoryItem(BaseModel):
     """Prediction history item for API response."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     timestamp: datetime
     image_name: str
@@ -30,9 +32,6 @@ class PredictionHistoryItem(BaseModel):
     probabilities: Dict[str, float]
     image_thumbnail: Optional[str]
     user_session: Optional[str]
-
-    class Config:
-        from_attributes = True
 
 
 class PredictionHistoryResponse(BaseModel):
@@ -175,7 +174,7 @@ async def delete_history_item(
 
 @router.get("/history/export")
 async def export_history(
-    format: str = Query("json", regex="^(json|csv)$", description="Export format"),
+    format: str = Query("json", pattern="^(json|csv)$", description="Export format"),
     model_name: Optional[str] = Query(None, description="Filter by model name"),
     start_date: Optional[datetime] = Query(None, description="Filter start date"),
     end_date: Optional[datetime] = Query(None, description="Filter end date"),

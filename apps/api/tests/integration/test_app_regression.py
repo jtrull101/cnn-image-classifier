@@ -208,7 +208,7 @@ class TestErrorRecoveryWorkflows:
     def test_recover_from_missing_file_on_load(self, client):
         """Test API handles missing file error during model load."""
         response = client.post(
-            "/api/models/load", params={"model_path": "/nonexistent/path/model.keras"}
+            "/api/models/load", json={"model_path": "/nonexistent/path/model.keras"}
         )
 
         assert response.status_code == 404
@@ -258,7 +258,7 @@ class TestApiStateManagement:
         mock_load.return_value = "loaded"
         response1 = client.post(
             "/api/models/load",
-            params={"model_path": "/path/to/model.keras", "model_name": "persistent"},
+            json={"model_path": "/path/to/model.keras", "model_name": "persistent"},
         )
         assert response1.status_code == 200
 

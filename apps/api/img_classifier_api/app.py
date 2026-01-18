@@ -13,25 +13,20 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict, List, Optional
 
-import cv2
-import numpy as np
 import tensorflow as tf
 from fastapi import (
     FastAPI,
-    File,
-    HTTPException,
     Request,
-    UploadFile,
     WebSocket,
     WebSocketDisconnect,
 )
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, Field
 
 from .database import init_db
 from .routers import analytics, history, models, predictions
+from .schemas import ModelInfo
 from .websocket_manager import manager as ws_manager
 
 # This will be defined after ModelManager is initialized
@@ -39,35 +34,6 @@ from .websocket_manager import manager as ws_manager
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 static_dir = Path(__file__).parent / "static"
 static_dir.mkdir(exist_ok=True)
-
-
-# Pydantic models for request/response
-# TODO extract to models class
-class PredictionResponse(BaseModel):
-    """Response model for predictions."""
-
-    class_name: str = Field(..., description="Predicted class name")
-    confidence: float = Field(..., description="Confidence score (0-1)")
-    probabilities: Dict[str, float] = Field(..., description="Probability for each class")
-    model_name: str = Field(..., description="Name of the model used")
-
-
-class ModelInfo(BaseModel):
-    """Information about a loaded model."""
-
-    name: str
-    path: str
-    num_classes: int
-    class_names: List[str]
-    input_shape: List[int]
-    accuracy: Optional[float] = None
-
-
-class AvailableModelsResponse(BaseModel):
-    """Response listing available models."""
-
-    models: List[ModelInfo]
-    current_model: Optional[str] = None
 
 
 # Global model cache
@@ -294,118 +260,6 @@ async def home(request: Request):
                 "num_classes": 0,
             },
         )
-
-
-@app.post("/api/predict", response_model=PredictionResponse)
-async def predict_image(
-    file: UploadFile = File(...),
-    model_name: Optional[str] = None,
-):
-    """
-    Predict the class of an uploaded image.
-
-    Args:
-        file: Image file to classify
-        model_name: Optional model name (uses current model if not specified)
-
-    Returns:
-        PredictionResponse with class prediction and confidence
-    """
-    # Validate file type
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(400, "File must be an image")
-
-    # Get model and info
-    try:
-        model = model_manager.get_model(model_name)
-        info = model_manager.get_info(model_name)
-    except ValueError as e:
-        raise HTTPException(404, str(e))
-
-    # Read and process image
-    try:
-        # Read file
-        contents = await file.read()
-        nparr = np.frombuffer(contents, np.uint8)
-        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-        if image is None:
-            raise HTTPException(400, "Unable to decode image")
-
-        # Resize to model input shape
-        input_shape = tuple(info.input_shape[:2])
-        image_resized = cv2.resize(image, input_shape)
-
-        # Normalize
-        image_array = np.asarray(image_resized, dtype=np.float32) / 255.0
-        image_batch = np.expand_dims(image_array, axis=0)
-
-        # Predict
-        predictions = model.predict(image_batch, verbose=0)
-        probabilities = predictions[0]
-
-        # Get top prediction
-        predicted_idx = int(np.argmax(probabilities))
-        predicted_class = info.class_names[predicted_idx]
-        confidence = float(probabilities[predicted_idx])
-
-        # Build probability dict
-        prob_dict = {
-            class_name: float(prob) for class_name, prob in zip(info.class_names, probabilities)
-        }
-
-        return PredictionResponse(
-            class_name=predicted_class,
-            confidence=confidence,
-            probabilities=prob_dict,
-            model_name=info.name,
-        )
-
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(500, f"Prediction error: {str(e)}")
-
-
-@app.get("/api/models", response_model=AvailableModelsResponse)
-async def list_models():
-    """List all available models."""
-    return AvailableModelsResponse(
-        models=list(model_manager.model_info.values()),
-        current_model=model_manager.current_model_name,
-    )
-
-
-@app.get("/api/models/{model_name}", response_model=ModelInfo)
-async def get_model_info(model_name: str):
-    """Get information about a specific model."""
-    try:
-        return model_manager.get_info(model_name)
-    except ValueError as e:
-        raise HTTPException(404, str(e))
-
-
-@app.post("/api/models/{model_name}/activate")
-async def activate_model(model_name: str):
-    """Set a model as the current active model."""
-    try:
-        model_manager.set_current_model(model_name)
-        return {"message": f"Model '{model_name}' is now active"}
-    except ValueError as e:
-        raise HTTPException(404, str(e))
-
-
-@app.post("/api/models/load")
-async def load_model_endpoint(model_path: str, model_name: Optional[str] = None):
-    """Load a model from a file path."""
-    try:
-        path = Path(model_path)
-        loaded_name = model_manager.load_model(path, model_name)
-        return {"message": "Model loaded successfully", "model_name": loaded_name}
-    except FileNotFoundError as e:
-        raise HTTPException(404, str(e))
-    except Exception as e:
-        raise HTTPException(500, f"Error loading model: {str(e)}")
 
 
 @app.get("/health")
