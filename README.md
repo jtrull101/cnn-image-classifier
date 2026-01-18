@@ -54,9 +54,36 @@ The setup script ensures UV is available, installs dependencies, and runs initia
 ```powershell
 # Install UV (if needed) and sync dependencies
 make install
+
+# Download datasets (optional - only if you plan to train models)
+make download-datasets
 ```
 
 **Note:** All configuration is now in `pyproject.toml` files. No separate `requirements.txt`, `pytest.ini`, or `setup.cfg` files needed.
+
+### Dataset Download (Optional)
+
+Datasets are hosted on GitHub Releases to keep the repository lightweight (~461 MB total).
+
+```powershell
+# Download all datasets
+make download-datasets
+
+# List available datasets
+make list-datasets
+
+# Download specific dataset
+uv run python scripts/download_datasets.py alzheimers-mri-dataset
+```
+
+**Available Datasets:**
+- `alzheimers-mri-dataset.zip` (72 MB) - Main Alzheimer's classification dataset
+- `brain-tumor-mri-dataset.zip` (149 MB) - Brain tumor classification
+- `covid-chest-xray.zip` (241 MB) - COVID-19 chest X-ray images
+
+See [docs/DATASETS.md](docs/DATASETS.md) for detailed information.
+
+**Note:** You only need to download datasets if you plan to train models. The pre-trained models and API work without downloading datasets.
 
 ---
 

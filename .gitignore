@@ -198,3 +198,8 @@ pyrightconfig.json
 .env
 .env.local
 .env.*.local
+
+# Large dataset files (hosted on GitHub Releases)
+datasets/*.zip
+datasets/*.tar.gz
+datasets/*.tar

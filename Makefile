@@ -1,4 +1,4 @@
-.PHONY: help install sync clean test test-coverage test-parallel test-unit test-integration test-slow test-config test-data test-models test-training test-utils test-cli test-api lint format typecheck build build-config build-utils build-data build-models build-training build-cli build-api serve-api install-hooks pre-commit pre-commit-fix check ci
+.PHONY: help install sync clean test test-coverage test-parallel test-unit test-integration test-slow test-config test-data test-models test-training test-utils test-cli test-api lint format typecheck build build-config build-utils build-data build-models build-training build-cli build-api serve-api install-hooks pre-commit pre-commit-fix check ci download-datasets list-datasets
 
 # Platform detection
 ifeq ($(OS),Windows_NT)
@@ -71,6 +71,10 @@ help:
 	@echo ""
 	@echo "Application commands:"
 	@echo "  make run      	     - Start API server"
+	@echo ""
+	@echo "Dataset commands:"
+	@echo "  make download-datasets - Download all datasets from GitHub Releases"
+	@echo "  make list-datasets     - List available datasets and their status"
 	@echo ""
 	@echo "Git hooks:"
 	@echo "  Pre-commit checks run automatically on each commit"
@@ -231,3 +235,13 @@ test-api:
 # CI workflow
 ci: lint typecheck test build
 	@echo "CI checks passed!"
+
+# Dataset management
+download-datasets:
+	@echo "Downloading all datasets from GitHub Releases..."
+	uv run python scripts/download_datasets.py
+
+list-datasets:
+	@echo "Listing available datasets..."
+	uv run python scripts/download_datasets.py --list
+

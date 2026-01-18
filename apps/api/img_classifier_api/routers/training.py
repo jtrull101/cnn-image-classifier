@@ -6,10 +6,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
 
-from img_classifier_config import DatasetConfig, DatasetDetector
+from img_classifier_config import DatasetDetector
 from img_classifier_training import TrainingOrchestrator, HyperparameterSpace
 
 
