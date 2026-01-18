@@ -16,11 +16,23 @@ from typing import Dict, List, Optional
 import cv2
 import numpy as np
 import tensorflow as tf
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import (
+    FastAPI,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
+
+from .database import init_db
+from .routers import analytics, history, models, predictions
+from .websocket_manager import manager as ws_manager
 
 # This will be defined after ModelManager is initialized
 # Setup templates and static files
@@ -224,6 +236,7 @@ model_manager = ModelManager()
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events."""
     # Startup
+    init_db()  # Initialize database
     model_manager.auto_load_best_model()
     yield
     # Shutdown (if needed)
@@ -240,6 +253,16 @@ app = FastAPI(
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+# Store manager instances in app state for router access
+app.state.model_manager = model_manager
+app.state.ws_manager = ws_manager
+
+# Include routers with /api prefix
+app.include_router(models.router, prefix="/api", tags=["models"])
+app.include_router(predictions.router, prefix="/api", tags=["predictions"])
+app.include_router(history.router, prefix="/api", tags=["history"])
+app.include_router(analytics.router, prefix="/api", tags=["analytics"])
 
 
 # API Endpoints
@@ -392,7 +415,59 @@ async def health_check():
         "status": "healthy",
         "models_loaded": len(model_manager.models),
         "current_model": model_manager.current_model_name,
+        "websocket_connections": ws_manager.get_connection_count(),
     }
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """
+    WebSocket endpoint for real-time communication.
+
+    Handles:
+    - Connection management
+    - Ping/pong heartbeat
+    - Real-time updates for predictions, model loading, batch processing
+    """
+    client_id = websocket.query_params.get("client_id")
+    await ws_manager.connect(websocket, client_id)
+
+    try:
+        while True:
+            # Receive message from client
+            data = await websocket.receive_json()
+            message_type = data.get("type")
+
+            if message_type == "ping":
+                # Respond to heartbeat
+                await ws_manager.send_personal_message(
+                    {"type": "pong", "timestamp": data.get("timestamp")}, websocket
+                )
+            elif message_type == "subscribe":
+                # Subscribe to specific room/channel
+                room = data.get("room")
+                if room:
+                    ws_manager.join_room(websocket, room)
+                    await ws_manager.send_personal_message(
+                        {"type": "subscribed", "room": room}, websocket
+                    )
+            elif message_type == "unsubscribe":
+                # Unsubscribe from room/channel
+                room = data.get("room")
+                if room:
+                    ws_manager.leave_room(websocket, room)
+                    await ws_manager.send_personal_message(
+                        {"type": "unsubscribed", "room": room}, websocket
+                    )
+            else:
+                # Echo unknown messages back (for debugging)
+                await ws_manager.send_personal_message({"type": "echo", "data": data}, websocket)
+
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+        ws_manager.disconnect(websocket)
 
 
 if __name__ == "__main__":

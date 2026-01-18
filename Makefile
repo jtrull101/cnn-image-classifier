@@ -69,7 +69,7 @@ help:
 	@echo "  make build-api      - Build API application"
 	@echo ""
 	@echo "Application commands:"
-	@echo "  make serve-api      - Start API server"
+	@echo "  make run      	     - Start API server"
 	@echo ""
 	@echo "Git hooks:"
 	@echo "  Pre-commit checks run automatically on each commit"
@@ -164,7 +164,7 @@ build-api:
 	uv build --directory apps/api
 
 # Application commands
-serve-api:
+run:
 	uv run python apps/api/run_api.py
 
 # Git hooks
