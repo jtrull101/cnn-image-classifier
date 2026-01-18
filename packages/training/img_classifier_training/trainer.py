@@ -177,7 +177,14 @@ class Trainer:
         assert self.model.model is not None, "Model must be built before evaluation"
 
         print("\nEvaluating model on test set...")
-        loss, acc = self.model.model.evaluate(X_test, y_test, verbose=0)
+        results = self.model.model.evaluate(X_test, y_test, verbose=0)
+        # evaluate returns list[float] or tuple when metrics are present, or float if only loss
+        if isinstance(results, (list, tuple)):
+            loss, acc = results[0], results[1]
+        else:
+            # Should not happen since we compile with metrics=['acc']
+            loss = float(results)
+            acc = 0.0
         print(f"Test Loss: {loss:.4f}")
         print(f"Test Accuracy: {acc:.4f} ({acc * 100:.2f}%)")
         return loss, acc
@@ -197,7 +204,8 @@ class Trainer:
 
         fig, axes = plt.subplots(1, 2, figsize=(18, 6))
 
-        for ax, metric in zip(np.ravel(axes), ["loss", "acc"]):
+        axes_flat = np.ravel(axes)
+        for ax, metric in zip(axes_flat, ["loss", "acc"], strict=False):
             ax.set_title(f"{metric.title()} Plot")
             df_metric = df[df["variable"].str.contains(metric)]
             sns.lineplot(data=df_metric, x="epoch", y="value", hue="variable", ax=ax)  # type: ignore[arg-type]

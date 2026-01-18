@@ -1,4 +1,4 @@
-﻿.PHONY: help install sync clean test test-coverage test-parallel test-unit test-integration test-slow test-config test-data test-models test-training test-utils test-cli test-api lint format typecheck build build-config build-utils build-data build-models build-training build-cli build-api serve-api install-hooks pre-commit pre-commit-fix ci
+.PHONY: help install sync clean test test-coverage test-parallel test-unit test-integration test-slow test-config test-data test-models test-training test-utils test-cli test-api lint format typecheck build build-config build-utils build-data build-models build-training build-cli build-api serve-api install-hooks pre-commit pre-commit-fix check ci
 
 # Platform detection
 ifeq ($(OS),Windows_NT)
@@ -42,6 +42,7 @@ help:
 	@echo "  make lint           - Lint all code with ruff"
 	@echo "  make format         - Format all code with ruff"
 	@echo "  make typecheck      - Run pyright across the workspace"
+	@echo "  make check          - Run all pre-commit checks (format, lint, typecheck, tests)"
 	@echo "  make clean          - Clean build/test artifacts"
 	@echo ""
 	@echo "Testing commands:"
@@ -179,6 +180,24 @@ pre-commit:
 # Pre-commit auto-fix
 pre-commit-fix:
 	@$(PRE_COMMIT_FIX_CMD)
+
+# Run all pre-commit checks (format check, lint, typecheck, tests)
+check:
+	@echo "Running all pre-commit checks..."
+	@echo ""
+	@echo "1/4 Checking code formatting..."
+	@uv run ruff format --check apps packages scripts tests
+	@echo ""
+	@echo "2/4 Linting code..."
+	@uv run ruff check apps packages scripts tests
+	@echo ""
+	@echo "3/4 Type checking..."
+	@uv run pyright
+	@echo ""
+	@echo "4/4 Running tests..."
+	@uv run python -m pytest -c pyproject.toml --rootdir . -v -n auto --maxfail=3
+	@echo ""
+	@echo "✓ All pre-commit checks passed!"
 
 # Package-specific tests
 test-config:

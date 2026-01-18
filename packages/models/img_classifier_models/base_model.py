@@ -117,5 +117,6 @@ class BaseModel(ABC):
         Returns:
             Loaded Keras model
         """
-        self.model = tf.keras.models.load_model(filepath)
-        return self.model
+        loaded_model = tf.keras.models.load_model(filepath)
+        self.model = loaded_model
+        return loaded_model

@@ -29,7 +29,7 @@ members = [
 [dependency-groups]
 dev = [
     "ruff>=0.14.7",
-    "pyright>=1.1.0",
+    "pyright>=1.1.408",
     "pydantic>=2.5.0",
     "pydantic-settings>=2.1.0",
 ]
