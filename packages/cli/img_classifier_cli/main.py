@@ -9,9 +9,12 @@ from img_classifier_config import DatasetConfig, DatasetDetector
 from img_classifier_training import HyperparameterSpace, TrainingOrchestrator
 
 
+_SEPARATOR = "=" * 60
+
+
 @click.group()
 @click.version_option(version="0.1.0")
-def cli():
+def cli() -> None:
     """Image Classification Neural Network System.
 
     A modular, automated system for training CNN models on any image
@@ -24,14 +27,14 @@ def cli():
 @click.argument("dataset_path", type=click.Path(exists=True, path_type=Path))
 @click.option("--project-name", "-n", help="Name for the project")
 @click.option("--working-dir", "-w", type=click.Path(path_type=Path), help="Working directory")
-def info(dataset_path: Path, project_name: Optional[str], working_dir: Optional[Path]):
+def info(dataset_path: Path, project_name: Optional[str], working_dir: Optional[Path]) -> None:
     """Display information about a dataset."""
     detector = DatasetDetector(dataset_path)
     info_dict = detector.detect()
 
-    click.echo("\n" + "=" * 60)
+    click.echo("\n" + _SEPARATOR)
     click.echo("Dataset Information")
-    click.echo("=" * 60)
+    click.echo(_SEPARATOR)
     click.echo(f"Path: {info_dict['dataset_path']}")
     click.echo(f"Number of classes: {info_dict['num_classes']}")
     click.echo(f"Class names: {', '.join(info_dict['class_names'])}")
@@ -45,7 +48,7 @@ def info(dataset_path: Path, project_name: Optional[str], working_dir: Optional[
     if info_dict["sample_image_shape"]:
         h, w, c = info_dict["sample_image_shape"]
         click.echo(f"Sample image shape: {h}x{w}x{c}")
-    click.echo("=" * 60 + "\n")
+    click.echo(_SEPARATOR + "\n")
 
 
 @cli.command()
@@ -73,11 +76,11 @@ def train(
     learning_rate: Optional[float],
     architecture: Optional[str],
     plot: bool,
-):
+) -> None:
     """Train a model on a dataset."""
-    click.echo("\n" + "=" * 60)
+    click.echo("\n" + _SEPARATOR)
     click.echo("Training Neural Network")
-    click.echo("=" * 60 + "\n")
+    click.echo(_SEPARATOR + "\n")
 
     # Load or create config
     if config:
@@ -101,9 +104,9 @@ def train(
 
     try:
         orchestrator.run(plot=plot)
-        click.echo("\n" + "=" * 60)
+        click.echo("\n" + _SEPARATOR)
         click.echo("Training completed successfully!")
-        click.echo("=" * 60 + "\n")
+        click.echo(_SEPARATOR + "\n")
     except KeyboardInterrupt:
         click.echo("\nTraining interrupted by user.")
         sys.exit(1)
@@ -137,15 +140,15 @@ def optimize(
     max_trials: int,
     target_accuracy: float,
     quick: bool,
-):
+) -> None:
     """Optimize hyperparameters for a dataset."""
-    click.echo("\n" + "=" * 60)
+    click.echo("\n" + _SEPARATOR)
     click.echo("Hyperparameter Optimization")
-    click.echo("=" * 60)
+    click.echo(_SEPARATOR)
     click.echo(f"Optimizer: {optimizer_type}")
     click.echo(f"Max trials: {max_trials}")
     click.echo(f"Target accuracy: {target_accuracy}")
-    click.echo("=" * 60 + "\n")
+    click.echo(_SEPARATOR + "\n")
 
     # Load or create config
     if config:
@@ -168,9 +171,9 @@ def optimize(
 
     try:
         orchestrator.run(plot=False)
-        click.echo("\n" + "=" * 60)
+        click.echo("\n" + _SEPARATOR)
         click.echo("Optimization completed successfully!")
-        click.echo("=" * 60)
+        click.echo(_SEPARATOR)
 
         opt = orchestrator.optimizer
         if opt is not None:
@@ -210,7 +213,7 @@ def create_config(
     batch_size: int,
     learning_rate: float,
     architecture: str,
-):
+) -> None:
     """Create a configuration file for a dataset."""
     detector = DatasetDetector(dataset_path)
     cfg = detector.create_config(
@@ -231,7 +234,7 @@ def create_config(
 @click.argument("model_path", type=click.Path(exists=True, path_type=Path))
 @click.argument("image_path", type=click.Path(exists=True, path_type=Path))
 @click.option("--class-names", "-c", multiple=True, help="Class names (in order)")
-def predict(model_path: Path, image_path: Path, class_names: tuple):
+def predict(model_path: Path, image_path: Path, class_names: tuple) -> None:
     """Make a prediction on a single image."""
     import cv2
     import numpy as np
@@ -262,9 +265,9 @@ def predict(model_path: Path, image_path: Path, class_names: tuple):
     confidence = predictions[0][predicted_class]
 
     # Display result
-    click.echo("\n" + "=" * 60)
+    click.echo("\n" + _SEPARATOR)
     click.echo("Prediction Result")
-    click.echo("=" * 60)
+    click.echo(_SEPARATOR)
     if class_names and len(class_names) > predicted_class:
         click.echo(f"Predicted class: {class_names[predicted_class]}")
     else:
@@ -274,10 +277,10 @@ def predict(model_path: Path, image_path: Path, class_names: tuple):
     for i, prob in enumerate(predictions[0]):
         label = class_names[i] if class_names and len(class_names) > i else f"Class {i}"
         click.echo(f"  {label}: {prob:.2%}")
-    click.echo("=" * 60 + "\n")
+    click.echo(_SEPARATOR + "\n")
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     cli()
 

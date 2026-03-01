@@ -1,6 +1,7 @@
 """Hyperparameter optimization for model training."""
 
 import json
+import logging
 import random
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
@@ -9,6 +10,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from img_classifier_config import BaseConfig
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -132,7 +135,7 @@ class HyperparameterOptimizer(ABC):
 
         return False
 
-    def record_result(self, result: TrialResult):
+    def record_result(self, result: TrialResult) -> None:
         """Record a trial result.
 
         Args:
@@ -150,7 +153,7 @@ class HyperparameterOptimizer(ABC):
         # Save results
         self._save_results()
 
-    def _save_results(self):
+    def _save_results(self) -> None:
         """Save all results to JSON file."""
         results_file = self.results_dir / "optimization_results.json"
 
@@ -289,7 +292,7 @@ class BayesianOptimizer(HyperparameterOptimizer):
                     study_name=f"optimization_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                 )
             except ImportError:
-                print("Warning: optuna not installed, falling back to random search")
+                logger.warning("optuna not installed, falling back to random search")
                 self.use_optuna = False
 
     def suggest_hyperparameters(self, trial_number: int) -> Dict[str, Any]:

@@ -3,4 +3,4 @@
 __version__ = "0.1.0"
 __all__ = ["cli", "main"]
 
-from .main import cli, main
+from img_classifier_cli.main import cli, main

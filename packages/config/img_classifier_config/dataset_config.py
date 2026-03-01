@@ -26,6 +26,7 @@ class DatasetConfig(BaseConfig):
     description: Optional[str] = Field(default=None, description="Dataset description")
 
     # Architecture hints
+    # TODO: enumify
     architecture_complexity: str = Field(
         default="auto", description="Model complexity: 'simple', 'medium', 'deep', or 'auto'"
     )
@@ -72,6 +73,7 @@ class DatasetConfig(BaseConfig):
     @classmethod
     def validate_complexity(cls, v: str) -> str:
         """Validate architecture complexity value."""
+        # TODO: enumify
         allowed = ["auto", "simple", "medium", "deep", "custom"]
         normalized = v.lower()
         if normalized not in allowed:
@@ -290,7 +292,7 @@ class DatasetDetector:
         min_count = min(counts)
         max_count = max(counts)
 
-        # Consider balanced if ratio is within 2:1
+        # Consider balanced if the ratio is within 2:1
         return max_count / min_count <= 2.0
 
     def create_config(
@@ -318,10 +320,10 @@ class DatasetDetector:
             "architecture_complexity": info["recommended_complexity"],
         }
 
-        # Add sample image shape if detected
+        # Add a sample image shape if detected
         if info["sample_image_shape"]:
             h, w, c = info["sample_image_shape"]
-            # Use detected size or standardize to reasonable size
+            # Use detected size or standardize to a reasonable size
             if h > 256 or w > 256:
                 config_dict["image_size"] = (128, 128)
             else:

@@ -1,5 +1,6 @@
 """Router for prediction endpoints."""
 
+import asyncio
 import base64
 import hashlib
 import logging
@@ -110,7 +111,7 @@ async def _run_prediction(
     # Normalize and predict
     image_array = np.asarray(image_resized, dtype=np.float32) / 255.0
     image_batch = np.expand_dims(image_array, axis=0)
-    raw_predictions = model.predict(image_batch, verbose=0)
+    raw_predictions = await asyncio.to_thread(model.predict, image_batch, verbose=0)
     probabilities = raw_predictions[0]
 
     predicted_idx = int(np.argmax(probabilities))

@@ -2,6 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
+from enum import StrEnum
 from pathlib import Path
 from typing import Optional, Union
 
@@ -9,6 +10,14 @@ import tensorflow as tf
 from img_classifier_config import BaseConfig
 
 logger = logging.getLogger(__name__)
+
+
+class OptimizerName(StrEnum):
+    """Supported optimizer name strings."""
+
+    ADAM = "adam"
+    SGD = "sgd"
+    RMSPROP = "rmsprop"
 
 
 class BaseModel(ABC):
@@ -60,11 +69,11 @@ class BaseModel(ABC):
             optimizer_obj = tf.keras.optimizers.Adam(learning_rate=lr)
         elif isinstance(optimizer, str):
             opt_name = optimizer.lower()
-            if opt_name == "adam":
+            if opt_name == OptimizerName.ADAM:
                 optimizer_obj = tf.keras.optimizers.Adam(learning_rate=lr)
-            elif opt_name == "sgd":
+            elif opt_name == OptimizerName.SGD:
                 optimizer_obj = tf.keras.optimizers.SGD(learning_rate=lr)
-            elif opt_name == "rmsprop":
+            elif opt_name == OptimizerName.RMSPROP:
                 optimizer_obj = tf.keras.optimizers.RMSprop(learning_rate=lr)
             else:
                 raise ValueError(f"Unsupported optimizer: {optimizer}")
@@ -81,7 +90,7 @@ class BaseModel(ABC):
             raise RuntimeError("Model must be built before compile")
         self.model.compile(optimizer=optimizer_obj, loss=loss, metrics=metrics)
 
-    def summary(self):
+    def summary(self) -> str:
         """Print and return model summary as a string.
 
         Returns:
@@ -98,7 +107,7 @@ class BaseModel(ABC):
         logger.info(summary_text)
         return summary_text
 
-    def save(self, filepath: Path):
+    def save(self, filepath: Path) -> None:
         """Save the model.
 
         Args:

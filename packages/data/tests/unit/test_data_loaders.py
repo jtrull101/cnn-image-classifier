@@ -12,7 +12,6 @@ from img_classifier_data import BaseDataLoader, ImageDataLoader
 pytestmark = pytest.mark.unit
 
 
-@pytest.mark.unit
 class TestBaseDataLoader:
     """Unit tests for BaseDataLoader abstract class."""
 
@@ -193,7 +192,6 @@ class TestBaseDataLoader:
         assert len(y_reduced) == 100
 
 
-@pytest.mark.unit
 class TestImageDataLoader:
     """Tests for ImageDataLoader class."""
 
@@ -260,7 +258,6 @@ class TestImageDataLoader:
         assert result is False
 
 
-@pytest.mark.unit
 class TestBaseDataLoaderEdgeCases:
     """Edge case tests for BaseDataLoader."""
 
@@ -369,7 +366,6 @@ class TestBaseDataLoaderEdgeCases:
         assert 15 <= np.sum(y_reduced == 1) <= 35  # Allow some variance
 
 
-@pytest.mark.unit
 class TestImageDataLoaderEdgeCases:
     """Edge case tests for ImageDataLoader."""
 
@@ -460,7 +456,7 @@ class TestImageDataLoaderEdgeCases:
         assert len(y_reduced) <= 1
 
     def test_reduce_dataset_preserves_data_type(self):
-        """Test reduce_dataset preserves numpy array types."""
+        """Test reduce_dataset preserves NumPy array types."""
         x = np.arange(100, dtype=np.float32).reshape(100, 1)
         y = np.arange(100, dtype=np.int64)
 
@@ -565,7 +561,6 @@ class TestImageDataLoaderEdgeCases:
         assert x_reduced.shape[1:] == (10, 10)
 
 
-@pytest.mark.unit
 class TestImageDataLoaderCacheOperations:
     """Tests for ImageDataLoader cache operations."""
 
@@ -662,7 +657,6 @@ class TestImageDataLoaderCacheOperations:
         assert result is None
 
 
-@pytest.mark.unit
 class TestImageDataLoaderDownloadPrepare:
     """Tests for ImageDataLoader download and prepare operations."""
 
@@ -740,7 +734,6 @@ class TestImageDataLoaderDownloadPrepare:
         assert result is False
 
 
-@pytest.mark.unit
 class TestImageDataLoaderProcessing:
     """Tests for ImageDataLoader image processing."""
 
@@ -783,7 +776,7 @@ class TestImageDataLoaderProcessing:
         mocker.patch("cv2.resize", return_value=mock_image)
 
         # Mock tqdm to avoid progress bars in tests
-        mocker.patch("img_classifier_data.image_loader.tqdm", side_effect=lambda x, **kwargs: x)
+        mocker.patch("img_classifier_data.image_loader.tqdm", side_effect=lambda z, **kwargs: z)
 
         x, y = self.loader._process_images(test_path)
 
@@ -810,7 +803,7 @@ class TestImageDataLoaderProcessing:
         mock_image = np.random.randint(0, 255, (img_h, img_w, 3), dtype=np.uint8)
         mocker.patch("cv2.imread", side_effect=[None, mock_image])
         mocker.patch("cv2.resize", return_value=mock_image)
-        mocker.patch("img_classifier_data.image_loader.tqdm", side_effect=lambda x, **kwargs: x)
+        mocker.patch("img_classifier_data.image_loader.tqdm", side_effect=lambda z, **kwargs: z)
 
         x, y = self.loader._process_images(test_path)
 
@@ -832,7 +825,7 @@ class TestImageDataLoaderProcessing:
         # First image raises exception, second succeeds
         mocker.patch("cv2.imread", side_effect=[Exception("Read error"), mock_image])
         mocker.patch("cv2.resize", return_value=mock_image)
-        mocker.patch("img_classifier_data.image_loader.tqdm", side_effect=lambda x, **kwargs: x)
+        mocker.patch("img_classifier_data.image_loader.tqdm", side_effect=lambda z, **kwargs: z)
 
         x, y = self.loader._process_images(test_path)
 
@@ -854,7 +847,7 @@ class TestImageDataLoaderProcessing:
         mock_image = np.random.randint(0, 255, (img_h, img_w, 3), dtype=np.uint8)
         mocker.patch("cv2.imread", return_value=mock_image)
         mocker.patch("cv2.resize", return_value=mock_image)
-        mocker.patch("img_classifier_data.image_loader.tqdm", side_effect=lambda x, **kwargs: x)
+        mocker.patch("img_classifier_data.image_loader.tqdm", side_effect=lambda z, **kwargs: z)
 
         x, y = self.loader._process_images(test_path)
 
@@ -885,7 +878,6 @@ class TestImageDataLoaderProcessing:
         assert set(y) == {0, 1, 2}  # Labels should be 0, 1, 2
 
 
-@pytest.mark.unit
 class TestImageDataLoaderLoadMethods:
     """Tests for load_train_data and load_test_data methods."""
 
@@ -961,7 +953,6 @@ class TestImageDataLoaderLoadMethods:
         mock_save.assert_called_once_with(mock_x, mock_y, train=False)
 
 
-@pytest.mark.unit
 class TestImageDataLoaderCacheErrors:
     """Tests for cache error handling."""
 
@@ -1003,7 +994,6 @@ class TestImageDataLoaderCacheErrors:
         assert self.config.cache_dir.exists()
 
 
-@pytest.mark.unit
 class TestImageDataLoaderDownloadSuccess:
     """Tests for successful download scenarios."""
 
@@ -1042,7 +1032,6 @@ class TestImageDataLoaderDownloadSuccess:
         assert result is False
 
 
-@pytest.mark.unit
 class TestImageDataLoaderPrepareExtraction:
     """Tests for dataset extraction scenarios."""
 

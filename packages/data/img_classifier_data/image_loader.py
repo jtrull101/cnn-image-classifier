@@ -142,7 +142,7 @@ class ImageDataLoader(BaseDataLoader):
 
         return None
 
-    def _save_to_cache(self, X: np.ndarray, y: np.ndarray, train: bool):
+    def _save_to_cache(self, X: np.ndarray, y: np.ndarray, train: bool) -> None:
         """Save data to cache.
 
         Args:

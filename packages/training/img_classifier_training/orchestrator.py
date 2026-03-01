@@ -101,16 +101,13 @@ class TrainingOrchestrator:
             working_dir=working_dir,
         )
 
-        print(f"\n{'=' * 60}")
-        print("Dataset Auto-Detection Results")
-        print(f"{'=' * 60}")
         info = detector.detect()
-        print(f"Dataset: {info['dataset_path']}")
-        print(f"Classes: {info['num_classes']} - {', '.join(info['class_names'])}")
-        print(f"Total images: {info['total_images']}")
-        print(f"Balanced: {info['is_balanced']}")
-        print(f"Recommended complexity: {info['recommended_complexity']}")
-        print(f"{'=' * 60}\n")
+        logger.info("Dataset Auto-Detection Results")
+        logger.info("Dataset: %s", info["dataset_path"])
+        logger.info("Classes: %d - %s", info["num_classes"], ", ".join(info["class_names"]))
+        logger.info("Total images: %d", info["total_images"])
+        logger.info("Balanced: %s", info["is_balanced"])
+        logger.info("Recommended complexity: %s", info["recommended_complexity"])
 
         return cls(config, **kwargs)
 
@@ -123,14 +120,13 @@ class TrainingOrchestrator:
         Returns:
             Dictionary containing model, history, and metrics
         """
-        print(f"\n{'=' * 60}")
-        print("Starting Training Orchestrator")
-        print(f"{'=' * 60}")
-        print(f"Project: {self.config.project_name}")
-        print(f"Dataset: {self.config.dataset_name}")
-        print(f"Classes: {self.config.num_classes}")
-        print(f"Optimization: {'Enabled' if self.optimize_hyperparameters else 'Disabled'}")
-        print(f"{'=' * 60}\n")
+        logger.info("Starting Training Orchestrator")
+        logger.info("Project: %s", self.config.project_name)
+        logger.info("Dataset: %s", self.config.dataset_name)
+        logger.info("Classes: %d", self.config.num_classes)
+        logger.info(
+            "Optimization: %s", "Enabled" if self.optimize_hyperparameters else "Disabled"
+        )
 
         # Prepare dataset
         if not self._prepare_dataset():
@@ -147,7 +143,7 @@ class TrainingOrchestrator:
         Returns:
             True if successful
         """
-        print("Preparing dataset...")
+        logger.info("Preparing dataset...")
 
         # Download if needed
         if hasattr(self.data_loader, "download_dataset"):
@@ -165,7 +161,7 @@ class TrainingOrchestrator:
         Args:
             plot: Whether to plot training history
         """
-        print("\nRunning single training session...")
+        logger.info("Running single training session...")
 
         # Create model from architecture factory
         model_keras = ArchitectureFactory.create(self.config)
@@ -179,9 +175,7 @@ class TrainingOrchestrator:
         self.best_model = model
         self.best_config = self.config
 
-        print("\nTraining completed!")
-        print(f"Final accuracy: {acc:.4f}")
-        print(f"Final loss: {loss:.4f}")
+        logger.info("Training completed! Final accuracy: %.4f  Final loss: %.4f", acc, loss)
         return {
             "model": model,
             "history": trainer.history,
@@ -194,8 +188,11 @@ class TrainingOrchestrator:
         Args:
             plot: Whether to plot training history
         """
-        print(f"\nStarting hyperparameter optimization ({self.optimizer_type})...")
-        print(f"Max trials: {self.max_trials}\n")
+        logger.info(
+            "Starting hyperparameter optimization (%s). Max trials: %d",
+            self.optimizer_type,
+            self.max_trials,
+        )
 
         # Create optimizer
         self.optimizer = create_optimizer(
@@ -213,12 +210,7 @@ class TrainingOrchestrator:
             # Get hyperparameters for this trial
             hyperparams = self.optimizer.suggest_hyperparameters(trial_number)
 
-            print(f"\n{'=' * 60}")
-            print(f"Trial {trial_number}/{self.max_trials}")
-            print(f"{'=' * 60}")
-            for key, value in hyperparams.items():
-                print(f"{key}: {value}")
-            print(f"{'=' * 60}\n")
+            logger.info("Trial %d/%d — hyperparameters: %s", trial_number, self.max_trials, hyperparams)
 
             # Create config for this trial
             trial_config = self._create_trial_config(hyperparams)
@@ -229,16 +221,17 @@ class TrainingOrchestrator:
             # Record result
             self.optimizer.record_result(result)
 
-            print(f"\nTrial {trial_number} completed:")
-            print(f"  Val Accuracy: {result.val_accuracy:.4f}")
-            print(f"  Test Accuracy: {result.test_accuracy:.4f}")
-            print(f"  Training Time: {result.training_time:.1f}s")
-
+            logger.info(
+                "Trial %d completed — val_acc: %.4f  test_acc: %.4f  time: %.1fs",
+                trial_number,
+                result.val_accuracy,
+                result.test_accuracy,
+                result.training_time,
+            )
             if self.optimizer.best_result:
-                print(f"\nBest so far: {self.optimizer.best_result.val_accuracy:.4f}")
+                logger.info("Best so far: %.4f", self.optimizer.best_result.val_accuracy)
 
-        # Print final summary
-        print(self.optimizer.get_summary())
+        logger.info("%s", self.optimizer.get_summary())
 
         metrics = {}
         if self.optimizer and self.optimizer.best_result:

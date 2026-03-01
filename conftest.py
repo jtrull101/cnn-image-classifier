@@ -207,7 +207,9 @@ def mock_data_loader(mock_config):
 def setup_test_environment():
     """Set up the test environment before any tests run."""
     # Create necessary directories
-    log_dir = Path("/tmp/img_classifier_cnn/logs")
+    import tempfile
+
+    log_dir = Path(tempfile.gettempdir()) / "img_classifier_cnn" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
 
     # Set any environment variables needed for testing
