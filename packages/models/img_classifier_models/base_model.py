@@ -1,11 +1,14 @@
 """Base model interface."""
 
+import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional, Union
 
 import tensorflow as tf
 from img_classifier_config import BaseConfig
+
+logger = logging.getLogger(__name__)
 
 
 class BaseModel(ABC):
@@ -89,12 +92,10 @@ class BaseModel(ABC):
         if self.model is None:
             raise RuntimeError("Model build should return a valid model")
 
-        # Capture Keras summary into a string and also print it to stdout
         lines = []
         self.model.summary(print_fn=lines.append)
         summary_text = "\n".join(lines)
-        # Ensure existing behavior of printing to stdout for tests capturing output
-        print(summary_text)
+        logger.info(summary_text)
         return summary_text
 
     def save(self, filepath: Path):
@@ -108,7 +109,7 @@ class BaseModel(ABC):
 
         filepath.parent.mkdir(parents=True, exist_ok=True)
         self.model.save(filepath)
-        print(f"Model saved to {filepath}")
+        logger.info("Model saved to %s", filepath)
 
     def load(self, filepath: Path) -> tf.keras.Model:
         """Load a saved model and attach it to this instance.

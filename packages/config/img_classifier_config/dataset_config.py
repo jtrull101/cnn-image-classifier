@@ -163,7 +163,7 @@ class DatasetDetector:
 
             # Ensure classes match
             if set(train_classes) != set(test_classes):
-                print("Warning: Train and test classes don't match!")
+                logger.warning("Train and test classes don't match")
                 classes = sorted(set(train_classes) | set(test_classes))
             else:
                 classes = train_classes

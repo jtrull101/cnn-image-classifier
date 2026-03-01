@@ -1,6 +1,7 @@
 """Model trainer for managing the training process."""
 
 import gc
+import logging
 import time
 from datetime import datetime
 from pathlib import Path
@@ -18,6 +19,8 @@ from keras import backend as K
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from .callbacks import AccuracyThresholdCallback
+
+logger = logging.getLogger(__name__)
 
 
 class Trainer:
@@ -50,10 +53,10 @@ class Trainer:
         Returns:
             Tuple of (X_train, y_train, X_val, y_val, X_test, y_test)
         """
-        print("Loading training data...")
+        logger.info("Loading training data...")
         X_train, y_train = self.data_loader.load_train_data()
 
-        print("Loading test data...")
+        logger.info("Loading test data...")
         X_test, y_test = self.data_loader.load_test_data()
 
         # Split test data into validation and test sets
@@ -63,7 +66,7 @@ class Trainer:
 
         # Reduce dataset size if configured
         if self.config.data_percent < 1.0:
-            print(f"Reducing dataset to {self.config.data_percent * 100}%...")
+            logger.info("Reducing dataset to %.0f%%...", self.config.data_percent * 100)
             X_train, y_train = self.data_loader.reduce_dataset(
                 X_train, y_train, self.config.data_percent
             )
@@ -77,10 +80,12 @@ class Trainer:
         y_val = tf.keras.utils.to_categorical(y_val, self.config.num_classes)
         y_test = tf.keras.utils.to_categorical(y_test, self.config.num_classes)
 
-        print("Data prepared:")
-        print(f"  Training: {X_train.shape}")
-        print(f"  Validation: {X_val.shape}")
-        print(f"  Test: {X_test.shape}")
+        logger.info(
+            "Data prepared: training=%s  validation=%s  test=%s",
+            X_train.shape,
+            X_val.shape,
+            X_test.shape,
+        )
 
         return X_train, y_train, X_val, y_val, X_test, y_test
 
@@ -144,7 +149,7 @@ class Trainer:
         callbacks = self.get_callbacks()
 
         # Train the model
-        print("\nStarting training...")
+        logger.info("Starting training...")
         start_time = time.time()
 
         if self.model.model is None:
@@ -160,7 +165,7 @@ class Trainer:
         )
 
         elapsed_time = time.time() - start_time
-        print(f"\nTraining completed in {elapsed_time:.0f} seconds")
+        logger.info("Training completed in %.0f seconds", elapsed_time)
 
         self.history = history
         return history
@@ -178,17 +183,16 @@ class Trainer:
         if self.model.model is None:
             raise RuntimeError("Model must be built before evaluation")
 
-        print("\nEvaluating model on test set...")
+        logger.info("Evaluating model on test set...")
         results = self.model.model.evaluate(X_test, y_test, verbose=0)
         # evaluate returns list[float] or tuple when metrics are present, or float if only loss
         if isinstance(results, (list, tuple)):
             loss, acc = results[0], results[1]
         else:
-            # Should not happen since we compile with metrics=['acc']
+            # Should not happen since we compile with metrics=['accuracy']
             loss = float(results)
             acc = 0.0
-        print(f"Test Loss: {loss:.4f}")
-        print(f"Test Accuracy: {acc:.4f} ({acc * 100:.2f}%)")
+        logger.info("Test Loss: %.4f  Test Accuracy: %.4f (%.2f%%)", loss, acc, acc * 100)
         return loss, acc
 
     def plot_history(self, save_path: Optional[Path] = None):
@@ -198,7 +202,7 @@ class Trainer:
             save_path: Optional path to save the plot
         """
         if self.history is None:
-            print("No training history available")
+            logger.warning("No training history available")
             return
 
         df = pd.DataFrame(self.history.history).rename_axis("epoch").reset_index()
@@ -207,7 +211,7 @@ class Trainer:
         fig, axes = plt.subplots(1, 2, figsize=(18, 6))
 
         axes_flat = np.ravel(axes)
-        for ax, metric in zip(axes_flat, ["loss", "acc"], strict=False):
+        for ax, metric in zip(axes_flat, ["loss", "accuracy"], strict=False):
             ax.set_title(f"{metric.title()} Plot")
             df_metric = df[df["variable"].str.contains(metric)]
             sns.lineplot(data=df_metric, x="epoch", y="value", hue="variable", ax=ax)  # type: ignore[arg-type]
@@ -216,7 +220,7 @@ class Trainer:
 
         if save_path:
             plt.savefig(save_path)
-            print(f"Plot saved to {save_path}")
+            logger.info("Plot saved to %s", save_path)
 
         plt.show()
 
@@ -235,8 +239,10 @@ class Trainer:
             Path where model was saved, or None if not saved
         """
         if not force_save and acc < self.config.min_accuracy_to_save:
-            print(
-                f"Model accuracy {acc:.2%} below threshold {self.config.min_accuracy_to_save:.2%}, not saving"
+            logger.info(
+                "Model accuracy %.2f%% below threshold %.2f%%, not saving",
+                acc * 100,
+                self.config.min_accuracy_to_save * 100,
             )
             return None
 
@@ -286,7 +292,7 @@ class Trainer:
                 f"{int(elapsed_time)}\n"
             )
 
-        print(f"Results logged to {log_file}")
+        logger.info("Results logged to %s", log_file)
 
     def run(self, plot: bool = False, force_save: bool = False) -> Tuple[float, float]:
         """Run the complete training pipeline.
@@ -338,4 +344,4 @@ class Trainer:
 
         K.clear_session()
         gc.collect()
-        print("Cleanup completed")
+        logger.info("Cleanup completed")

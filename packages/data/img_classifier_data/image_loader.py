@@ -1,5 +1,6 @@
 """Image data loader implementation."""
 
+import logging
 import pickle
 from pathlib import Path
 from typing import Optional, Tuple
@@ -16,6 +17,8 @@ from img_classifier_utils import (
 from tqdm import tqdm
 
 from .base_loader import BaseDataLoader
+
+logger = logging.getLogger(__name__)
 
 
 class ImageDataLoader(BaseDataLoader):
@@ -47,16 +50,16 @@ class ImageDataLoader(BaseDataLoader):
             raise RuntimeError("data_path should be set")
 
         if self.config.dataset_zip_id is None:
-            print("No dataset zip ID provided, skipping download")
+            logger.info("No dataset zip ID provided, skipping download")
             return False
 
         zip_path = self.config.data_path / f"{self.config.dataset_name}.zip"
 
         if zip_path.exists():
-            print(f"Dataset already downloaded at {zip_path}")
+            logger.info("Dataset already downloaded at %s", zip_path)
             return True
 
-        print("Downloading dataset from Google Drive...")
+        logger.info("Downloading dataset from Google Drive...")
         return download_from_google_drive(self.config.dataset_zip_id, zip_path, quiet=False)
 
     def prepare_dataset(self) -> bool:
@@ -79,23 +82,23 @@ class ImageDataLoader(BaseDataLoader):
             train_items = list(self.config.train_path.iterdir())
             test_items = list(self.config.test_path.iterdir())
             if train_items and test_items:
-                print("Dataset already prepared")
+                logger.info("Dataset already prepared")
                 return True
 
         # Extract if not already extracted
         extracted_path = self.config.data_path / self.config.dataset_name
         if not extracted_path.exists():
             if not zip_path.exists():
-                print(f"Dataset zip not found at {zip_path}")
+                logger.warning("Dataset zip not found at %s", zip_path)
                 return False
 
-            print("Extracting dataset...")
+            logger.info("Extracting dataset...")
             if not extract_archive(zip_path, self.config.data_path):
                 return False
 
         # Organize the dataset structure if needed
         if extracted_path.exists():
-            print("Organizing dataset...")
+            logger.info("Organizing dataset...")
             organize_dataset(extracted_path, self.config.data_path)
 
         return True
@@ -127,14 +130,14 @@ class ImageDataLoader(BaseDataLoader):
 
         if x_path.exists() and y_path.exists():
             try:
-                print(f"Loading {'train' if train else 'test'} data from cache...")
+                logger.info("Loading %s data from cache...", "train" if train else "test")
                 with open(x_path, "rb") as f:
                     X = pickle.load(f)
                 with open(y_path, "rb") as f:
                     y = pickle.load(f)
                 return X, y
-            except Exception as e:
-                print(f"Error loading from cache: {e}")
+            except Exception:
+                logger.exception("Error loading from cache")
                 return None
 
         return None
@@ -155,9 +158,9 @@ class ImageDataLoader(BaseDataLoader):
                 pickle.dump(X, f)
             with open(y_path, "wb") as f:
                 pickle.dump(y, f)
-            print("Data cached successfully")
-        except Exception as e:
-            print(f"Error saving to cache: {e}")
+            logger.info("Data cached successfully")
+        except Exception:
+            logger.exception("Error saving to cache")
 
     def _process_images(self, data_path: Path) -> Tuple[np.ndarray, np.ndarray]:
         """Process images from a directory.
@@ -172,7 +175,7 @@ class ImageDataLoader(BaseDataLoader):
         if not categories:
             raise ValueError(f"No categories found in {data_path}")
 
-        print(f"Found categories: {categories}")
+        logger.info("Found categories: %s", categories)
         self.categories = categories
         self.num_categories = len(categories)
 
@@ -197,8 +200,8 @@ class ImageDataLoader(BaseDataLoader):
                     image_resized = cv2.resize(image, self.config.image_size)
                     image_data.append([image_resized, category_idx])
 
-                except Exception as e:
-                    print(f"Error processing {img_path}: {e}")
+                except Exception:
+                    logger.exception("Error processing %s", img_path)
 
         # Convert to numpy arrays
         data_array = np.array(image_data, dtype=object)
@@ -278,15 +281,15 @@ class ImageDataLoader(BaseDataLoader):
 
         # Validate that we have data
         if not self.config.train_path.exists() or not self.config.test_path.exists():
-            print("Dataset not properly prepared")
+            logger.warning("Dataset not properly prepared")
             return False
 
         train_categories = self.get_categories(self.config.train_path)
         test_categories = self.get_categories(self.config.test_path)
 
         if not train_categories or not test_categories:
-            print("No categories found in dataset")
+            logger.warning("No categories found in dataset")
             return False
 
-        print(f"Dataset setup complete. Found {len(train_categories)} categories.")
+        logger.info("Dataset setup complete. Found %d categories.", len(train_categories))
         return True

@@ -198,8 +198,8 @@ class TestFileUploadSizeLimit:
     @pytest.fixture(autouse=True)
     def _clear_api_key(self, monkeypatch):
         monkeypatch.delenv("IMG_CLASSIFIER_API_KEY", raising=False)
-        # Set a tiny limit so tests run fast
-        monkeypatch.setenv("IMG_CLASSIFIER_MAX_UPLOAD_BYTES", str(1024))  # 1 KB
+        # Set a tiny limit so tests run fast — patch the cached module-level constant directly
+        monkeypatch.setattr("img_classifier_api.routers.predictions._MAX_UPLOAD_BYTES", 1024)
 
     @pytest.fixture
     def client(self):

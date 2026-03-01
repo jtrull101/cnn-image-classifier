@@ -5,8 +5,6 @@ All tests use the real request/response cycle; heavy-mocked workflow tests live
 in apps/api/tests/unit/test_app.py instead.
 """
 
-from pathlib import Path
-
 import pytest
 from fastapi.testclient import TestClient
 
@@ -80,20 +78,15 @@ class TestModelEndpointBehavior:
         )
         assert response.status_code == 403
 
-    def test_load_model_missing_file_returns_404(self, client):
+    def test_load_model_missing_file_returns_404(self, client, tmp_path, monkeypatch):
         """A path inside an allowed directory that does not exist returns 404."""
-        from unittest.mock import patch
-
-        # Override the allowed-dirs check so the path passes the guard, then the
-        # real filesystem is consulted — no model business logic is mocked.
-        with patch(
-            "img_classifier_api.routers.models._get_allowed_model_dirs",
-            return_value=[Path("/").resolve()],
-        ):
-            response = client.post(
-                "/api/models/load",
-                json={"model_path": "/nonexistent/path/model.keras"},
-            )
+        # Make tmp_path an allowed model directory via the env var, then request a
+        # file that is inside it but does not exist — the real filesystem is consulted.
+        monkeypatch.setenv("IMG_CLASSIFIER_MODEL_DIR", str(tmp_path))
+        response = client.post(
+            "/api/models/load",
+            json={"model_path": str(tmp_path / "nonexistent_model.keras")},
+        )
         assert response.status_code == 404
 
 
