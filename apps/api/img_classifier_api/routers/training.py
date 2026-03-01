@@ -124,7 +124,7 @@ training_jobs: Dict[str, Dict[str, Any]] = {}
 
 
 @router.post("/training/dataset-info", response_model=DatasetInfoResponse)
-async def get_dataset_info(request: DatasetInfoRequest):
+async def get_dataset_info(request: DatasetInfoRequest) -> DatasetInfoResponse:
     """
     Get information about a dataset.
 
@@ -168,7 +168,9 @@ async def get_dataset_info(request: DatasetInfoRequest):
 
 
 @router.post("/training/start", response_model=TrainingJobResponse)
-async def start_training_job(request: TrainingJobRequest, background_tasks: BackgroundTasks):
+async def start_training_job(
+    request: TrainingJobRequest, background_tasks: BackgroundTasks
+) -> TrainingJobResponse:
     """
     Start a new training job.
 
@@ -222,7 +224,7 @@ async def start_training_job(request: TrainingJobRequest, background_tasks: Back
 
 
 @router.get("/training/status/{job_id}", response_model=TrainingStatusResponse)
-async def get_training_status(job_id: str):
+async def get_training_status(job_id: str) -> TrainingStatusResponse:
     """
     Get status of a training job.
 
@@ -256,7 +258,7 @@ async def get_training_status(job_id: str):
 
 
 @router.get("/training/jobs", response_model=TrainingJobsListResponse)
-async def list_training_jobs(limit: int = 50, skip: int = 0):
+async def list_training_jobs(limit: int = 50, skip: int = 0) -> TrainingJobsListResponse:
     """
     List all training jobs.
 
@@ -293,7 +295,7 @@ async def list_training_jobs(limit: int = 50, skip: int = 0):
 
 
 @router.delete("/training/jobs/{job_id}")
-async def cancel_training_job(job_id: str):
+async def cancel_training_job(job_id: str) -> Dict[str, str]:
     """
     Cancel a training job.
 
@@ -316,7 +318,7 @@ async def cancel_training_job(job_id: str):
     return {"message": "Training job cancelled successfully"}
 
 
-async def run_training_job(job_id: str, request: TrainingJobRequest):
+async def run_training_job(job_id: str, request: TrainingJobRequest) -> None:
     """
     Background task to run training job.
 

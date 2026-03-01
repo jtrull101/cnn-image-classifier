@@ -1,9 +1,10 @@
 """Training orchestrator for coordinating the complete ML pipeline."""
 
+import logging
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from img_classifier_config import BaseConfig, DatasetConfig, DatasetDetector
 from img_classifier_data import BaseDataLoader, ImageDataLoader
@@ -16,6 +17,21 @@ from .optimizer import (
     create_optimizer,
 )
 from .trainer import Trainer
+
+import tensorflow as tf
+
+logger = logging.getLogger(__name__)
+
+
+class _DynamicModel(BaseModel):
+    """Thin BaseModel wrapper around an already-built Keras model."""
+
+    def __init__(self, config: BaseConfig, keras_model: tf.keras.Model):
+        super().__init__(config)
+        self.model = keras_model
+
+    def build(self) -> tf.keras.Model:
+        return self.model  # type: ignore[return-value]
 
 
 class TrainingOrchestrator:
@@ -34,7 +50,8 @@ class TrainingOrchestrator:
         config: BaseConfig,
         data_loader: Optional[BaseDataLoader] = None,
         optimize_hyperparameters: bool = False,
-        optimizer_type: str = "random",  # TODO: Enumify
+        # TODO: enum not literal?
+        optimizer_type: Literal["grid", "random", "bayesian"] = "random",
         search_space: Optional[HyperparameterSpace] = None,
         max_trials: int = 20,
     ):
@@ -152,17 +169,7 @@ class TrainingOrchestrator:
 
         # Create model from architecture factory
         model_keras = ArchitectureFactory.create(self.config)
-
-        # Wrap in BaseModel (BaseModel is imported at module scope)
-        class DynamicModel(BaseModel):
-            def __init__(self, config: BaseConfig, keras_model):
-                super().__init__(config)
-                self.model = keras_model
-
-            def build(self):
-                return self.model
-
-        model = DynamicModel(self.config, model_keras)
+        model = _DynamicModel(self.config, model_keras)
         model.compile()
 
         # Create trainer and run
@@ -293,35 +300,25 @@ class TrainingOrchestrator:
         try:
             # Create model from architecture factory
             model_keras = ArchitectureFactory.create(trial_config)
-
-            # Wrap in BaseModel (BaseModel is imported at module scope)
-            class DynamicModel(BaseModel):
-                def __init__(self, config: BaseConfig, keras_model):
-                    super().__init__(config)
-                    self.model = keras_model
-
-                def build(self):
-                    return self.model
-
-            model = DynamicModel(trial_config, model_keras)
+            model = _DynamicModel(trial_config, model_keras)
             model.compile()
 
             # Create trainer and run
             trainer = Trainer(trial_config, model, self.data_loader)
 
             # Prepare data once if not already done
-            X_train, y_train, X_val, y_val, X_test, y_test = trainer.prepare_data()
+            x_train, y_train, x_val, y_val, x_test, y_test = trainer.prepare_data()
 
             # Train
-            history = trainer.train(X_train, y_train, X_val, y_val)
+            history = trainer.train(x_train, y_train, x_val, y_val)
 
             # Evaluate
-            test_loss, test_acc = trainer.evaluate(X_test, y_test)
+            test_loss, test_acc = trainer.evaluate(x_test, y_test)
 
             # Get training metrics
-            train_acc = history.history["acc"][-1]
+            train_acc = history.history["accuracy"][-1]
             train_loss = history.history["loss"][-1]
-            val_acc = history.history["val_acc"][-1]
+            val_acc = history.history["val_accuracy"][-1]
             val_loss = history.history["val_loss"][-1]
 
             training_time = time.time() - start_time
@@ -362,8 +359,8 @@ class TrainingOrchestrator:
                 timestamp=datetime.now().isoformat(),
             )
 
-        except Exception as e:
-            print(f"Trial {trial_number} failed: {e}")
+        except Exception:
+            logger.exception("Trial %d failed", trial_number)
             # Return a failed result
             return TrialResult(
                 trial_id=trial_number,

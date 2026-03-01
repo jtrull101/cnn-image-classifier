@@ -1,5 +1,6 @@
 """Dynamic CNN architecture generator based on dataset characteristics."""
 
+import math
 from enum import Enum
 from typing import Dict, List, Optional
 
@@ -268,8 +269,6 @@ class ModelScaler:
 
         scaled = int(base_filters * multiplier * scale_factor)
         # Round to nearest power of 2
-        import math
-
         log_val = math.log2(float(scaled))
         return 2 ** round(log_val)
 
@@ -289,8 +288,6 @@ class ModelScaler:
         Returns:
             Recommended number of conv blocks
         """
-        import math
-
         max_dimension = max(image_size)
 
         # Calculate maximum useful depth based on image size

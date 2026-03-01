@@ -197,7 +197,4 @@ pyrightconfig.json
 .env.local
 .env.*.local
 
-/images/spine_fracture_xrays/
-/images/spine_fracture_xrays.zip
-
 apps/api/data/predictions.db

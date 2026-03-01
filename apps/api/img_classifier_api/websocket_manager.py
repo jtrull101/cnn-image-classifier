@@ -47,7 +47,7 @@ class WebSocketManager:
             "connected_at": asyncio.get_event_loop().time(),
         }
 
-        logger.info(f"WebSocket connected. Total connections: {len(self.active_connections)}")
+        logger.info("WebSocket connected. Total connections: %d", len(self.active_connections))
 
         # Send welcome message
         await self.send_personal_message(
@@ -76,7 +76,7 @@ class WebSocketManager:
         for room_connections in self.rooms.values():
             room_connections.discard(websocket)
 
-        logger.info(f"WebSocket disconnected. Total connections: {len(self.active_connections)}")
+        logger.info("WebSocket disconnected. Total connections: %d", len(self.active_connections))
 
     async def send_personal_message(self, message: dict, websocket: WebSocket):
         """
@@ -92,7 +92,7 @@ class WebSocketManager:
             logger.warning("WebSocket disconnected during send")
             self.disconnect(websocket)
         except Exception as e:
-            logger.error(f"Error sending personal message: {e}")
+            logger.error("Error sending personal message: %s", e)
             self.disconnect(websocket)
 
     async def broadcast(self, message: dict, exclude: Optional[Set[WebSocket]] = None):
@@ -115,7 +115,7 @@ class WebSocketManager:
             except WebSocketDisconnect:
                 disconnected.add(connection)
             except Exception as e:
-                logger.error(f"Error broadcasting to connection: {e}")
+                logger.error("Error broadcasting to connection: %s", e)
                 disconnected.add(connection)
 
         # Clean up disconnected clients
@@ -131,7 +131,7 @@ class WebSocketManager:
             message: Dictionary to send as JSON
         """
         if room not in self.rooms:
-            logger.warning(f"Room '{room}' does not exist")
+            logger.warning("Room %r does not exist", room)
             return
 
         disconnected = set()
@@ -162,7 +162,7 @@ class WebSocketManager:
             self.rooms[room] = set()
 
         self.rooms[room].add(websocket)
-        logger.info(f"WebSocket joined room '{room}'")
+        logger.info("WebSocket joined room %r", room)
 
     def leave_room(self, websocket: WebSocket, room: str):
         """
@@ -176,7 +176,7 @@ class WebSocketManager:
             self.rooms[room].discard(websocket)
             if not self.rooms[room]:
                 del self.rooms[room]
-            logger.info(f"WebSocket left room '{room}'")
+            logger.info("WebSocket left room %r", room)
 
     async def send_model_loading_update(
         self,

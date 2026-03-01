@@ -23,12 +23,12 @@ _DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 _THUMBNAIL_SIZE = (100, 100)
 _MAX_BATCH_FILES = 100
 
-
-def _get_max_upload_size() -> int:
-    try:
-        return int(os.environ.get("IMG_CLASSIFIER_MAX_UPLOAD_BYTES", _DEFAULT_MAX_UPLOAD_BYTES))
-    except ValueError:
-        return _DEFAULT_MAX_UPLOAD_BYTES
+try:
+    _MAX_UPLOAD_BYTES: int = int(
+        os.environ.get("IMG_CLASSIFIER_MAX_UPLOAD_BYTES", _DEFAULT_MAX_UPLOAD_BYTES)
+    )
+except ValueError:
+    _MAX_UPLOAD_BYTES = _DEFAULT_MAX_UPLOAD_BYTES
 
 
 class PredictionResponse(BaseModel):
@@ -82,7 +82,7 @@ async def _run_prediction(
         raise HTTPException(400, "File must be an image")
 
     # Read with size guard (before model lookup so 413 is always reachable)
-    max_size = _get_max_upload_size()
+    max_size = _MAX_UPLOAD_BYTES
     contents = await file.read(max_size + 1)
     if len(contents) > max_size:
         raise HTTPException(

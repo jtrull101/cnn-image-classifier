@@ -9,6 +9,8 @@ import pytest
 
 from img_classifier_data import BaseDataLoader, ImageDataLoader
 
+pytestmark = pytest.mark.unit
+
 
 @pytest.mark.unit
 class TestBaseDataLoader:

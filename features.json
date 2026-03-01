@@ -86,7 +86,7 @@
       "status": "pending",
       "estimated_days": 2,
       "dependencies": ["phase_1", "phase_2"],
-      "features": ["feature_3_1", "feature_3_2", "feature_3_3", "feature_3_4", "feature_3_5"],
+      "features": ["feature_3_1", "feature_3_2", "feature_3_3", "feature_3_4", "feature_3_5", "feature_3_6"],
       "checkpoint": "Backend refactored with database, routers, and new endpoints tested"
     },
     {
@@ -96,7 +96,7 @@
       "status": "pending",
       "estimated_days": 2.5,
       "dependencies": ["phase_1", "phase_2", "phase_3"],
-      "features": ["feature_4_1", "feature_4_2", "feature_4_3", "feature_4_4"],
+      "features": ["feature_4_1", "feature_4_2", "feature_4_3", "feature_4_4", "feature_4_5"],
       "checkpoint": "Core UI functional - dashboard, model management, and predictions working"
     },
     {
@@ -387,6 +387,17 @@
       "dependencies": ["feature_3_4", "feature_2_1"]
     },
 
+    "feature_3_6": {
+      "id": "feature_3_6",
+      "phase": "phase_3",
+      "name": "Add More Download Options for Datasets",
+      "description": "Add downloads from GitHub releases for packaged datasets, options to download from Kaggle via CURL, and more",
+      "status": "pending",
+      "priority": "critical",
+      "estimated_hours": 4,
+      "dependencies": []
+    },
+
     "feature_4_1": {
       "id": "feature_4_1",
       "phase": "phase_4",
@@ -429,6 +440,17 @@
       "priority": "medium",
       "estimated_hours": 2,
       "dependencies": ["feature_1_3"]
+    },
+
+    "feature_4_5": {
+      "id": "feature_4_5",
+      "phase": "phase_4",
+      "name": "Add Dataset Management Page",
+      "description": "Build page for managing datasets with upload, view, and delete functionality",
+      "status": "pending",
+      "priority": "high",
+      "estimated_hours": 4,
+      "dependencies": ["feature_4_4","feature_3_6"]
     },
 
     "feature_5_1": {

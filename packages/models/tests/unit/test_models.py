@@ -1232,19 +1232,12 @@ class TestBaseModelEdgeCases:
         assert classifier.model is None
 
         # Calling summary should build the model
-        import io
-        import sys
-
-        old_stdout = sys.stdout
-        sys.stdout = buffer = io.StringIO()
-        classifier.summary()
-        output = buffer.getvalue()
-        sys.stdout = old_stdout
+        result = classifier.summary()
 
         # Model should now exist
         assert classifier.model is not None
-        assert len(output) > 0
-        assert "Total params" in output
+        assert len(result) > 0
+        assert "Total params" in result
 
     def test_summary_with_already_built_model(self):
         """Test that summary() works with already built model."""
@@ -1253,18 +1246,10 @@ class TestBaseModelEdgeCases:
         classifier = CnnClassifier(self.config)
         classifier.build()
 
-        import io
-        import sys
-
-        old_stdout = sys.stdout
-        sys.stdout = buffer = io.StringIO()
         result = classifier.summary()
-        output = buffer.getvalue()
-        sys.stdout = old_stdout
 
         assert len(result) > 0
-        assert len(output) > 0
-        assert "Total params" in output
+        assert "Total params" in result
 
     def test_compile_with_custom_loss(self):
         """Test compile with custom loss function."""

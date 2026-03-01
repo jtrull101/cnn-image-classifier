@@ -296,9 +296,9 @@ class TestTrainingOrchestrator:
         mock_trainer = Mock()
         mock_history = Mock()
         mock_history.history = {
-            "acc": [0.7, 0.8, 0.9],
+            "accuracy": [0.7, 0.8, 0.9],
             "loss": [0.5, 0.3, 0.2],
-            "val_acc": [0.65, 0.75, 0.85],
+            "val_accuracy": [0.65, 0.75, 0.85],
             "val_loss": [0.6, 0.4, 0.25],
         }
         mock_trainer.prepare_data.return_value = (
@@ -347,7 +347,12 @@ class TestTrainingOrchestrator:
 
         mock_trainer = Mock()
         mock_history = Mock()
-        mock_history.history = {"acc": [0.95], "loss": [0.1], "val_acc": [0.92], "val_loss": [0.15]}
+        mock_history.history = {
+            "accuracy": [0.95],
+            "loss": [0.1],
+            "val_accuracy": [0.92],
+            "val_loss": [0.15],
+        }
         mock_trainer.prepare_data.return_value = (
             np.array([1]),
             np.array([0]),

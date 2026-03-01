@@ -314,9 +314,9 @@ class TestTrainer:
         mock_history = Mock()
         mock_history.history = {
             "loss": [0.5, 0.3, 0.2],
-            "acc": [0.7, 0.85, 0.9],
+            "accuracy": [0.7, 0.85, 0.9],
             "val_loss": [0.6, 0.35, 0.25],
-            "val_acc": [0.65, 0.8, 0.88],
+            "val_accuracy": [0.65, 0.8, 0.88],
         }
         self.trainer.history = mock_history
 
@@ -342,7 +342,12 @@ class TestTrainer:
     def test_plot_history_with_save_path(self, mock_sns, mock_dataframe, mock_plt):
         """Test plotting with save path."""
         mock_history = Mock()
-        mock_history.history = {"loss": [0.5], "acc": [0.8], "val_loss": [0.6], "val_acc": [0.75]}
+        mock_history.history = {
+            "loss": [0.5],
+            "accuracy": [0.8],
+            "val_loss": [0.6],
+            "val_accuracy": [0.75],
+        }
         self.trainer.history = mock_history
 
         # Mock DataFrame
@@ -535,7 +540,12 @@ class TestTrainer:
         mock_to_categorical.side_effect = lambda y, num_classes: np.eye(num_classes)[y]
 
         mock_history = MagicMock()
-        mock_history.history = {"loss": [0.5], "acc": [0.8], "val_loss": [0.6], "val_acc": [0.75]}
+        mock_history.history = {
+            "loss": [0.5],
+            "accuracy": [0.8],
+            "val_loss": [0.6],
+            "val_accuracy": [0.75],
+        }
         self.mock_keras_model.fit.return_value = mock_history
         self.mock_keras_model.evaluate.return_value = (0.1, 0.96)
 
