@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "WebFetch(domain:www.jsdelivr.com)",
+      "WebFetch(domain:data.jsdelivr.com)",
+      "WebFetch(domain:alpinejs.dev)",
+      "Bash(uv run:*)",
+      "Bash(cmd:*)",
+      "Bash(timeout 5 bash:*)",
+      "Bash(docker info:*)",
+      "Bash(docker build:*)",
+      "Bash(docker run:*)",
+      "Bash(curl:*)",
+      "Bash(docker stop:*)",
+      "Bash(docker:*)",
+      "Bash(unzip:*)",
+      "Bash(test:*)",
+      "Bash(python3:*)"
+    ]
+  }
+}

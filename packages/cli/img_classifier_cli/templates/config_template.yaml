@@ -1,0 +1,56 @@
+# Example Dataset Configuration Template
+  - 0.01
+  - 0.001
+  - 0.0001
+recommended_learning_rates:
+
+  - 64
+  - 32
+  - 16
+recommended_batch_sizes:
+# Recommended hyperparameters for optimization
+
+min_accuracy_to_save: 0.90
+accuracy_threshold: 0.995
+use_accuracy_threshold_stopping: true
+use_model_checkpoint: true
+early_stopping_patience: 20
+use_early_stopping: true
+# Training callbacks
+
+dropout_rate: 0.3
+architecture_complexity: "auto"  # Options: auto, simple, medium, deep
+# Model architecture
+
+data_percent: 1.0  # 1.0 = use all data, 0.1 = use 10%
+# Data sampling - use less data for faster experiments
+
+test_split: 0.5
+validation_split: 0.2
+learning_rate: 0.001
+num_epochs: 25
+batch_size: 32
+# Training hyperparameters
+
+  - "Class4"
+  - "Class3"
+  - "Class2"
+  - "Class1"
+class_names:
+num_classes: 4
+# Class settings - will be auto-detected if not specified
+
+color_channels: 3  # 3 for RGB, 1 for grayscale
+image_size: [128, 128]  # [height, width]
+# Image settings - adjust based on your dataset
+
+data_path: "/path/to/dataset"
+dataset_name: "my_dataset"
+# Dataset settings
+
+working_dir: "/tmp/my_classifier/"
+project_name: "my_classifier"
+# Project settings
+
+# Copy and customize this file for your specific dataset
+

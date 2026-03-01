@@ -1,0 +1,64 @@
+[project]
+name = "img-classifier-api"
+  version = "0.2.0"
+description = "FastAPI for generic image classification CNN predictions"
+authors = [{ name = "Jonathan Trull" }]
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { text = "MIT" }
+
+dependencies = [
+    "img-classifier-config",
+    "img-classifier-data",
+    "img-classifier-models",
+    "img-classifier-training",
+    "img-classifier-utils",
+    "fastapi>=0.104.0",
+    "httpx>=0.24.0",
+    "uvicorn[standard]>=0.24.0",
+    "python-multipart>=0.0.6",
+    "jinja2>=3.1.2",
+    "aiofiles>=23.2.1",
+    "tensorflow>=2.20.0",
+    "keras>=2.20.0",
+    "numpy>=1.24.0",
+    "opencv-python>=4.8.0",
+    "pillow>=10.0.0",
+    "websockets>=12.0",
+    "sqlalchemy>=2.0.0",
+    "alembic>=1.13.0",
+]
+
+[tool.uv.sources]
+img-classifier-config = { workspace = true }
+img-classifier-data = { workspace = true }
+img-classifier-models = { workspace = true }
+img-classifier-utils = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["img_classifier_api"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = [
+    "unit: Fast unit tests using mocks and no I/O (default)",
+    "integration: Slower integration tests using real dependencies and I/O",
+    "smoke: Critical path validation tests (run in pre-commit hooks)",
+    "slow: Slow tests that take significant time to run",
+    "serial: Tests that must run serially, not in parallel",
+    "requires_gpu: Tests that require GPU access",
+    "requires_data: Tests that require dataset download",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.pyright]
+typeCheckingMode = "basic"
+pythonVersion = "3.13"

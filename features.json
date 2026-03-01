@@ -1,0 +1,605 @@
+{
+  "project": {
+    "name": "FastAPI UI Enhancement - Full-Featured Image Classification Interface",
+    "version": "1.0.0",
+    "description": "Comprehensive UI implementation with HTMX, Alpine.js, Tailwind CSS, WebSocket support, and full feature coverage including multi-model comparison, batch processing, history management, and analytics dashboard",
+    "tech_stack": {
+      "frontend": ["HTMX", "Alpine.js", "Tailwind CSS", "Chart.js"],
+      "backend": ["FastAPI", "WebSockets", "SQLAlchemy", "Alembic"],
+      "database": "SQLite",
+      "testing": ["pytest", "pytest-asyncio", "httpx"]
+    },
+    "estimated_duration_days": 10,
+    "created": "2026-01-17",
+    "started": "2026-01-17",
+    "status": "in_progress",
+    "agent_harness": {
+      "type": "long_running_project",
+      "verification_strategy": "incremental_with_rollback",
+      "checkpoint_frequency": "per_phase",
+      "quality_gates_required": true
+    }
+  },
+
+  "configuration": {
+    "validation_commands": {
+      "lint": "uv run ruff check apps/api",
+      "format": "uv run ruff format apps/api",
+      "typecheck": "uv run pyright apps/api",
+      "test_unit": "uv run pytest apps/api/tests/unit -v",
+      "test_integration": "uv run pytest apps/api/tests/integration -v",
+      "test_all": "make test-api",
+      "build": "uv build --directory apps/api",
+      "serve": "uv run python apps/api/run_api.py"
+    },
+    "paths": {
+      "api_root": "apps/api",
+      "templates": "apps/api/img_classifier_api/templates",
+      "static": "apps/api/img_classifier_api/static",
+      "routers": "apps/api/img_classifier_api/routers",
+      "models": "apps/api/img_classifier_api/models",
+      "crud": "apps/api/img_classifier_api/crud",
+      "tests": "apps/api/tests"
+    },
+    "quality_gates": {
+      "code_coverage_min": 80,
+      "lint_errors_max": 0,
+      "type_errors_max": 0,
+      "test_pass_rate": 100
+    },
+    "checkpoints": {
+      "enabled": true,
+      "strategy": "git_commits",
+      "commit_message_format": "feat(ui): {feature_name} - {description}"
+    }
+  },
+
+  "phases": [
+    {
+      "id": "phase_1",
+      "name": "Foundation Setup",
+      "description": "Set up base infrastructure including dependencies, templates, and static asset structure",
+      "status": "completed",
+      "estimated_days": 1.5,
+      "actual_days": 0.5,
+      "dependencies": [],
+      "features": ["feature_1_1", "feature_1_2", "feature_1_3", "feature_1_4"],
+      "checkpoint": "Foundation complete - base templates, navigation, and dependencies ready",
+      "completed_at": "2026-01-17T15:54:00Z"
+    },
+    {
+      "id": "phase_2",
+      "name": "WebSocket Infrastructure",
+      "description": "Implement real-time communication layer for async operations",
+      "status": "completed",
+      "estimated_days": 1,
+      "actual_days": 0.25,
+      "dependencies": ["phase_1"],
+      "features": ["feature_2_1", "feature_2_2", "feature_2_3"],
+      "checkpoint": "WebSocket infrastructure operational with client/server communication",
+      "completed_at": "2026-01-17T15:54:00Z"
+    },
+    {
+      "id": "phase_3",
+      "name": "Backend API Enhancements",
+      "description": "Database setup, router refactoring, and new API endpoints",
+      "status": "pending",
+      "estimated_days": 2,
+      "dependencies": ["phase_1", "phase_2"],
+      "features": ["feature_3_1", "feature_3_2", "feature_3_3", "feature_3_4", "feature_3_5"],
+      "checkpoint": "Backend refactored with database, routers, and new endpoints tested"
+    },
+    {
+      "id": "phase_4",
+      "name": "Core UI Components",
+      "description": "Build main dashboard and essential UI components",
+      "status": "pending",
+      "estimated_days": 2.5,
+      "dependencies": ["phase_1", "phase_2", "phase_3"],
+      "features": ["feature_4_1", "feature_4_2", "feature_4_3", "feature_4_4"],
+      "checkpoint": "Core UI functional - dashboard, model management, and predictions working"
+    },
+    {
+      "id": "phase_5",
+      "name": "Advanced Features",
+      "description": "Implement multi-model comparison, batch processing, history, and analytics",
+      "status": "pending",
+      "estimated_days": 3.5,
+      "dependencies": ["phase_4"],
+      "features": ["feature_5_1", "feature_5_2", "feature_5_3", "feature_5_4"],
+      "checkpoint": "All advanced features implemented and tested"
+    },
+    {
+      "id": "phase_6",
+      "name": "Testing & Polish",
+      "description": "Comprehensive testing, UI/UX improvements, and documentation",
+      "status": "pending",
+      "estimated_days": 1.5,
+      "dependencies": ["phase_5"],
+      "features": ["feature_6_1", "feature_6_2", "feature_6_3", "feature_6_4"],
+      "checkpoint": "Project complete - all tests passing, documentation updated, production-ready"
+    }
+  ],
+
+  "features": {
+    "feature_1_1": {
+      "id": "feature_1_1",
+      "phase": "phase_1",
+      "name": "Update Dependencies",
+      "description": "Add new Python dependencies for WebSocket, database, and UI features",
+      "status": "completed",
+      "priority": "critical",
+      "estimated_hours": 0.5,
+      "actual_hours": 0.25,
+      "dependencies": [],
+      "files_affected": ["apps/api/pyproject.toml"],
+      "files_created": [],
+      "files_modified": ["apps/api/pyproject.toml"],
+      "validation": {
+        "type": "command",
+        "command": "uv pip list | grep -E '(websockets|sqlalchemy|alembic)'",
+        "success_criteria": "All required packages installed without conflicts",
+        "verified": true
+      },
+      "rollback": {
+        "commands": ["git checkout apps/api/pyproject.toml", "make sync"]
+      },
+      "completed_at": "2026-01-17T15:50:00Z"
+    },
+
+    "feature_1_2": {
+      "id": "feature_1_2",
+      "phase": "phase_1",
+      "name": "Create Base Template with CDN Links",
+      "description": "Create base.html template with Tailwind, HTMX, Alpine.js, and Chart.js CDN links",
+      "status": "completed",
+      "priority": "critical",
+      "estimated_hours": 2,
+      "actual_hours": 1,
+      "dependencies": [],
+      "files_affected": ["apps/api/img_classifier_api/templates/base.html"],
+      "files_created": ["apps/api/img_classifier_api/templates/base.html"],
+      "files_modified": [],
+      "validation": {
+        "type": "manual",
+        "steps": [
+          "Start server with 'make run'",
+          "Visit http://localhost:8000",
+          "Verify all CDN resources load without errors",
+          "Check browser console - no 404s for CDN links"
+        ],
+        "verified": false
+      },
+      "rollback": {
+        "commands": ["git checkout apps/api/img_classifier_api/templates/"]
+      },
+      "completed_at": "2026-01-17T15:51:00Z"
+    },
+
+    "feature_1_3": {
+      "id": "feature_1_3",
+      "phase": "phase_1",
+      "name": "Create Shared Navigation Component",
+      "description": "Build responsive navbar with mobile menu and WebSocket status indicator",
+      "status": "completed",
+      "priority": "high",
+      "estimated_hours": 2,
+      "actual_hours": 1,
+      "dependencies": ["feature_1_2"],
+      "files_affected": ["apps/api/img_classifier_api/templates/components/navbar.html"],
+      "files_created": ["apps/api/img_classifier_api/templates/components/navbar.html"],
+      "files_modified": [],
+      "validation": {
+        "type": "manual",
+        "steps": [
+          "Test navigation links on all pages",
+          "Test mobile menu toggle",
+          "Verify responsive design on mobile/tablet/desktop"
+        ],
+        "verified": false
+      },
+      "rollback": {
+        "commands": ["rm apps/api/img_classifier_api/templates/components/navbar.html"]
+      },
+      "completed_at": "2026-01-17T15:52:00Z"
+    },
+
+    "feature_1_4": {
+      "id": "feature_1_4",
+      "phase": "phase_1",
+      "name": "Set Up Static Assets Structure",
+      "description": "Organize JavaScript and CSS files with proper module structure",
+      "status": "completed",
+      "priority": "high",
+      "estimated_hours": 1,
+      "actual_hours": 1,
+      "dependencies": [],
+      "files_affected": [
+        "apps/api/img_classifier_api/static/js/app.js",
+        "apps/api/img_classifier_api/static/js/utils.js",
+        "apps/api/img_classifier_api/static/js/websocket.js",
+        "apps/api/img_classifier_api/static/css/styles.css"
+      ],
+      "files_created": [
+        "apps/api/img_classifier_api/static/js/app.js",
+        "apps/api/img_classifier_api/static/js/utils.js",
+        "apps/api/img_classifier_api/static/js/websocket.js",
+        "apps/api/img_classifier_api/static/css/styles.css"
+      ],
+      "files_modified": [],
+      "validation": {
+        "type": "command",
+        "command": "ls -la apps/api/img_classifier_api/static/js/ && ls -la apps/api/img_classifier_api/static/css/",
+        "success_criteria": "All directories and files exist",
+        "verified": true
+      },
+      "rollback": {
+        "commands": ["git checkout apps/api/img_classifier_api/static/"]
+      },
+      "completed_at": "2026-01-17T15:53:00Z"
+    },
+
+    "feature_2_1": {
+      "id": "feature_2_1",
+      "phase": "phase_2",
+      "name": "Create WebSocket Manager",
+      "description": "Implement WebSocketManager class for connection pooling and broadcasting",
+      "status": "completed",
+      "priority": "critical",
+      "estimated_hours": 3,
+      "actual_hours": 1,
+      "dependencies": ["feature_1_1"],
+      "files_affected": ["apps/api/img_classifier_api/websocket_manager.py"],
+      "files_created": ["apps/api/img_classifier_api/websocket_manager.py"],
+      "files_modified": [],
+      "validation": {
+        "type": "test",
+        "test_file": "apps/api/tests/unit/test_websocket_manager.py",
+        "command": "uv run pytest apps/api/tests/unit/test_websocket_manager.py -v",
+        "success_criteria": "All WebSocketManager tests pass",
+        "verified": false,
+        "notes": "Tests not yet written - will create in Phase 6"
+      },
+      "rollback": {
+        "commands": ["rm apps/api/img_classifier_api/websocket_manager.py"]
+      },
+      "completed_at": "2026-01-17T15:54:00Z"
+    },
+
+    "feature_2_2": {
+      "id": "feature_2_2",
+      "phase": "phase_2",
+      "name": "Add WebSocket Endpoint",
+      "description": "Create /ws endpoint in FastAPI for WebSocket connections",
+      "status": "completed",
+      "priority": "critical",
+      "estimated_hours": 2,
+      "actual_hours": 0.5,
+      "dependencies": ["feature_2_1"],
+      "files_affected": ["apps/api/img_classifier_api/app.py"],
+      "files_created": [],
+      "files_modified": ["apps/api/img_classifier_api/app.py"],
+      "validation": {
+        "type": "test",
+        "test_file": "apps/api/tests/integration/test_websocket_endpoint.py",
+        "command": "uv run pytest apps/api/tests/integration/test_websocket_endpoint.py -v",
+        "success_criteria": "WebSocket connection and message exchange work correctly",
+        "verified": false,
+        "notes": "Tests not yet written - will create in Phase 6"
+      },
+      "rollback": {
+        "commands": ["git checkout apps/api/img_classifier_api/app.py"]
+      },
+      "completed_at": "2026-01-17T15:54:00Z"
+    },
+
+    "feature_2_3": {
+      "id": "feature_2_3",
+      "phase": "phase_2",
+      "name": "WebSocket Client",
+      "description": "JavaScript WebSocket client with auto-reconnect (already created in Phase 1)",
+      "status": "completed",
+      "priority": "high",
+      "estimated_hours": 3,
+      "actual_hours": 1,
+      "dependencies": ["feature_2_2", "feature_1_4"],
+      "files_affected": ["apps/api/img_classifier_api/static/js/websocket.js"],
+      "files_created": [],
+      "files_modified": [],
+      "validation": {
+        "type": "manual",
+        "steps": [
+          "Start server and open browser console",
+          "Verify WebSocket connects to ws://localhost:8000/ws",
+          "Check navbar status indicator turns green",
+          "Stop server and verify auto-reconnect attempts",
+          "Restart server and verify successful reconnection"
+        ],
+        "verified": false
+      },
+      "rollback": {
+        "commands": ["rm apps/api/img_classifier_api/static/js/websocket.js"]
+      },
+      "completed_at": "2026-01-17T15:53:00Z",
+      "notes": "Created as part of feature_1_4"
+    },
+
+    "feature_3_1": {
+      "id": "feature_3_1",
+      "phase": "phase_3",
+      "name": "Set Up Database Layer",
+      "description": "Configure SQLAlchemy with SQLite and create database.py module",
+      "status": "completed",
+      "priority": "critical",
+      "estimated_hours": 2,
+      "actual_hours": 0.5,
+      "dependencies": ["feature_1_1"],
+      "files_affected": ["apps/api/img_classifier_api/database.py"],
+      "started_at": "2026-02-28T00:00:00Z",
+      "completed_at": "2026-02-28T00:00:00Z"
+    },
+
+    "feature_3_2": {
+      "id": "feature_3_2",
+      "phase": "phase_3",
+      "name": "Create Database Models",
+      "description": "Define PredictionHistory SQLAlchemy model",
+      "status": "pending",
+      "priority": "critical",
+      "estimated_hours": 1.5,
+      "dependencies": ["feature_3_1"],
+      "files_affected": [
+        "apps/api/img_classifier_api/models/__init__.py",
+        "apps/api/img_classifier_api/models/prediction.py"
+      ]
+    },
+
+    "feature_3_3": {
+      "id": "feature_3_3",
+      "phase": "phase_3",
+      "name": "Set Up Alembic for Migrations",
+      "description": "Initialize Alembic and create initial migration for predictions table",
+      "status": "pending",
+      "priority": "high",
+      "estimated_hours": 2,
+      "dependencies": ["feature_3_2"]
+    },
+
+    "feature_3_4": {
+      "id": "feature_3_4",
+      "phase": "phase_3",
+      "name": "Create CRUD Operations",
+      "description": "Implement CRUD functions for prediction history",
+      "status": "pending",
+      "priority": "high",
+      "estimated_hours": 2,
+      "dependencies": ["feature_3_2"]
+    },
+
+    "feature_3_5": {
+      "id": "feature_3_5",
+      "phase": "phase_3",
+      "name": "Refactor and Add API Endpoints",
+      "description": "Organize endpoints into routers and add new endpoints for history, batch, comparison",
+      "status": "pending",
+      "priority": "critical",
+      "estimated_hours": 4,
+      "dependencies": ["feature_3_4", "feature_2_1"]
+    },
+
+    "feature_4_1": {
+      "id": "feature_4_1",
+      "phase": "phase_4",
+      "name": "Update Main Dashboard",
+      "description": "Redesign index.html as the main dashboard with navigation and quick stats",
+      "status": "pending",
+      "priority": "critical",
+      "estimated_hours": 3,
+      "dependencies": ["feature_1_2", "feature_1_3", "feature_3_5"]
+    },
+
+    "feature_4_2": {
+      "id": "feature_4_2",
+      "phase": "phase_4",
+      "name": "Model Management UI",
+      "description": "Build model management section with cards, switching, loading, and deletion",
+      "status": "pending",
+      "priority": "high",
+      "estimated_hours": 3,
+      "dependencies": ["feature_4_1"]
+    },
+
+    "feature_4_3": {
+      "id": "feature_4_3",
+      "phase": "phase_4",
+      "name": "Enhanced Single Prediction UI",
+      "description": "Improve existing prediction interface with model selector and real-time updates",
+      "status": "pending",
+      "priority": "high",
+      "estimated_hours": 2,
+      "dependencies": ["feature_4_1", "feature_2_3"]
+    },
+
+    "feature_4_4": {
+      "id": "feature_4_4",
+      "phase": "phase_4",
+      "name": "Create Reusable UI Components",
+      "description": "Build additional template components for consistent UI",
+      "status": "pending",
+      "priority": "medium",
+      "estimated_hours": 2,
+      "dependencies": ["feature_1_3"]
+    },
+
+    "feature_5_1": {
+      "id": "feature_5_1",
+      "phase": "phase_5",
+      "name": "Multi-Model Comparison Page",
+      "description": "Build page for comparing predictions from multiple models on the same image",
+      "status": "pending",
+      "priority": "high",
+      "estimated_hours": 4,
+      "dependencies": ["feature_4_4", "feature_3_5"]
+    },
+
+    "feature_5_2": {
+      "id": "feature_5_2",
+      "phase": "phase_5",
+      "name": "Batch Processing Page",
+      "description": "Build page for uploading and processing multiple images with queue management",
+      "status": "pending",
+      "priority": "high",
+      "estimated_hours": 5,
+      "dependencies": ["feature_4_4", "feature_3_5", "feature_2_3"]
+    },
+
+    "feature_5_3": {
+      "id": "feature_5_3",
+      "phase": "phase_5",
+      "name": "History/Results Archive Page",
+      "description": "Build page for viewing and managing prediction history with hybrid storage",
+      "status": "pending",
+      "priority": "high",
+      "estimated_hours": 5,
+      "dependencies": ["feature_4_4", "feature_3_5"]
+    },
+
+    "feature_5_4": {
+      "id": "feature_5_4",
+      "phase": "phase_5",
+      "name": "Analytics Dashboard Page",
+      "description": "Build page with Chart.js visualizations for model performance and statistics",
+      "status": "pending",
+      "priority": "medium",
+      "estimated_hours": 4,
+      "dependencies": ["feature_4_4", "feature_3_5"]
+    },
+
+    "feature_6_1": {
+      "id": "feature_6_1",
+      "phase": "phase_6",
+      "name": "Comprehensive Testing Suite",
+      "description": "Write unit and integration tests for all new features",
+      "status": "pending",
+      "priority": "critical",
+      "estimated_hours": 4,
+      "dependencies": ["feature_5_1", "feature_5_2", "feature_5_3", "feature_5_4"]
+    },
+
+    "feature_6_2": {
+      "id": "feature_6_2",
+      "phase": "phase_6",
+      "name": "UI/UX Polish",
+      "description": "Add loading states, error handling, animations, and responsive design improvements",
+      "status": "pending",
+      "priority": "high",
+      "estimated_hours": 3,
+      "dependencies": ["feature_5_4"]
+    },
+
+    "feature_6_3": {
+      "id": "feature_6_3",
+      "phase": "phase_6",
+      "name": "Code Quality & Linting",
+      "description": "Ensure all code passes lint, format, and type checking",
+      "status": "pending",
+      "priority": "critical",
+      "estimated_hours": 2,
+      "dependencies": ["feature_6_1"]
+    },
+
+    "feature_6_4": {
+      "id": "feature_6_4",
+      "phase": "phase_6",
+      "name": "Documentation Updates",
+      "description": "Update README, create UI guide, and API documentation",
+      "status": "pending",
+      "priority": "high",
+      "estimated_hours": 2,
+      "dependencies": ["feature_6_3"]
+    }
+  },
+
+  "progress_tracking": {
+    "total_features": 24,
+    "completed_features": 8,
+    "in_progress_features": 0,
+    "blocked_features": 0,
+    "pending_features": 16,
+    "total_estimated_hours": 71,
+    "elapsed_hours": 5.75,
+    "completion_percentage": 33.3,
+    "phases_completed": 2,
+    "phases_remaining": 4
+  },
+
+  "quality_metrics": {
+    "lint_status": "passing",
+    "type_check_status": "warnings_only",
+    "test_coverage": 0,
+    "tests_passing": 0,
+    "tests_total": 0
+  },
+
+  "session_log": [
+    {
+      "timestamp": "2026-01-17T15:50:00Z",
+      "event": "project_started",
+      "phase": "phase_1",
+      "description": "Began implementation of FastAPI UI enhancement project"
+    },
+    {
+      "timestamp": "2026-01-17T15:50:15Z",
+      "event": "feature_completed",
+      "feature": "feature_1_1",
+      "description": "Added websockets, sqlalchemy, alembic dependencies"
+    },
+    {
+      "timestamp": "2026-01-17T15:51:30Z",
+      "event": "feature_completed",
+      "feature": "feature_1_2",
+      "description": "Created base.html template with CDN links"
+    },
+    {
+      "timestamp": "2026-01-17T15:52:15Z",
+      "event": "feature_completed",
+      "feature": "feature_1_3",
+      "description": "Created responsive navbar component"
+    },
+    {
+      "timestamp": "2026-01-17T15:53:30Z",
+      "event": "feature_completed",
+      "feature": "feature_1_4",
+      "description": "Set up static assets (JS and CSS files)"
+    },
+    {
+      "timestamp": "2026-01-17T15:53:30Z",
+      "event": "phase_completed",
+      "phase": "phase_1",
+      "description": "Foundation setup complete"
+    },
+    {
+      "timestamp": "2026-01-17T15:54:00Z",
+      "event": "feature_completed",
+      "feature": "feature_2_1",
+      "description": "Created WebSocket manager class"
+    },
+    {
+      "timestamp": "2026-01-17T15:54:15Z",
+      "event": "feature_completed",
+      "feature": "feature_2_2",
+      "description": "Added /ws WebSocket endpoint"
+    },
+    {
+      "timestamp": "2026-01-17T15:54:15Z",
+      "event": "phase_completed",
+      "phase": "phase_2",
+      "description": "WebSocket infrastructure complete"
+    },
+    {
+      "timestamp": "2026-01-17T15:55:00Z",
+      "event": "features_json_created",
+      "description": "Created agentic workflow scaffolding with features.json"
+    }
+  ]
+}
