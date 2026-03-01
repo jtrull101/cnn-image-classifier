@@ -41,16 +41,16 @@ pip-delete-this-directory.txt
 htmlcov/
 .tox/
 .nox/
-.coverage
-.coverage.*
 .cache
 nosetests.xml
-coverage.xml
 *.cover
 *.py,cover
 .hypothesis/
 .pytest_cache/
 cover/
+.coverage
+.coverage.*
+coverage.xml
 
 # Translations
 *.mo
@@ -61,6 +61,12 @@ cover/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+
+# API database files
+apps/api/data/*.db
+apps/api/data/*.db-journal
+apps/api/data/*.db-shm
+apps/api/data/*.db-wal
 
 # Flask stuff:
 instance/
@@ -158,14 +164,40 @@ cython_debug/
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
+.idea/
 
-src/alz_mri_cnn/output/*
-!src/alz_mri_cnn/static/alz_cnn_98%_acc_25_es_32_bs_0.001_lr_99%_data_0.05_loss_86_seconds.keras
-src/alz_mri_cnn/static/*.jpg
+src/img_classifier_cnn/output/*
+!src/img_classifier_cnn/static/*.keras
+src/img_classifier_cnn/static/*.jpg
 
 *.pyc
 *.pyo
-*.pyc
 logs/
 
+# UV specific
+.python-version
+# uv.lock must be committed for reproducible builds — do NOT ignore it
+
+# Ruff cache
+.ruff_cache/
+
+# Pyright
+pyrightconfig.json
+
+# Modern Python build artifacts
+*.whl
+
+# Monorepo specific
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env.local
+.env.*.local
+
+/images/spine_fracture_xrays/
+/images/spine_fracture_xrays.zip
+
+apps/api/data/predictions.db

@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Image Classification System{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8" x-data="dashboardData()">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-4xl font-bold text-gray-900 mb-2">Dashboard</h1>
+        <p class="text-gray-600">Upload and classify images using trained neural network models</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <!-- Total Predictions -->
+        <div class="stats-card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-blue-100 text-sm font-medium mb-1">Total Predictions</p>
+                    <p class="text-3xl font-bold" x-text="stats.totalPredictions">0</p>
+                </div>
+                <div class="text-blue-200 text-4xl">📊</div>
+            </div>
+        </div>
+
+        <!-- Active Model -->
+        <div class="stats-card bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-purple-100 text-sm font-medium mb-1">Active Model</p>
+                    <p class="text-xl font-bold truncate" x-text="stats.activeModel || 'None'">Loading...</p>
+                </div>
+                <div class="text-purple-200 text-4xl">🤖</div>
+            </div>
+        </div>
+
+        <!-- Avg Confidence -->
+        <div class="stats-card bg-gradient-to-br from-green-500 to-green-600 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-green-100 text-sm font-medium mb-1">Avg Confidence</p>
+                    <p class="text-3xl font-bold" x-text="(stats.avgConfidence * 100).toFixed(1) + '%'">0%</p>
+                </div>
+                <div class="text-green-200 text-4xl">✓</div>
+            </div>
+        </div>
+
+        <!-- Models Loaded -->
+        <div class="stats-card bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-orange-100 text-sm font-medium mb-1">Models Loaded</p>
+                    <p class="text-3xl font-bold" x-text="stats.modelsLoaded">0</p>
+                </div>
+                <div class="text-orange-200 text-4xl">📦</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Upload & Prediction Section (2 columns) -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Quick Prediction Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Quick Prediction</h2>
+                    <p class="text-gray-600 text-sm">Upload an image to classify</p>
+                </div>
+                <div class="card-body">
+                    <!-- File Upload Component -->
+                    <div x-data="fileUploadComponent()">
+                        <div 
+                            class="upload-zone"
+                            :class="{ 'border-blue-500 bg-blue-50': isDragging }"
+                            @click="$refs.fileInput.click()"
+                            @dragover.prevent="isDragging = true"
+                            @dragleave.prevent="isDragging = false"
+                            @drop.prevent="handleDrop($event)"
+                        >
+                            <input 
+                                type="file" 
+                                x-ref="fileInput"
+                                accept="image/*"
+                                class="hidden"
+                                @change="handleFileSelect($event)"
+                            >
+                            
+                            <template x-if="!previewUrl">
+                                <div class="text-center">
+                                    <div class="text-6xl mb-4">📤</div>
+                                    <p class="text-lg font-semibold text-gray-700 mb-2">
+                                        Click to upload or drag and drop
+                                    </p>
+                                    <p class="text-sm text-gray-500">
+                                        PNG, JPG, GIF up to 10MB
+                                    </p>
+                                </div>
+                            </template>
+
+                            <template x-if="previewUrl">
+                                <div class="space-y-4">
+                                    <img :src="previewUrl" class="max-h-64 mx-auto rounded-lg shadow-lg">
+                                    <div class="flex gap-2 justify-center">
+                                        <button 
+                                            type="button"
+                                            class="btn btn-secondary btn-sm"
+                                            @click.stop="clearFile()"
+                                        >
+                                            Clear
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            class="btn btn-primary btn-sm"
+                                            @click.stop="predictImage()"
+                                            :disabled="isProcessing"
+                                        >
+                                            <span x-show="!isProcessing">Classify Image</span>
+                                            <span x-show="isProcessing" class="flex items-center gap-2">
+                                                <span class="spinner-sm"></span>
+                                                Processing...
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Error Display -->
+                        <div x-show="error" class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                            <p x-text="error"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prediction Result -->
+            <div x-show="$store.app.currentPrediction" class="card" x-cloak>
+                <div class="card-header">
+                    <h2 class="card-title">Prediction Result</h2>
+                </div>
+                <div class="card-body" x-data="predictionResultComponent()">
+                    <template x-if="prediction">
+                        <div class="space-y-6">
+                            <!-- Main Result -->
+                            <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 text-white text-center">
+                                <p class="text-sm font-medium opacity-90 mb-2">Predicted Class</p>
+                                <p class="text-4xl font-bold mb-4" x-text="prediction.class_name"></p>
+                                <div class="space-y-2">
+                                    <p class="text-xl font-semibold">
+                                        Confidence: <span x-text="formatConfidence(prediction.confidence)"></span>
+                                    </p>
+                                    <div class="confidence-bar">
+                                        <div 
+                                            class="confidence-bar-fill"
+                                            :style="`width: ${prediction.confidence * 100}%`"
+                                        ></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- All Probabilities -->
+                            <div>
+                                <h3 class="text-lg font-semibold mb-3 text-gray-700">All Classes</h3>
+                                <div class="space-y-2">
+                                    <template x-for="(prob, className) in sortedProbabilities()" :key="className">
+                                        <div class="probability-item">
+                                            <span class="font-medium" x-text="className"></span>
+                                            <div class="probability-bar-mini">
+                                                <div 
+                                                    class="probability-bar-fill-mini"
+                                                    :style="`width: ${prob * 100}%`"
+                                                ></div>
+                                            </div>
+                                            <span class="text-sm font-semibold" x-text="formatConfidence(prob)"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- Model Info -->
+                            <div class="text-sm text-gray-600 text-center">
+                                Model: <span class="font-semibold" x-text="prediction.model_name"></span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Recent Predictions -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Recent Predictions</h2>
+                    <a href="/history" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        View All →
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div 
+                        hx-get="/api/history?limit=5"
+                        hx-trigger="load, historyUpdate from:body"
+                        hx-target="this"
+                        hx-swap="innerHTML"
+                    >
+                        <div class="skeleton-loader">
+                            <div class="skeleton-line"></div>
+                            <div class="skeleton-line"></div>
+                            <div class="skeleton-line"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar (1 column) -->
+        <div class="space-y-6">
+            <!-- Model Selector Card -->
+            <div class="card" x-data="modelSelectorComponent()">
+                <div class="card-header">
+                    <h2 class="card-title">Active Model</h2>
+                </div>
+                <div class="card-body">
+                    <template x-if="models.length === 0">
+                        <div class="text-center text-gray-500 py-4">
+                            <p>No models loaded</p>
+                        </div>
+                    </template>
+
+                    <template x-if="models.length > 0">
+                        <div class="space-y-3">
+                            <template x-for="model in models" :key="model.name">
+                                <div 
+                                    class="model-card"
+                                    :class="{ 'model-card-active': model.name === currentModel }"
+                                    @click="selectModel(model.name)"
+                                >
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <h3 class="font-semibold text-gray-900" x-text="model.name"></h3>
+                                                <span 
+                                                    x-show="model.name === currentModel"
+                                                    class="badge badge-success"
+                                                >
+                                                    Active
+                                                </span>
+                                            </div>
+                                            <p class="text-sm text-gray-600" x-text="`${model.num_classes} classes`"></p>
+                                            <p 
+                                                x-show="model.accuracy"
+                                                class="text-xs text-gray-500 mt-1"
+                                            >
+                                                Accuracy: <span x-text="(model.accuracy * 100).toFixed(1) + '%'"></span>
+                                            </p>
+                                        </div>
+                                        <template x-if="model.name === currentModel">
+                                            <div class="text-green-500 text-xl">✓</div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <button 
+                        class="btn btn-secondary btn-sm w-full mt-4"
+                        @click="$dispatch('open-model-manager')"
+                    >
+                        Manage Models
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Quick Stats</h2>
+                </div>
+                <div class="card-body">
+                    <div 
+                        hx-get="/api/analytics/summary"
+                        hx-trigger="load, statsUpdate from:body"
+                        hx-target="this"
+                        hx-swap="innerHTML"
+                    >
+                        <div class="skeleton-loader">
+                            <div class="skeleton-line"></div>
+                            <div class="skeleton-line"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Quick Actions</h2>
+                </div>
+                <div class="card-body space-y-2">
+                    <a href="/batch" class="btn btn-secondary btn-sm w-full">
+                        Batch Upload
+                    </a>
+                    <a href="/compare" class="btn btn-secondary btn-sm w-full">
+                        Compare Models
+                    </a>
+                    <a href="/analytics" class="btn btn-secondary btn-sm w-full">
+                        View Analytics
+                    </a>
+                    <a href="/history" class="btn btn-secondary btn-sm w-full">
+                        View History
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alpine.js Data -->
+<script>
+function dashboardData() {
+    return {
+        stats: {
+            totalPredictions: 0,
+            activeModel: {{ model_name | tojson }},
+            avgConfidence: 0,
+            modelsLoaded: 0
+        },
+        
+        init() {
+            this.loadStats();
+            
+            // Listen for WebSocket updates
+            this.$watch('$store.app.wsConnected', (connected) => {
+                if (connected) {
+                    this.loadStats();
+                }
+            });
+        },
+        
+        async loadStats() {
+            try {
+                // Load analytics summary
+                const analyticsRes = await fetch('/api/analytics/summary');
+                if (analyticsRes.ok) {
+                    const data = await analyticsRes.json();
+                    this.stats.totalPredictions = data.total_predictions;
+                    this.stats.avgConfidence = data.average_confidence;
+                }
+                
+                // Load models info
+                const modelsRes = await fetch('/api/models');
+                if (modelsRes.ok) {
+                    const data = await modelsRes.json();
+                    this.stats.modelsLoaded = data.models.length;
+                    this.stats.activeModel = data.current_model;
+                }
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+    };
+}
+</script>
+{% endblock %}
