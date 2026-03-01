@@ -90,9 +90,16 @@ class BaseConfig(BaseSettings):
 
     @property
     def cache_dir(self) -> Path:
-        """Get the cache directory for pickled data."""
+        """Get the cache directory for pickled data.
+
+        Requires data_path to be set (typically via DatasetConfig.model_post_init).
+        Raises RuntimeError if called before data_path is initialised.
+        """
         if self.data_path is None:
-            raise RuntimeError("data_path should be set in model_post_init")
+            raise RuntimeError(
+                "cache_dir is unavailable: data_path has not been set. "
+                "Ensure model_post_init has been called or pass dataset_path to the config."
+            )
         return self.data_path / "cache"
 
     def create_directories(self) -> None:

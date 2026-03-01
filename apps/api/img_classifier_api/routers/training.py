@@ -5,6 +5,7 @@ import logging
 import os
 import uuid
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -15,6 +16,15 @@ from img_classifier_config import DatasetDetector
 from img_classifier_training import TrainingOrchestrator, HyperparameterSpace
 
 logger = logging.getLogger(__name__)
+
+
+class JobStatus(StrEnum):
+    """Training job status values."""
+
+    QUEUED = "queued"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 def _training_working_dir() -> Path:
@@ -96,7 +106,7 @@ class TrainingStatusResponse(BaseModel):
     """Response with training job status."""
 
     job_id: str
-    status: str  # queued, running, completed, failed
+    status: str  # JobStatus: queued, running, completed, failed
     progress: float  # 0-100
     current_epoch: Optional[int]
     total_epochs: Optional[int]
@@ -199,7 +209,7 @@ async def start_training_job(
     # Initialize job status
     training_jobs[job_id] = {
         "job_id": job_id,
-        "status": "queued",
+        "status": JobStatus.QUEUED,
         "progress": 0.0,
         "current_epoch": None,
         "total_epochs": request.num_epochs,
@@ -217,7 +227,7 @@ async def start_training_job(
 
     return TrainingJobResponse(
         job_id=job_id,
-        status="queued",
+        status=JobStatus.QUEUED,
         message="Training job has been queued and will start shortly",
         created_at=created_at,
     )
@@ -328,7 +338,7 @@ async def run_training_job(job_id: str, request: TrainingJobRequest) -> None:
     """
     try:
         # Update status to running
-        training_jobs[job_id]["status"] = "running"
+        training_jobs[job_id]["status"] = JobStatus.RUNNING
         training_jobs[job_id]["started_at"] = datetime.now()
 
         dataset_path = Path(request.dataset_path)
@@ -388,7 +398,7 @@ async def run_training_job(job_id: str, request: TrainingJobRequest) -> None:
         results = await asyncio.to_thread(orchestrator.run, plot=False)
 
         # Update job with results
-        training_jobs[job_id]["status"] = "completed"
+        training_jobs[job_id]["status"] = JobStatus.COMPLETED
         training_jobs[job_id]["progress"] = 100.0
         training_jobs[job_id]["completed_at"] = datetime.now()
         training_jobs[job_id]["final_results"] = {
@@ -403,6 +413,6 @@ async def run_training_job(job_id: str, request: TrainingJobRequest) -> None:
     except Exception as e:
         # Update job with error
         logger.exception("Training job %s failed", job_id)
-        training_jobs[job_id]["status"] = "failed"
+        training_jobs[job_id]["status"] = JobStatus.FAILED
         training_jobs[job_id]["error"] = str(e)
         training_jobs[job_id]["completed_at"] = datetime.now()

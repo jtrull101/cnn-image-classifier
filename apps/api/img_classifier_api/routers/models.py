@@ -14,8 +14,7 @@ from ..schemas import AvailableModelsResponse, ModelInfo
 def _get_allowed_model_dirs() -> List[Path]:
     """Return the resolved list of directories from which models may be loaded."""
     dirs: List[Path] = [
-        Path("/tmp/img_classifier/models").resolve(),
-        Path("/tmp/img_classifier_cnn/models").resolve(),
+        (Path.home() / ".local" / "share" / "img_classifier" / "models").resolve(),
         (Path.cwd() / "models").resolve(),
     ]
     env_dir = os.environ.get("IMG_CLASSIFIER_MODEL_DIR", "").strip()

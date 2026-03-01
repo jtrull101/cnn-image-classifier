@@ -18,8 +18,7 @@ from img_classifier_api.crud.predictions import (
 )
 from img_classifier_api.database import get_db
 
-_HTMX_REQUEST_HEADER = "HX-Request"
-_HTMX_REQUEST_VALUE = "true"
+from img_classifier_api.routers._constants import _HTMX_REQUEST_HEADER, _HTMX_REQUEST_VALUE
 _MEDIA_TYPE_JSON = "application/json"
 _MEDIA_TYPE_CSV = "text/csv"
 _TIMESTAMP_FORMAT = "%b %d, %Y %I:%M %p"

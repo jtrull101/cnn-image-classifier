@@ -7,7 +7,7 @@ from pydantic import Field
 
 from .base_config import BaseConfig
 
-
+# TODO: can this be removed?
 class AlzheimerConfig(BaseConfig):
     """Configuration for Alzheimer's MRI classification.
 

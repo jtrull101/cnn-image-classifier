@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from img_classifier_api.crud.predictions import get_analytics_summary
 from img_classifier_api.database import get_db
+from img_classifier_api.routers._constants import _HTMX_REQUEST_HEADER, _HTMX_REQUEST_VALUE
 
 
 class AnalyticsSummaryResponse(BaseModel):
@@ -61,7 +62,7 @@ async def get_summary(
     summary = get_analytics_summary(db, start_date=start_date, end_date=end_date)
 
     # Check if this is an HTMX request
-    is_htmx = request.headers.get("HX-Request") == "true"
+    is_htmx = request.headers.get(_HTMX_REQUEST_HEADER) == _HTMX_REQUEST_VALUE
 
     if is_htmx:
         # Return HTML for HTMX

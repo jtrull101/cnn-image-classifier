@@ -195,7 +195,7 @@ class Trainer:
         logger.info("Test Loss: %.4f  Test Accuracy: %.4f (%.2f%%)", loss, acc, acc * 100)
         return loss, acc
 
-    def plot_history(self, save_path: Optional[Path] = None):
+    def plot_history(self, save_path: Optional[Path] = None) -> None:
         """Plot training history.
 
         Args:
@@ -261,7 +261,7 @@ class Trainer:
 
         return filepath
 
-    def log_results(self, acc: float, loss: float, elapsed_time: float):
+    def log_results(self, acc: float, loss: float, elapsed_time: float) -> None:
         """Log training results to file.
 
         Args:
@@ -336,7 +336,7 @@ class Trainer:
             # Clean up
             self.cleanup()
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up resources after training."""
         if self.model.model:
             del self.model.model
