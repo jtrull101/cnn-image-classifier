@@ -1,1 +1,0 @@
-python src/alz_mri_cnn/front_end.py
