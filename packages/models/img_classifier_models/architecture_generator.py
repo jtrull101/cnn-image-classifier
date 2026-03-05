@@ -1,7 +1,6 @@
 """Dynamic CNN architecture generator based on dataset characteristics."""
 
 import math
-from typing import Optional
 
 import tensorflow as tf
 from img_classifier_config import ArchitectureComplexity, BaseConfig
@@ -74,8 +73,8 @@ class ArchitectureFactory:
     @staticmethod
     def create(
         config: BaseConfig,
-        complexity: Optional[ArchitectureComplexity] = None,
-        custom_spec: Optional[ArchitectureSpec] = None,
+        complexity: ArchitectureComplexity | None = None,
+        custom_spec: ArchitectureSpec | None = None,
     ) -> tf.keras.Model:
         """Create a CNN model based on configuration and complexity.
 
@@ -92,8 +91,9 @@ class ArchitectureFactory:
 
         # Determine complexity
         if complexity is None:
-            raw = getattr(config, "architecture_complexity", ArchitectureComplexity.AUTO)
-            complexity = ArchitectureComplexity(str(raw).lower())
+            complexity = ArchitectureComplexity(
+                getattr(config, "architecture_complexity", ArchitectureComplexity.AUTO)
+            )
 
         if complexity == ArchitectureComplexity.AUTO:
             complexity = ArchitectureFactory._auto_select_complexity(config)
@@ -141,7 +141,7 @@ class ArchitectureFactory:
         Returns:
             ArchitectureSpec instance
         """
-        if complexity == "simple":
+        if complexity == ArchitectureComplexity.SIMPLE:
             return ArchitectureSpec(
                 name="SimpleCNN",
                 conv_blocks=[
@@ -155,7 +155,7 @@ class ArchitectureFactory:
                 dropout_rate=0.3,
             )
 
-        elif complexity == "medium":
+        elif complexity == ArchitectureComplexity.MEDIUM:
             return ArchitectureSpec(
                 name="MediumCNN",
                 conv_blocks=[
@@ -170,7 +170,7 @@ class ArchitectureFactory:
                 dropout_rate=0.3,
             )
 
-        elif complexity == "deep":
+        elif complexity == ArchitectureComplexity.DEEP:
             return ArchitectureSpec(
                 name="DeepCNN",
                 conv_blocks=[

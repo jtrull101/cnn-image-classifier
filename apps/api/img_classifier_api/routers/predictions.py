@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from img_classifier_api.crud.predictions import create_prediction
 from img_classifier_api.database import get_db
+from img_classifier_api.schemas import PredictionResponse
 
 logger = logging.getLogger(__name__)
 
@@ -29,15 +30,6 @@ try:
     )
 except ValueError:
     _MAX_UPLOAD_BYTES = _DEFAULT_MAX_UPLOAD_BYTES
-
-
-class PredictionResponse(BaseModel):
-    """Response model for predictions."""
-
-    class_name: str = Field(..., description="Predicted class name")
-    confidence: float = Field(..., description="Confidence score (0-1)")
-    probabilities: dict[str, float] = Field(..., description="Probability for each class")
-    model_name: str = Field(..., description="Name of the model used")
 
 
 class BatchPredictionRequest(BaseModel):

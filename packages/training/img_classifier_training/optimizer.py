@@ -10,7 +10,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from img_classifier_config import BaseConfig
+from img_classifier_config import ArchitectureComplexity, BaseConfig
 
 logger = logging.getLogger(__name__)
 
@@ -18,14 +18,21 @@ logger = logging.getLogger(__name__)
 _DEFAULT_LEARNING_RATES: list[float] = [0.0001, 0.0005, 0.001, 0.005, 0.01]
 _DEFAULT_BATCH_SIZES: list[int] = [16, 32, 64]
 _DEFAULT_DROPOUT_RATES: list[float] = [0.2, 0.3, 0.4, 0.5]
-_DEFAULT_ARCHITECTURES: list[str] = ["simple", "medium", "deep"]
+_DEFAULT_ARCHITECTURES: list[ArchitectureComplexity] = [
+    ArchitectureComplexity.SIMPLE,
+    ArchitectureComplexity.MEDIUM,
+    ArchitectureComplexity.DEEP,
+]
 _DEFAULT_NUM_EPOCHS: list[int] = [20, 30, 40, 50]
 
 # Quick (reduced) search space values
 _QUICK_LEARNING_RATES: list[float] = [0.001, 0.01]
 _QUICK_BATCH_SIZES: list[int] = [32, 64]
 _QUICK_DROPOUT_RATES: list[float] = [0.3, 0.4]
-_QUICK_ARCHITECTURES: list[str] = ["simple", "medium"]
+_QUICK_ARCHITECTURES: list[ArchitectureComplexity] = [
+    ArchitectureComplexity.SIMPLE,
+    ArchitectureComplexity.MEDIUM,
+]
 _QUICK_NUM_EPOCHS: list[int] = [20, 30]
 
 
@@ -44,7 +51,7 @@ class HyperparameterSpace:
     learning_rates: list[float]
     batch_sizes: list[int]
     dropout_rates: list[float]
-    architectures: list[str]  # 'simple', 'medium', 'deep'
+    architectures: list[ArchitectureComplexity]
     num_epochs: list[int]
 
     @classmethod

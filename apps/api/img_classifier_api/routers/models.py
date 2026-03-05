@@ -1,5 +1,6 @@
 """Router for model management endpoints."""
 
+import asyncio
 import os
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -153,7 +154,9 @@ async def load_model_endpoint(
                 "Model path is not within an allowed directory. "
                 f"Allowed locations: {[str(d) for d in allowed_dirs]}",
             )
-        loaded_name = model_manager.load_model(safe_path, request_body.model_name)
+        loaded_name = await asyncio.to_thread(
+            model_manager.load_model, safe_path, request_body.model_name
+        )
         return LoadModelResponse(message="Model loaded successfully", model_name=loaded_name)
     except HTTPException:
         raise

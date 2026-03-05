@@ -2,7 +2,6 @@
 
 import logging
 from datetime import datetime
-from enum import Enum
 from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -12,6 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from img_classifier_api.crud.predictions import (
+    count_predictions,
     create_prediction,
     delete_prediction,
     export_predictions,
@@ -26,17 +26,10 @@ from img_classifier_api.routers._constants import (
     _MEDIA_TYPE_JSON,
     _MEDIA_TYPE_CSV,
 )
-from img_classifier_api.schemas import MessageResponse
+from img_classifier_api.schemas import ExportFormat, MessageResponse
 
 _TIMESTAMP_FORMAT = "%b %d, %Y %I:%M %p"
 _FILENAME_TIMESTAMP_FORMAT = "%Y%m%d_%H%M%S"
-
-
-class ExportFormat(str, Enum):
-    """Supported export formats for prediction history."""
-
-    JSON = "json"
-    CSV = "csv"
 
 
 class PredictionHistoryItem(BaseModel):
@@ -123,14 +116,7 @@ async def get_history(
     predictions = get_predictions(
         db, skip=skip, limit=limit, model_name=model_name, user_session=user_session
     )
-
-    # Get total count for pagination
-    query = db.query(PredictionHistory)
-    if model_name:
-        query = query.filter(PredictionHistory.model_name == model_name)
-    if user_session:
-        query = query.filter(PredictionHistory.user_session == user_session)
-    total = query.count()
+    total = count_predictions(db, model_name=model_name, user_session=user_session)
 
     # Check if this is an HTMX request
     is_htmx = request.headers.get(_HTMX_REQUEST_HEADER) == _HTMX_REQUEST_VALUE
@@ -219,7 +205,7 @@ async def export_history(
     """
     exported_data = export_predictions(
         db,
-        format=export_format.value,
+        export_format=export_format,
         model_name=model_name,
         start_date=start_date,
         end_date=end_date,
@@ -323,21 +309,24 @@ async def sync_history(
     skipped = 0
     errors = []
 
+    # Batch-lookup existing hashes in a single query to avoid N+1
+    all_hashes = {p.get("image_hash") for p in request.predictions if p.get("image_hash")}
+    if all_hashes:
+        existing_hashes: set[str] = {
+            row[0]
+            for row in db.query(PredictionHistory.image_hash)
+            .filter(PredictionHistory.image_hash.in_(all_hashes))
+            .all()
+        }
+    else:
+        existing_hashes = set()
+
     for pred_data in request.predictions:
         try:
-            # Check if prediction already exists (by hash)
             image_hash = pred_data.get("image_hash")
-
-            if image_hash:
-                existing = (
-                    db.query(PredictionHistory)
-                    .filter(PredictionHistory.image_hash == image_hash)
-                    .first()
-                )
-
-                if existing:
-                    skipped += 1
-                    continue
+            if image_hash and image_hash in existing_hashes:
+                skipped += 1
+                continue
 
             # Create new prediction
             create_prediction(db, pred_data)
