@@ -1,7 +1,6 @@
 """Base configuration class for all models using Pydantic."""
 
 from pathlib import Path
-from typing import List, Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -29,10 +28,10 @@ class BaseConfig(BaseSettings):
 
     # Data settings
     dataset_name: str = "dataset"
-    dataset_zip_id: Optional[str] = None  # Google Drive ID
-    data_path: Optional[Path] = None
-    train_path: Optional[Path] = None
-    test_path: Optional[Path] = None
+    dataset_zip_id: str | None = None  # Google Drive ID
+    data_path: Path | None = None
+    train_path: Path | None = None
+    test_path: Path | None = None
 
     # Image settings
     image_size: tuple[int, int] = (128, 128)
@@ -40,7 +39,7 @@ class BaseConfig(BaseSettings):
 
     # Class settings
     num_classes: int = Field(default=4, ge=0)
-    class_names: List[str] = Field(default_factory=list)
+    class_names: list[str] = Field(default_factory=list)
 
     # Training hyperparameters
     batch_size: int = Field(default=32, ge=1)

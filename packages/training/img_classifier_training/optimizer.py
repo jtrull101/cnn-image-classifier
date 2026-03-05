@@ -7,43 +7,57 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from img_classifier_config import BaseConfig
 
 logger = logging.getLogger(__name__)
+
+# Default search space values
+_DEFAULT_LEARNING_RATES: list[float] = [0.0001, 0.0005, 0.001, 0.005, 0.01]
+_DEFAULT_BATCH_SIZES: list[int] = [16, 32, 64]
+_DEFAULT_DROPOUT_RATES: list[float] = [0.2, 0.3, 0.4, 0.5]
+_DEFAULT_ARCHITECTURES: list[str] = ["simple", "medium", "deep"]
+_DEFAULT_NUM_EPOCHS: list[int] = [20, 30, 40, 50]
+
+# Quick (reduced) search space values
+_QUICK_LEARNING_RATES: list[float] = [0.001, 0.01]
+_QUICK_BATCH_SIZES: list[int] = [32, 64]
+_QUICK_DROPOUT_RATES: list[float] = [0.3, 0.4]
+_QUICK_ARCHITECTURES: list[str] = ["simple", "medium"]
+_QUICK_NUM_EPOCHS: list[int] = [20, 30]
 
 
 @dataclass
 class HyperparameterSpace:
     """Defines the search space for hyperparameters."""
 
-    learning_rates: List[float]
-    batch_sizes: List[int]
-    dropout_rates: List[float]
-    architectures: List[str]  # 'simple', 'medium', 'deep'
-    num_epochs: List[int]
+    learning_rates: list[float]
+    batch_sizes: list[int]
+    dropout_rates: list[float]
+    architectures: list[str]  # 'simple', 'medium', 'deep'
+    num_epochs: list[int]
 
     @classmethod
     def default(cls) -> "HyperparameterSpace":
         """Create default hyperparameter search space."""
         return cls(
-            learning_rates=[0.0001, 0.0005, 0.001, 0.005, 0.01],
-            batch_sizes=[16, 32, 64],
-            dropout_rates=[0.2, 0.3, 0.4, 0.5],
-            architectures=["simple", "medium", "deep"],
-            num_epochs=[20, 30, 40, 50],
+            learning_rates=_DEFAULT_LEARNING_RATES,
+            batch_sizes=_DEFAULT_BATCH_SIZES,
+            dropout_rates=_DEFAULT_DROPOUT_RATES,
+            architectures=_DEFAULT_ARCHITECTURES,
+            num_epochs=_DEFAULT_NUM_EPOCHS,
         )
 
     @classmethod
     def quick(cls) -> "HyperparameterSpace":
         """Create a smaller search space for quick experiments."""
         return cls(
-            learning_rates=[0.001, 0.01],
-            batch_sizes=[32, 64],
-            dropout_rates=[0.3, 0.4],
-            architectures=["simple", "medium"],
-            num_epochs=[20, 30],
+            learning_rates=_QUICK_LEARNING_RATES,
+            batch_sizes=_QUICK_BATCH_SIZES,
+            dropout_rates=_QUICK_DROPOUT_RATES,
+            architectures=_QUICK_ARCHITECTURES,
+            num_epochs=_QUICK_NUM_EPOCHS,
         )
 
 
@@ -52,7 +66,7 @@ class TrialResult:
     """Result from a single hyperparameter trial."""
 
     trial_id: int
-    hyperparameters: Dict[str, Any]
+    hyperparameters: dict[str, Any]
     train_accuracy: float
     val_accuracy: float
     test_accuracy: float
@@ -62,7 +76,7 @@ class TrialResult:
     training_time: float
     timestamp: str
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Convert to dictionary."""
         return asdict(self)
 
@@ -74,7 +88,7 @@ class HyperparameterOptimizer(ABC):
         self,
         config: BaseConfig,
         search_space: HyperparameterSpace,
-        results_dir: Optional[Path] = None,
+        results_dir: Path | None = None,
         max_trials: int = 50,
         early_stop_patience: int = 10,
         target_accuracy: float = 0.95,
@@ -96,15 +110,15 @@ class HyperparameterOptimizer(ABC):
         self.early_stop_patience = early_stop_patience
         self.target_accuracy = target_accuracy
 
-        self.results: List[TrialResult] = []
-        self.best_result: Optional[TrialResult] = None
+        self.results: list[TrialResult] = []
+        self.best_result: TrialResult | None = None
         self.trials_without_improvement = 0
 
         # Create results directory
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
     @abstractmethod
-    def suggest_hyperparameters(self, trial_number: int) -> Dict[str, Any]:
+    def suggest_hyperparameters(self, trial_number: int) -> dict[str, Any]:
         """Suggest next set of hyperparameters to try.
 
         Args:
@@ -204,7 +218,7 @@ class GridSearchOptimizer(HyperparameterOptimizer):
         self._grid = self._create_grid()
         self._current_index = 0
 
-    def _create_grid(self) -> List[Dict[str, Any]]:
+    def _create_grid(self) -> list[dict[str, Any]]:
         """Create grid of all hyperparameter combinations.
 
         Returns:
@@ -230,7 +244,7 @@ class GridSearchOptimizer(HyperparameterOptimizer):
         random.shuffle(grid)
         return grid
 
-    def suggest_hyperparameters(self, trial_number: int) -> Dict[str, Any]:
+    def suggest_hyperparameters(self, trial_number: int) -> dict[str, Any]:
         """Suggest next hyperparameters from grid.
 
         Args:
@@ -250,7 +264,7 @@ class GridSearchOptimizer(HyperparameterOptimizer):
 class RandomSearchOptimizer(HyperparameterOptimizer):
     """Random search over hyperparameter space."""
 
-    def suggest_hyperparameters(self, trial_number: int) -> Dict[str, Any]:
+    def suggest_hyperparameters(self, trial_number: int) -> dict[str, Any]:
         """Randomly suggest hyperparameters.
 
         Args:
@@ -295,7 +309,7 @@ class BayesianOptimizer(HyperparameterOptimizer):
                 logger.warning("optuna not installed, falling back to random search")
                 self.use_optuna = False
 
-    def suggest_hyperparameters(self, trial_number: int) -> Dict[str, Any]:
+    def suggest_hyperparameters(self, trial_number: int) -> dict[str, Any]:
         """Suggest hyperparameters using Bayesian optimization.
 
         Args:
@@ -330,7 +344,7 @@ class BayesianOptimizer(HyperparameterOptimizer):
 def create_optimizer(
     optimizer_type: str,
     config: BaseConfig,
-    search_space: Optional[HyperparameterSpace] = None,
+    search_space: HyperparameterSpace | None = None,
     **kwargs,
 ) -> HyperparameterOptimizer:
     """Factory function to create optimizer.

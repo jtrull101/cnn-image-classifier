@@ -1,8 +1,28 @@
 """Shared Pydantic models for API requests and responses."""
 
-from typing import List, Optional
-
 from pydantic import BaseModel, Field
+
+
+class MessageResponse(BaseModel):
+    """Generic single-message response."""
+
+    message: str
+
+
+class LoadModelResponse(BaseModel):
+    """Response after loading a model."""
+
+    message: str
+    model_name: str
+
+
+class HealthCheckResponse(BaseModel):
+    """Health check response."""
+
+    status: str
+    models_loaded: int
+    current_model: str | None
+    websocket_connections: int
 
 
 class ModelInfo(BaseModel):
@@ -11,16 +31,16 @@ class ModelInfo(BaseModel):
     name: str
     path: str
     num_classes: int
-    class_names: List[str]
-    input_shape: List[int]
-    accuracy: Optional[float] = None
+    class_names: list[str]
+    input_shape: list[int]
+    accuracy: float | None = None
 
 
 class AvailableModelsResponse(BaseModel):
     """Response listing available models."""
 
-    models: List[ModelInfo]
-    current_model: Optional[str] = None
+    models: list[ModelInfo]
+    current_model: str | None = None
 
 
 class PredictionResponse(BaseModel):

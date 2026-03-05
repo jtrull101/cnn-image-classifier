@@ -5,7 +5,6 @@ import logging
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -47,7 +46,7 @@ class Trainer:
         self.data_loader = data_loader
         self.history = None
 
-    def prepare_data(self) -> Tuple[np.ndarray, ...]:
+    def prepare_data(self) -> tuple[np.ndarray, ...]:
         """Load and prepare all datasets.
 
         Returns:
@@ -89,7 +88,7 @@ class Trainer:
 
         return X_train, y_train, X_val, y_val, X_test, y_test
 
-    def get_callbacks(self) -> List[tf.keras.callbacks.Callback]:
+    def get_callbacks(self) -> list[tf.keras.callbacks.Callback]:
         """Create and return list of callbacks.
 
         Returns:
@@ -103,7 +102,7 @@ class Trainer:
                 monitor="val_loss",
                 mode="min",
                 patience=self.config.early_stopping_patience,
-                verbose=1,
+                verbose=0,
             )
             callbacks.append(early_stopping)
 
@@ -170,7 +169,7 @@ class Trainer:
         self.history = history
         return history
 
-    def evaluate(self, X_test: np.ndarray, y_test: np.ndarray) -> Tuple[float, float]:
+    def evaluate(self, X_test: np.ndarray, y_test: np.ndarray) -> tuple[float, float]:
         """Evaluate the model on test data.
 
         Args:
@@ -195,7 +194,7 @@ class Trainer:
         logger.info("Test Loss: %.4f  Test Accuracy: %.4f (%.2f%%)", loss, acc, acc * 100)
         return loss, acc
 
-    def plot_history(self, save_path: Optional[Path] = None) -> None:
+    def plot_history(self, save_path: Path | None = None) -> None:
         """Plot training history.
 
         Args:
@@ -226,7 +225,7 @@ class Trainer:
 
     def save_model(
         self, acc: float, loss: float, elapsed_time: float, force_save: bool = False
-    ) -> Optional[Path]:
+    ) -> Path | None:
         """Save the trained model.
 
         Args:
@@ -294,7 +293,7 @@ class Trainer:
 
         logger.info("Results logged to %s", log_file)
 
-    def run(self, plot: bool = False, force_save: bool = False) -> Tuple[float, float]:
+    def run(self, plot: bool = False, force_save: bool = False) -> tuple[float, float]:
         """Run the complete training pipeline.
 
         Args:
