@@ -159,11 +159,16 @@ class TestPathTraversal:
     @pytest.mark.parametrize(
         "malicious_path",
         [
+            # Classic traversal sequences
             "../../etc/passwd",
             "/etc/shadow",
             "../../../../etc/hosts",
             "/root/.ssh/id_rsa",
             "/tmp/../etc/passwd",
+            # URL-encoded variants (must be caught if path is decoded before the guard)
+            "..%2Fetc%2Fpasswd",
+            "%2e%2e%2fetc%2fpasswd",
+            "..%2F..%2Fetc%2Fshadow",
         ],
     )
     def test_path_traversal_returns_403(self, client, malicious_path):

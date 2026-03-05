@@ -4,10 +4,10 @@ import logging
 import os
 from enum import StrEnum
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any
 
 import yaml
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from .base_config import BaseConfig
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class ArchitectureComplexity(StrEnum):
-    """Allowed values for model architecture complexity."""
+    """Valid values for the architecture_complexity field."""
 
     AUTO = "auto"
     SIMPLE = "simple"
@@ -34,17 +34,17 @@ class DatasetConfig(BaseConfig):
 
     # Dataset metadata
     dataset_type: str = Field(default="image_classification", description="Type of dataset")
-    description: Optional[str] = Field(default=None, description="Dataset description")
+    description: str | None = Field(default=None, description="Dataset description")
 
     # Architecture hints
     architecture_complexity: ArchitectureComplexity = Field(
         default=ArchitectureComplexity.AUTO,
         description="Model complexity: 'simple', 'medium', 'deep', or 'auto'",
     )
-    recommended_batch_sizes: List[int] = Field(
+    recommended_batch_sizes: list[int] = Field(
         default_factory=lambda: [16, 32, 64], description="Recommended batch sizes for optimization"
     )
-    recommended_learning_rates: List[float] = Field(
+    recommended_learning_rates: list[float] = Field(
         default_factory=lambda: [0.0001, 0.001, 0.01],
         description="Recommended learning rates for optimization",
     )
@@ -80,6 +80,16 @@ class DatasetConfig(BaseConfig):
         if explicit_none_test:
             self.test_path = None
 
+    @field_validator("architecture_complexity", mode="before")
+    @classmethod
+    def validate_complexity(cls, v: str) -> str:
+        """Validate and normalise architecture complexity value."""
+        allowed = [e.value for e in ArchitectureComplexity]
+        normalized = str(v).lower()
+        if normalized not in allowed:
+            raise ValueError(f"architecture_complexity must be one of {allowed}")
+        return normalized
+
     @classmethod
     def from_yaml(cls, yaml_path: Path) -> "DatasetConfig":
         """Load configuration from YAML file.
@@ -113,7 +123,7 @@ class DatasetConfig(BaseConfig):
             config_dict = self.model_dump(exclude_none=False, mode="json")
 
             # Convert Path objects to strings for YAML serialization
-            def convert_paths(obj):
+            def convert_paths(obj: Any) -> Any:
                 if isinstance(obj, dict):
                     return {k: convert_paths(v) for k, v in obj.items()}
                 elif isinstance(obj, list):
@@ -144,7 +154,7 @@ class DatasetDetector:
         """
         self.dataset_path = Path(dataset_path)
 
-    def detect(self) -> Dict:
+    def detect(self) -> dict[str, Any]:
         """Detect dataset characteristics.
 
         Returns:
@@ -208,7 +218,7 @@ class DatasetDetector:
         test_path = self.dataset_path / "test"
         return train_path.exists() and test_path.exists()
 
-    def _detect_classes(self, path: Path) -> Tuple[List[str], Dict[str, int]]:
+    def _detect_classes(self, path: Path) -> tuple[list[str], dict[str, int]]:
         """Detect classes from directory structure.
 
         Args:
@@ -236,7 +246,7 @@ class DatasetDetector:
 
         return classes, class_counts
 
-    def _detect_image_properties(self) -> Optional[Tuple[int, int, int]]:
+    def _detect_image_properties(self) -> tuple[int, int, int] | None:
         """Detect image properties from a sample image.
 
         Returns:
@@ -275,7 +285,7 @@ class DatasetDetector:
         else:
             return ArchitectureComplexity.DEEP
 
-    def _check_balance(self, class_distribution: Dict[str, int]) -> bool:
+    def _check_balance(self, class_distribution: dict[str, int]) -> bool:
         """Check if dataset is balanced.
 
         Args:
@@ -295,7 +305,7 @@ class DatasetDetector:
         return max_count / min_count <= 2.0
 
     def create_config(
-        self, project_name: Optional[str] = None, working_dir: Optional[Path] = None, **kwargs
+        self, project_name: str | None = None, working_dir: Path | None = None, **kwargs
     ) -> DatasetConfig:
         """Create a DatasetConfig from detected characteristics.
 

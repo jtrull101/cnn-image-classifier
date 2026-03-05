@@ -4,7 +4,6 @@ import logging
 from abc import ABC, abstractmethod
 from enum import StrEnum
 from pathlib import Path
-from typing import Optional, Union
 
 import tensorflow as tf
 from img_classifier_config import BaseConfig
@@ -34,7 +33,7 @@ class BaseModel(ABC):
             config: Configuration object
         """
         self.config = config
-        self.model: Optional[tf.keras.Model] = None
+        self.model: tf.keras.Model | None = None
 
     @abstractmethod
     def build(self) -> tf.keras.Model:
@@ -47,10 +46,10 @@ class BaseModel(ABC):
 
     def compile(
         self,
-        optimizer: Optional[Union[str, tf.keras.optimizers.Optimizer]] = None,
-        loss: Optional[str] = None,
-        metrics: Optional[list] = None,
-        learning_rate: Optional[float] = None,
+        optimizer: str | tf.keras.optimizers.Optimizer | None = None,
+        loss: str | None = None,
+        metrics: list[str] | None = None,
+        learning_rate: float | None = None,
     ):
         """Compile the model.
 

@@ -12,8 +12,9 @@ import json
 import logging
 import os
 from contextlib import asynccontextmanager
+from enum import StrEnum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, AsyncGenerator
 
 import tensorflow as tf
 from fastapi import (
@@ -31,7 +32,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from .auth import require_api_key
 from .database import init_db
 from .routers import analytics, history, models, predictions, training
-from .schemas import ModelInfo
+from .schemas import HealthCheckResponse, ModelInfo
 from .websocket_manager import manager as ws_manager
 
 logger = logging.getLogger(__name__)
@@ -42,7 +43,27 @@ static_dir = Path(__file__).parent / "static"
 static_dir.mkdir(exist_ok=True)
 
 
-def _default_model_dirs() -> List[Path]:
+def _parse_accuracy_from_filename(filename: str) -> float | None:
+    """Parse an accuracy percentage embedded in a model filename.
+
+    Expects the pattern ``<name>_<integer>%<rest>``, e.g.
+    ``model_name_95%_acc_...``.  Returns the value as a fraction
+    (e.g. 0.95), or ``None`` if the pattern is not found.
+    """
+    if "%" not in filename:
+        return None
+    try:
+        percent_pos = filename.find("%")
+        before_percent = filename[:percent_pos]
+        if "_" not in before_percent:
+            return None
+        acc_str = before_percent[before_percent.rfind("_") + 1 :]
+        return float(acc_str) / 100.0
+    except (ValueError, IndexError):
+        return None
+
+
+def _default_model_dirs() -> list[Path]:
     """Return the default model search directories, respecting env config."""
     _model_dir_env = os.environ.get("IMG_CLASSIFIER_MODEL_DIR")
     dirs = [
@@ -63,12 +84,12 @@ class ModelManager:
     """Manages multiple loaded models."""
 
     def __init__(self):
-        self.models: Dict[str, tf.keras.Model] = {}
-        self.model_info: Dict[str, ModelInfo] = {}
-        self.current_model_name: Optional[str] = None
+        self.models: dict[str, tf.keras.Model] = {}
+        self.model_info: dict[str, ModelInfo] = {}
+        self.current_model_name: str | None = None
         self.default_model_dirs = _default_model_dirs()
 
-    def discover_models(self) -> List[Path]:
+    def discover_models(self) -> list[Path]:
         """Discover available model files."""
         found = []
         for model_dir in self.default_model_dirs:
@@ -77,7 +98,7 @@ class ModelManager:
                 found.extend(model_dir.glob("*.h5"))
         return found
 
-    def load_model(self, model_path: Path, model_name: Optional[str] = None) -> str:
+    def load_model(self, model_path: Path, model_name: str | None = None) -> str:
         """Load a model from disk."""
         if not model_path.exists():
             raise FileNotFoundError(f"Model not found: {model_path}")
@@ -95,15 +116,7 @@ class ModelManager:
         accuracy = None
 
         filename = model_path.name
-        if "%" in filename:
-            try:
-                percent_pos = filename.find("%")
-                before_percent = filename[:percent_pos]
-                if "_" in before_percent:
-                    acc_str = before_percent[before_percent.rfind("_") + 1 :]
-                    accuracy = float(acc_str) / 100.0
-            except (ValueError, IndexError):
-                logger.debug("Could not parse accuracy from filename %r", filename)
+        accuracy = _parse_accuracy_from_filename(filename)
 
         metadata_path = model_path.with_suffix(".json")
         if metadata_path.exists():
@@ -131,7 +144,7 @@ class ModelManager:
 
         return model_name
 
-    def get_model(self, model_name: Optional[str] = None) -> tf.keras.Model:
+    def get_model(self, model_name: str | None = None) -> tf.keras.Model:
         """Get a loaded model."""
         if model_name is None:
             model_name = self.current_model_name
@@ -144,7 +157,7 @@ class ModelManager:
 
         return self.models[model_name]
 
-    def get_info(self, model_name: Optional[str] = None) -> ModelInfo:
+    def get_info(self, model_name: str | None = None) -> ModelInfo:
         """Get model information."""
         if model_name is None:
             model_name = self.current_model_name
@@ -174,19 +187,12 @@ class ModelManager:
         best_accuracy = -1
 
         for model_path in available:
-            filename = model_path.name
-            if "%" in filename:
-                try:
-                    percent_pos = filename.find("%")
-                    before_percent = filename[:percent_pos]
-                    if "_" in before_percent:
-                        acc_str = before_percent[before_percent.rfind("_") + 1 :]
-                        accuracy = int(acc_str)
-                        if accuracy > best_accuracy:
-                            best_accuracy = accuracy
-                            best_model = model_path
-                except (ValueError, IndexError):
-                    logger.debug("Could not parse accuracy from filename %r", filename)
+            parsed = _parse_accuracy_from_filename(model_path.name)
+            if parsed is not None:
+                accuracy_pct = int(parsed * 100)
+                if accuracy_pct > best_accuracy:
+                    best_accuracy = accuracy_pct
+                    best_model = model_path
 
         if best_model:
             self.load_model(best_model)
@@ -194,6 +200,18 @@ class ModelManager:
         elif available:
             self.load_model(available[0])
             logger.info("Loaded first available model: %s", available[0].name)
+
+
+class WebSocketMessageType(StrEnum):
+    """WebSocket message type strings used in the /ws endpoint protocol."""
+
+    PING = "ping"
+    PONG = "pong"
+    SUBSCRIBE = "subscribe"
+    SUBSCRIBED = "subscribed"
+    UNSUBSCRIBE = "unsubscribe"
+    UNSUBSCRIBED = "unsubscribed"
+    ECHO = "echo"
 
 
 # ---------------------------------------------------------------------------
@@ -230,7 +248,7 @@ model_manager = ModelManager()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Lifespan context manager for startup and shutdown events."""
     logging.basicConfig(
         level=logging.INFO,
@@ -290,15 +308,15 @@ async def home(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request=request, name="index.html", context=context)
 
 
-@app.get("/health")
-async def health_check() -> Dict[str, object]:
+@app.get("/health", response_model=HealthCheckResponse)
+async def health_check() -> HealthCheckResponse:
     """Health check endpoint."""
-    return {
-        "status": "healthy",
-        "models_loaded": len(model_manager.models),
-        "current_model": model_manager.current_model_name,
-        "websocket_connections": ws_manager.get_connection_count(),
-    }
+    return HealthCheckResponse(
+        status="healthy",
+        models_loaded=len(model_manager.models),
+        current_model=model_manager.current_model_name,
+        websocket_connections=ws_manager.get_connection_count(),
+    )
 
 
 @app.get("/train", response_class=HTMLResponse)
@@ -308,7 +326,7 @@ async def training_page(request: Request) -> HTMLResponse:
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket) -> None:
     """WebSocket endpoint for real-time communication."""
     client_id = websocket.query_params.get("client_id")
     await ws_manager.connect(websocket, client_id)
@@ -318,26 +336,29 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_json()
             message_type = data.get("type")
 
-            if message_type == "ping":
+            if message_type == WebSocketMessageType.PING:
                 await ws_manager.send_personal_message(
-                    {"type": "pong", "timestamp": data.get("timestamp")}, websocket
+                    {"type": WebSocketMessageType.PONG, "timestamp": data.get("timestamp")},
+                    websocket,
                 )
-            elif message_type == "subscribe":
+            elif message_type == WebSocketMessageType.SUBSCRIBE:
                 room = data.get("room")
                 if room:
                     ws_manager.join_room(websocket, room)
                     await ws_manager.send_personal_message(
-                        {"type": "subscribed", "room": room}, websocket
+                        {"type": WebSocketMessageType.SUBSCRIBED, "room": room}, websocket
                     )
-            elif message_type == "unsubscribe":
+            elif message_type == WebSocketMessageType.UNSUBSCRIBE:
                 room = data.get("room")
                 if room:
                     ws_manager.leave_room(websocket, room)
                     await ws_manager.send_personal_message(
-                        {"type": "unsubscribed", "room": room}, websocket
+                        {"type": WebSocketMessageType.UNSUBSCRIBED, "room": room}, websocket
                     )
             else:
-                await ws_manager.send_personal_message({"type": "echo", "data": data}, websocket)
+                await ws_manager.send_personal_message(
+                    {"type": WebSocketMessageType.ECHO, "data": data}, websocket
+                )
 
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)

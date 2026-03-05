@@ -61,6 +61,7 @@ img-classifier-utils = { workspace = true }
 # Pytest Configuration
 [tool.pytest.ini_options]
 minversion = "7.0"
+asyncio_mode = "auto"
 addopts = [
     "-n=auto",  # Run tests in parallel using all available CPU cores
     "--dist=loadgroup",  # Distribute tests by group (respects marks)
@@ -195,6 +196,9 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"conftest.py" = [
+    "N806",    # Uppercase variable names OK in ML test fixtures (X_train, etc.)
+]
 "tests/**/*.py" = [
     "ARG",     # Unused arguments OK in tests
     "S101",    # Assert use is OK in tests
@@ -242,10 +246,13 @@ exclude = [
     "**/.venv",
     "**/node_modules",
 ]
-pythonVersion = "3.13"
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.11"
 pythonPlatform = "All"
 typeCheckingMode = "basic"
 
 # Type checking settings
 reportMissingImports = true
 reportAttributeAccessIssue = false  # Disable for TensorFlow keras attributes
+reportPrivateImportUsage = false  # Pydantic v2 and pytest use private-looking exports

@@ -2,18 +2,16 @@
 
 import os
 from pathlib import Path
-from typing import Dict, List, Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from ..auth import require_api_key
-from ..schemas import AvailableModelsResponse, ModelInfo
+from ..schemas import AvailableModelsResponse, LoadModelResponse, MessageResponse, ModelInfo
 
 
-def _get_allowed_model_dirs() -> List[Path]:
+def _get_allowed_model_dirs() -> list[Path]:
     """Return the resolved list of directories from which models may be loaded."""
-    dirs: List[Path] = [
+    dirs: list[Path] = [
         (Path.home() / ".local" / "share" / "img_classifier" / "models").resolve(),
         (Path.cwd() / "models").resolve(),
     ]
@@ -26,7 +24,7 @@ def _get_allowed_model_dirs() -> List[Path]:
 class DiscoveredModelsResponse(BaseModel):
     """Response for discovered model files."""
 
-    model_files: List[str]
+    model_files: list[str]
     count: int
 
 
@@ -89,8 +87,12 @@ async def get_model_info(model_name: str, request: Request) -> ModelInfo:
         raise HTTPException(404, str(e))
 
 
-@router.post("/models/{model_name}/activate", dependencies=[Depends(require_api_key)])
-async def activate_model(model_name: str, request: Request) -> Dict[str, str]:
+@router.post(
+    "/models/{model_name}/activate",
+    dependencies=[Depends(require_api_key)],
+    response_model=MessageResponse,
+)
+async def activate_model(model_name: str, request: Request) -> MessageResponse:
     """Set a model as the current active model.
 
     Args:
@@ -98,7 +100,7 @@ async def activate_model(model_name: str, request: Request) -> Dict[str, str]:
         request: FastAPI request object
 
     Returns:
-        dict: Success message
+        MessageResponse: Success message
 
     Raises:
         HTTPException: 404 if model not found
@@ -106,7 +108,7 @@ async def activate_model(model_name: str, request: Request) -> Dict[str, str]:
     model_manager = request.app.state.model_manager
     try:
         model_manager.set_current_model(model_name)
-        return {"message": f"Model '{model_name}' is now active"}
+        return MessageResponse(message=f"Model '{model_name}' is now active")
     except ValueError as e:
         raise HTTPException(404, str(e))
 
@@ -115,11 +117,15 @@ class LoadModelRequest(BaseModel):
     """Request body for loading a model."""
 
     model_path: str = Field(..., description="File path to the model")
-    model_name: Optional[str] = Field(None, description="Optional custom name for the model")
+    model_name: str | None = Field(None, description="Optional custom name for the model")
 
 
-@router.post("/models/load", dependencies=[Depends(require_api_key)])
-async def load_model_endpoint(request_body: LoadModelRequest, request: Request):
+@router.post(
+    "/models/load", dependencies=[Depends(require_api_key)], response_model=LoadModelResponse
+)
+async def load_model_endpoint(
+    request_body: LoadModelRequest, request: Request
+) -> LoadModelResponse:
     """Load a model from a file path.
 
     The supplied path must resolve to a location inside one of the configured
@@ -148,7 +154,7 @@ async def load_model_endpoint(request_body: LoadModelRequest, request: Request):
                 f"Allowed locations: {[str(d) for d in allowed_dirs]}",
             )
         loaded_name = model_manager.load_model(safe_path, request_body.model_name)
-        return {"message": "Model loaded successfully", "model_name": loaded_name}
+        return LoadModelResponse(message="Model loaded successfully", model_name=loaded_name)
     except HTTPException:
         raise
     except FileNotFoundError as e:

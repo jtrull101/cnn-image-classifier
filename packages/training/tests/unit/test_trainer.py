@@ -81,12 +81,12 @@ class TestTrainer:
     def test_prepare_data_basic(self, mock_to_categorical):
         """Test basic data preparation."""
         # Mock data
-        x_train = np.random.rand(100, 128, 128, 3)
+        X_train = np.random.rand(100, 128, 128, 3)
         y_train = np.random.randint(0, 4, 100)
         X_test = np.random.rand(40, 128, 128, 3)
         y_test = np.random.randint(0, 4, 40)
 
-        self.mock_loader.load_train_data.return_value = (x_train, y_train)
+        self.mock_loader.load_train_data.return_value = (X_train, y_train)
         self.mock_loader.load_test_data.return_value = (X_test, y_test)
         self.mock_loader.split_data.return_value = (
             X_test[:20],
@@ -101,10 +101,10 @@ class TestTrainer:
         result = self.trainer.prepare_data()
 
         assert len(result) == 6
-        x_train_out, y_train_out, x_val_out, y_val_out, X_test_out, y_test_out = result
+        X_train_out, y_train_out, x_val_out, y_val_out, X_test_out, y_test_out = result
 
         # Check shapes
-        assert x_train_out.shape == x_train.shape
+        assert X_train_out.shape == X_train.shape
         assert x_val_out.shape[0] == 20
         assert X_test_out.shape[0] == 20
 
@@ -116,12 +116,12 @@ class TestTrainer:
         """Test data preparation with dataset reduction."""
         self.mock_config.data_percent = 0.5
 
-        x_train = np.random.rand(100, 128, 128, 3)
+        X_train = np.random.rand(100, 128, 128, 3)
         y_train = np.random.randint(0, 4, 100)
         X_test = np.random.rand(40, 128, 128, 3)
         y_test = np.random.randint(0, 4, 40)
 
-        self.mock_loader.load_train_data.return_value = (x_train, y_train)
+        self.mock_loader.load_train_data.return_value = (X_train, y_train)
         self.mock_loader.load_test_data.return_value = (X_test, y_test)
         self.mock_loader.split_data.return_value = (
             X_test[:20],
@@ -132,7 +132,7 @@ class TestTrainer:
 
         # Mock reduction to return half the data
         self.mock_loader.reduce_dataset.side_effect = [
-            (x_train[:50], y_train[:50]),  # train
+            (X_train[:50], y_train[:50]),  # train
             (X_test[:10], y_test[:10]),  # val
             (X_test[20:30], y_test[20:30]),  # test
         ]
@@ -150,12 +150,12 @@ class TestTrainer:
         """Test data preparation with full dataset (data_percent=1.0)."""
         self.mock_config.data_percent = 1.0
 
-        x_train = np.random.rand(50, 128, 128, 3)
+        X_train = np.random.rand(50, 128, 128, 3)
         y_train = np.random.randint(0, 4, 50)
         X_test = np.random.rand(20, 128, 128, 3)
         y_test = np.random.randint(0, 4, 20)
 
-        self.mock_loader.load_train_data.return_value = (x_train, y_train)
+        self.mock_loader.load_train_data.return_value = (X_train, y_train)
         self.mock_loader.load_test_data.return_value = (X_test, y_test)
         self.mock_loader.split_data.return_value = (
             X_test[:10],
@@ -225,7 +225,7 @@ class TestTrainer:
         """Test basic training."""
         mock_time.time.side_effect = [1000.0, 1100.0]  # 100s training
 
-        x_train = np.random.rand(10, 128, 128, 3)
+        X_train = np.random.rand(10, 128, 128, 3)
         y_train = np.random.randint(0, 4, (10, 4))
         x_val = np.random.rand(5, 128, 128, 3)
         y_val = np.random.randint(0, 4, (5, 4))
@@ -233,7 +233,7 @@ class TestTrainer:
         mock_history = MagicMock()
         self.mock_keras_model.fit.return_value = mock_history
 
-        result = self.trainer.train(x_train, y_train, x_val, y_val)
+        result = self.trainer.train(X_train, y_train, x_val, y_val)
 
         assert result == mock_history
         assert self.trainer.history == mock_history
@@ -253,7 +253,7 @@ class TestTrainer:
 
         self.mock_model.compile.side_effect = compile_side_effect
 
-        x_train = np.random.rand(10, 128, 128, 3)
+        X_train = np.random.rand(10, 128, 128, 3)
         y_train = np.random.randint(0, 4, (10, 4))
         x_val = np.random.rand(5, 128, 128, 3)
         y_val = np.random.randint(0, 4, (5, 4))
@@ -261,13 +261,13 @@ class TestTrainer:
         mock_history = MagicMock()
         self.mock_keras_model.fit.return_value = mock_history
 
-        self.trainer.train(x_train, y_train, x_val, y_val)
+        self.trainer.train(X_train, y_train, x_val, y_val)
 
         self.mock_model.compile.assert_called_once()
 
     def test_train_with_callbacks(self):
         """Test training with callbacks."""
-        x_train = np.random.rand(10, 128, 128, 3)
+        X_train = np.random.rand(10, 128, 128, 3)
         y_train = np.random.randint(0, 4, (10, 4))
         x_val = np.random.rand(5, 128, 128, 3)
         y_val = np.random.randint(0, 4, (5, 4))
@@ -275,7 +275,7 @@ class TestTrainer:
         mock_history = MagicMock()
         self.mock_keras_model.fit.return_value = mock_history
 
-        self.trainer.train(x_train, y_train, x_val, y_val)
+        self.trainer.train(X_train, y_train, x_val, y_val)
 
         # Verify fit was called with callbacks
         call_args = self.mock_keras_model.fit.call_args
@@ -485,14 +485,14 @@ class TestTrainer:
     def test_run_complete_pipeline(self, mock_to_categorical):
         """Test complete run pipeline."""
         # Setup data
-        x_train = np.random.rand(10, 128, 128, 3)
+        X_train = np.random.rand(10, 128, 128, 3)
         y_train = np.random.randint(0, 4, 10)
         x_val = np.random.rand(5, 128, 128, 3)
         y_val = np.random.randint(0, 4, 5)
         x_test = np.random.rand(5, 128, 128, 3)
         y_test = np.random.randint(0, 4, 5)
 
-        self.mock_loader.load_train_data.return_value = (x_train, y_train)
+        self.mock_loader.load_train_data.return_value = (X_train, y_train)
         self.mock_loader.load_test_data.return_value = (x_test, y_test)
         self.mock_loader.split_data.return_value = (x_val, x_test, y_val, y_test)
 
@@ -525,14 +525,14 @@ class TestTrainer:
     def test_run_with_plot(self, mock_plt, mock_sns_lineplot, mock_to_categorical):
         """Test run with plotting enabled."""
         # Setup data
-        x_train = np.random.rand(10, 128, 128, 3)
+        X_train = np.random.rand(10, 128, 128, 3)
         y_train = np.random.randint(0, 4, 10)
         x_val = np.random.rand(5, 128, 128, 3)
         y_val = np.random.randint(0, 4, 5)
         x_test = np.random.rand(5, 128, 128, 3)
         y_test = np.random.randint(0, 4, 5)
 
-        self.mock_loader.load_train_data.return_value = (x_train, y_train)
+        self.mock_loader.load_train_data.return_value = (X_train, y_train)
         self.mock_loader.load_test_data.return_value = (x_test, y_test)
         self.mock_loader.split_data.return_value = (x_val, x_test, y_val, y_test)
 
@@ -633,7 +633,7 @@ class TestTrainerEdgeCases:
         """Test with zero epochs."""
         self.config.num_epochs = 0
 
-        x_train = np.random.rand(10, 128, 128, 3)
+        X_train = np.random.rand(10, 128, 128, 3)
         y_train = np.random.randint(0, 4, (10, 4))
         x_val = np.random.rand(5, 128, 128, 3)
         y_val = np.random.randint(0, 4, (5, 4))
@@ -641,7 +641,7 @@ class TestTrainerEdgeCases:
         mock_history = MagicMock()
         self.mock_model.model.fit.return_value = mock_history
 
-        self.trainer.train(x_train, y_train, x_val, y_val)
+        self.trainer.train(X_train, y_train, x_val, y_val)
 
         # Should still call fit with 0 epochs
         call_args = self.mock_model.model.fit.call_args
@@ -652,7 +652,7 @@ class TestTrainerEdgeCases:
         """Test with batch size of 1."""
         self.config.batch_size = 1
 
-        x_train = np.random.rand(10, 128, 128, 3)
+        X_train = np.random.rand(10, 128, 128, 3)
         y_train = np.random.randint(0, 4, (10, 4))
         x_val = np.random.rand(5, 128, 128, 3)
         y_val = np.random.randint(0, 4, (5, 4))
@@ -660,7 +660,7 @@ class TestTrainerEdgeCases:
         mock_history = MagicMock()
         self.mock_model.model.fit.return_value = mock_history
 
-        self.trainer.train(x_train, y_train, x_val, y_val)
+        self.trainer.train(X_train, y_train, x_val, y_val)
 
         call_args = self.mock_model.model.fit.call_args
         assert call_args is not None
@@ -670,7 +670,7 @@ class TestTrainerEdgeCases:
         """Test with very large batch size."""
         self.config.batch_size = 10000
 
-        x_train = np.random.rand(100, 128, 128, 3)
+        X_train = np.random.rand(100, 128, 128, 3)
         y_train = np.random.randint(0, 4, (100, 4))
         x_val = np.random.rand(20, 128, 128, 3)
         y_val = np.random.randint(0, 4, (20, 4))
@@ -678,7 +678,7 @@ class TestTrainerEdgeCases:
         mock_history = MagicMock()
         self.mock_model.model.fit.return_value = mock_history
 
-        self.trainer.train(x_train, y_train, x_val, y_val)
+        self.trainer.train(X_train, y_train, x_val, y_val)
 
         call_args = self.mock_model.model.fit.call_args
         assert call_args is not None
@@ -686,7 +686,7 @@ class TestTrainerEdgeCases:
 
     def test_empty_training_data(self):
         """Test with empty training data."""
-        x_train = np.array([]).reshape(0, 128, 128, 3)
+        X_train = np.array([]).reshape(0, 128, 128, 3)
         y_train = np.array([]).reshape(0, 4)
         x_val = np.random.rand(5, 128, 128, 3)
         y_val = np.random.randint(0, 4, (5, 4))
@@ -695,7 +695,7 @@ class TestTrainerEdgeCases:
         self.mock_model.model.fit.return_value = mock_history
 
         # Should not raise, just attempt to train
-        self.trainer.train(x_train, y_train, x_val, y_val)
+        self.trainer.train(X_train, y_train, x_val, y_val)
         self.mock_model.model.fit.assert_called_once()
 
     def test_perfect_accuracy(self):
