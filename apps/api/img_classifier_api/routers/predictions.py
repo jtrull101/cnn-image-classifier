@@ -168,7 +168,7 @@ async def predict_image(
         image_hash = hashlib.sha256(contents).hexdigest()
         thumbnail = cv2.resize(image, _THUMBNAIL_SIZE)
         _, buffer = cv2.imencode(".jpg", thumbnail)
-        thumbnail_b64 = base64.b64encode(buffer).decode("utf-8")
+        thumbnail_b64 = base64.b64encode(buffer.tobytes()).decode("utf-8")
         create_prediction(
             db,
             {
@@ -226,7 +226,7 @@ async def batch_predict(
                 image_hash = hashlib.sha256(contents).hexdigest()
                 thumbnail = cv2.resize(image, _THUMBNAIL_SIZE)
                 _, buffer = cv2.imencode(".jpg", thumbnail)
-                thumbnail_b64 = base64.b64encode(buffer).decode("utf-8")
+                thumbnail_b64 = base64.b64encode(buffer.tobytes()).decode("utf-8")
                 create_prediction(
                     db,
                     {

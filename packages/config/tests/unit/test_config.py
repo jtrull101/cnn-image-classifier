@@ -991,11 +991,16 @@ class TestDatasetConfigValidation:
             # Should not raise
             assert config.architecture_complexity == complexity
 
-    def test_validate_complexity_case_sensitive(self, tmp_path):
-        """Test complexity validation requires lowercase enum values."""
-        for complexity in ["SIMPLE", "Medium", "DEEP", "Auto"]:
-            with pytest.raises(ValueError):
-                DatasetConfig(working_dir=tmp_path, architecture_complexity=complexity)
+    def test_validate_complexity_case_insensitive(self, tmp_path):
+        """Test complexity validation normalises mixed-case inputs to lowercase."""
+        for complexity, expected in [
+            ("SIMPLE", "simple"),
+            ("Medium", "medium"),
+            ("DEEP", "deep"),
+            ("Auto", "auto"),
+        ]:
+            config = DatasetConfig(working_dir=tmp_path, architecture_complexity=complexity)
+            assert config.architecture_complexity == expected
 
     def test_empty_class_names_list(self, tmp_path):
         """Test with empty class names list."""

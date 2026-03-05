@@ -5,7 +5,7 @@ from pathlib import Path
 
 import click
 from img_classifier_config import DatasetConfig, DatasetDetector
-from img_classifier_training import HyperparameterSpace, TrainingOrchestrator
+from img_classifier_training import HyperparameterSpace, OptimizerType, TrainingOrchestrator
 
 
 _SEPARATOR = "=" * 60
@@ -163,7 +163,7 @@ def optimize(
     orchestrator: TrainingOrchestrator = TrainingOrchestrator(
         cfg,
         optimize_hyperparameters=True,
-        optimizer_type=optimizer_type,
+        optimizer_type=OptimizerType(optimizer_type),
         search_space=search_space,
         max_trials=max_trials,
     )

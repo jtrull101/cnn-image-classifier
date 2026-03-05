@@ -255,7 +255,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     init_db()
-    model_manager.auto_load_best_model()
+    try:
+        model_manager.auto_load_best_model()
+    except Exception:
+        logger.warning("Could not auto-load model on startup; server will run without a model")
     yield
 
 

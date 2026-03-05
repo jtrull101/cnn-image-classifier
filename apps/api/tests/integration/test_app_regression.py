@@ -15,7 +15,8 @@ pytestmark = pytest.mark.integration
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    with TestClient(app) as client:
+        yield client
 
 
 class TestHealthEndpoint:
