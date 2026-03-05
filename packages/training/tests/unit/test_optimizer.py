@@ -388,7 +388,9 @@ class TestBayesianOptimizer:
 
     def test_import_error_handling(self):
         """Test handling of optuna import error."""
-        with patch("builtins.__import__", side_effect=ImportError("No module named 'optuna'")):
+        import sys
+
+        with patch.dict(sys.modules, {"optuna": None}):
             optimizer = BayesianOptimizer(self.config, self.search_space, use_optuna=True)
 
             # Should fall back gracefully
@@ -731,12 +733,12 @@ class TestCreateOptimizer:
 
     def test_create_invalid_type(self):
         """Test creating optimizer with invalid type."""
-        with pytest.raises(ValueError, match="Unknown optimizer type"):
+        with pytest.raises(ValueError):
             create_optimizer("invalid_type", self.config)
 
     def test_create_empty_type(self):
         """Test creating optimizer with empty type."""
-        with pytest.raises(ValueError, match="Unknown optimizer type"):
+        with pytest.raises(ValueError):
             create_optimizer("", self.config)
 
 

@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -34,7 +34,7 @@ router = APIRouter()
 
 
 @router.get("/models", response_model=AvailableModelsResponse)
-async def list_models(request: Request):
+async def list_models(request: Request) -> AvailableModelsResponse:
     """List all loaded models.
 
     Args:
@@ -51,7 +51,7 @@ async def list_models(request: Request):
 
 
 @router.get("/models/discover", response_model=DiscoveredModelsResponse)
-async def discover_models(request: Request):
+async def discover_models(request: Request) -> DiscoveredModelsResponse:
     """Re-scan for available model files in default directories.
 
     Args:
@@ -69,7 +69,7 @@ async def discover_models(request: Request):
 
 
 @router.get("/models/{model_name}", response_model=ModelInfo)
-async def get_model_info(model_name: str, request: Request):
+async def get_model_info(model_name: str, request: Request) -> ModelInfo:
     """Get information about a specific loaded model.
 
     Args:
@@ -90,7 +90,7 @@ async def get_model_info(model_name: str, request: Request):
 
 
 @router.post("/models/{model_name}/activate", dependencies=[Depends(require_api_key)])
-async def activate_model(model_name: str, request: Request):
+async def activate_model(model_name: str, request: Request) -> Dict[str, str]:
     """Set a model as the current active model.
 
     Args:

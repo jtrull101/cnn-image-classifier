@@ -252,6 +252,7 @@ async def batch_predict(
                     f"Processed {file.filename}",
                 )
         except Exception as e:
+            logger.warning("Batch item %r failed: %s", file.filename, e)
             errors.append({"filename": file.filename, "error": str(e)})
 
     if ws_manager:

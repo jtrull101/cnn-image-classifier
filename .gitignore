@@ -198,3 +198,6 @@ pyrightconfig.json
 .env.*.local
 
 apps/api/data/predictions.db
+
+# Claude
+.claude/settings*

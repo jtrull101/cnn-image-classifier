@@ -12,8 +12,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
 
-from img_classifier_config import DatasetDetector
-from img_classifier_training import TrainingOrchestrator, HyperparameterSpace
+from img_classifier_config import ArchitectureComplexity, DatasetDetector
+from img_classifier_training import HyperparameterSpace, OptimizerType, TrainingOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -70,8 +70,8 @@ class TrainingJobRequest(BaseModel):
     num_epochs: int = Field(25, ge=1, le=200, description="Number of training epochs")
     batch_size: int = Field(32, ge=1, le=256, description="Batch size")
     learning_rate: float = Field(0.001, gt=0, le=1, description="Learning rate")
-    architecture_complexity: str = Field(
-        "auto", description="Model complexity: auto, simple, medium, deep"
+    architecture_complexity: ArchitectureComplexity = Field(
+        ArchitectureComplexity.AUTO, description="Model complexity: auto, simple, medium, deep"
     )
 
     # Advanced parameters
@@ -88,7 +88,9 @@ class TrainingJobRequest(BaseModel):
 
     # Hyperparameter optimization
     optimize_hyperparameters: bool = Field(False, description="Enable hyperparameter optimization")
-    optimizer_type: str = Field("random", description="Optimizer type: random, grid, bayesian")
+    optimizer_type: OptimizerType = Field(
+        OptimizerType.RANDOM, description="Optimizer type: random, grid, bayesian"
+    )
     max_trials: int = Field(20, ge=1, le=100, description="Maximum optimization trials")
     search_space_type: str = Field("default", description="Search space: quick, default, full")
 

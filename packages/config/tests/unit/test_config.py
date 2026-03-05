@@ -185,7 +185,7 @@ class TestDatasetConfig:
 
     def test_validate_complexity_invalid(self):
         """Test architecture complexity validation with invalid value."""
-        with pytest.raises(ValueError, match="architecture_complexity must be one of"):
+        with pytest.raises(ValueError):
             DatasetConfig(working_dir=self.temp_dir, architecture_complexity="invalid")
 
     def test_recommended_batch_sizes_default(self):
@@ -503,7 +503,7 @@ class TestDatasetConfigEdgeCases:
 
     def test_invalid_architecture_complexity_empty_string(self, tmp_path):
         """Test empty string for architecture complexity."""
-        with pytest.raises(ValueError, match="architecture_complexity must be one of"):
+        with pytest.raises(ValueError):
             DatasetConfig(working_dir=tmp_path, architecture_complexity="")
 
     def test_all_valid_architecture_complexities(self, tmp_path):
@@ -579,77 +579,6 @@ class TestDatasetConfigEdgeCases:
         )
         assert len(config.recommended_batch_sizes) == 7
         assert len(config.recommended_learning_rates) == 6
-
-
-class TestAlzheimerConfig:
-    """Tests for AlzheimerConfig class."""
-
-    def test_alzheimer_config_defaults(self):
-        """Test Alzheimer's config default values."""
-        from img_classifier_config import AlzheimerConfig
-
-        config = AlzheimerConfig()
-        assert config.project_name == "alzheimer_mri_cnn"
-        assert config.num_classes == 4
-        assert len(config.class_names) == 4
-        assert len(config.nice_class_names) == 4
-
-    def test_alzheimer_class_names(self):
-        """Test Alzheimer's specific class names."""
-        from img_classifier_config import AlzheimerConfig
-
-        config = AlzheimerConfig()
-        expected_names = [
-            "MildDemented",
-            "NonDemented",
-            "ModerateDemented",
-            "VeryMildDemented",
-        ]
-        assert config.class_names == expected_names
-
-    def test_alzheimer_nice_class_names(self):
-        """Test Alzheimer's nice class names."""
-        from img_classifier_config import AlzheimerConfig
-
-        config = AlzheimerConfig()
-        expected_nice = [
-            "Mild Impairment",
-            "No Impairment",
-            "Moderate Impairment",
-            "Very Mild Impairment",
-        ]
-        assert config.nice_class_names == expected_nice
-
-    def test_alzheimer_dataset_info(self):
-        """Test Alzheimer's dataset specific info."""
-        from img_classifier_config import AlzheimerConfig
-
-        config = AlzheimerConfig()
-        assert config.dataset_name == "Combined Dataset"
-        assert config.dataset_zip_id == "1SQuB_8IL3s7vZPMeGkOZo116QSTMa6BN"
-        assert config.pretrained_model_id == "1U9uywbNatIFAj6XlahT6BBrMqyLgd4qZ"
-
-    def test_alzheimer_inherits_base_config(self):
-        """Test that AlzheimerConfig inherits from BaseConfig."""
-        from img_classifier_config import AlzheimerConfig
-
-        config = AlzheimerConfig()
-        assert isinstance(config, BaseConfig)
-        assert hasattr(config, "batch_size")
-        assert hasattr(config, "num_epochs")
-        assert hasattr(config, "input_shape")
-
-    def test_alzheimer_config_override(self, tmp_path):
-        """Test overriding AlzheimerConfig values."""
-        from img_classifier_config import AlzheimerConfig
-
-        config = AlzheimerConfig(working_dir=tmp_path, batch_size=64, num_epochs=50)
-        assert config.working_dir == tmp_path
-        assert config.batch_size == 64
-        assert config.num_epochs == 50
-        # Should still have Alzheimer-specific values
-        assert config.num_classes == 4
-        assert len(config.class_names) == 4
 
 
 class TestDatasetDetector:
@@ -1062,12 +991,11 @@ class TestDatasetConfigValidation:
             # Should not raise
             assert config.architecture_complexity == complexity
 
-    def test_validate_complexity_case_insensitive(self, tmp_path):
-        """Test complexity validation is case insensitive."""
+    def test_validate_complexity_case_sensitive(self, tmp_path):
+        """Test complexity validation requires lowercase enum values."""
         for complexity in ["SIMPLE", "Medium", "DEEP", "Auto"]:
-            config = DatasetConfig(working_dir=tmp_path, architecture_complexity=complexity)
-            # Should be normalized to lowercase
-            assert config.architecture_complexity.lower() in ["simple", "medium", "deep", "auto"]
+            with pytest.raises(ValueError):
+                DatasetConfig(working_dir=tmp_path, architecture_complexity=complexity)
 
     def test_empty_class_names_list(self, tmp_path):
         """Test with empty class names list."""

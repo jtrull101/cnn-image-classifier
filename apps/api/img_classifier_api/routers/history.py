@@ -11,14 +11,17 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from img_classifier_api.crud.predictions import (
+    create_prediction,
     delete_prediction,
     export_predictions,
     get_prediction_by_id,
     get_predictions,
 )
 from img_classifier_api.database import get_db
+from img_classifier_api.models.prediction import PredictionHistory as PHModel
 
 from img_classifier_api.routers._constants import _HTMX_REQUEST_HEADER, _HTMX_REQUEST_VALUE
+
 _MEDIA_TYPE_JSON = "application/json"
 _MEDIA_TYPE_CSV = "text/csv"
 _TIMESTAMP_FORMAT = "%b %d, %Y %I:%M %p"
@@ -101,8 +104,6 @@ async def get_history(
     )
 
     # Get total count for pagination
-    from img_classifier_api.models.prediction import PredictionHistory as PHModel
-
     query = db.query(PHModel)
     if model_name:
         query = query.filter(PHModel.model_name == model_name)
@@ -297,9 +298,6 @@ async def sync_history(
     Returns:
         dict: Summary of sync operation
     """
-    from img_classifier_api.crud.predictions import create_prediction
-    from img_classifier_api.models.prediction import PredictionHistory
-
     synced = 0
     skipped = 0
     errors = []
@@ -310,11 +308,7 @@ async def sync_history(
             image_hash = pred_data.get("image_hash")
 
             if image_hash:
-                existing = (
-                    db.query(PredictionHistory)
-                    .filter(PredictionHistory.image_hash == image_hash)
-                    .first()
-                )
+                existing = db.query(PHModel).filter(PHModel.image_hash == image_hash).first()
 
                 if existing:
                     skipped += 1

@@ -398,7 +398,10 @@ class TestApiEndpoints:
         # Use a simple bytes representation instead of PIL
         img_data = img_array.tobytes()
 
-        response = client.post("/api/predict", files={"file": ("test.jpg", img_data, "image/jpeg")})
+        response = client.post(
+            "/api/predict?save_to_history=false",
+            files={"file": ("test.jpg", img_data, "image/jpeg")},
+        )
 
         assert response.status_code == 200
         data = response.json()
