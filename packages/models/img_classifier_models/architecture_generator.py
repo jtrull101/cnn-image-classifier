@@ -106,7 +106,7 @@ class ArchitectureFactory:
         return ArchitectureFactory._build_from_spec(config, spec)
 
     @staticmethod
-    def _auto_select_complexity(config: BaseConfig) -> str:
+    def _auto_select_complexity(config: BaseConfig) -> ArchitectureComplexity:
         """Automatically select complexity based on dataset characteristics.
 
         Args:
@@ -119,15 +119,15 @@ class ArchitectureFactory:
         image_area = config.image_size[0] * config.image_size[1]
 
         if config.num_classes <= _SIMPLE_MAX_CLASSES and image_area <= _SIMPLE_MAX_IMAGE_AREA:
-            return "simple"
+            return ArchitectureComplexity.SIMPLE
         elif config.num_classes <= _MEDIUM_MAX_CLASSES and image_area <= _MEDIUM_MAX_IMAGE_AREA:
-            return "medium"
+            return ArchitectureComplexity.MEDIUM
         else:
-            return "deep"
+            return ArchitectureComplexity.DEEP
 
     @staticmethod
     def _get_spec_for_complexity(
-        complexity: str,
+        complexity: ArchitectureComplexity,
         input_shape: tuple,
         num_classes: int,
     ) -> ArchitectureSpec:
