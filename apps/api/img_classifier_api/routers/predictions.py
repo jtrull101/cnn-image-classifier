@@ -6,7 +6,6 @@ import hashlib
 import logging
 import os
 import uuid
-from typing import Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -37,7 +36,7 @@ class PredictionResponse(BaseModel):
 
     class_name: str = Field(..., description="Predicted class name")
     confidence: float = Field(..., description="Confidence score (0-1)")
-    probabilities: Dict[str, float] = Field(..., description="Probability for each class")
+    probabilities: dict[str, float] = Field(..., description="Probability for each class")
     model_name: str = Field(..., description="Name of the model used")
 
 
@@ -45,14 +44,14 @@ class BatchPredictionRequest(BaseModel):
     """Request for batch predictions."""
 
     image_count: int = Field(..., description="Number of images to process")
-    model_name: Optional[str] = Field(None, description="Model to use (defaults to current)")
+    model_name: str | None = Field(None, description="Model to use (defaults to current)")
 
 
 class ComparePredictionResponse(BaseModel):
     """Response for multi-model comparison."""
 
     image_name: str
-    predictions: Dict[str, PredictionResponse]
+    predictions: dict[str, PredictionResponse]
 
 
 router = APIRouter()
@@ -66,8 +65,8 @@ router = APIRouter()
 async def _run_prediction(
     request: Request,
     file: UploadFile,
-    model_name: Optional[str],
-) -> Tuple[PredictionResponse, bytes, "np.ndarray"]:  # type: ignore[name-defined]
+    model_name: str | None,
+) -> tuple[PredictionResponse, bytes, "np.ndarray"]:  # type: ignore[name-defined]
     """Run inference on *file* and return the response plus raw bytes and image array.
 
     Returns:
@@ -139,9 +138,9 @@ async def _run_prediction(
 async def predict_image(
     request: Request,
     file: UploadFile = File(...),
-    model_name: Optional[str] = None,
+    model_name: str | None = None,
     save_to_history: bool = True,
-    user_session: Optional[str] = None,
+    user_session: str | None = None,
     db: Session = Depends(get_db),
 ):
     """Predict the class of an uploaded image.
@@ -190,10 +189,10 @@ async def predict_image(
 @router.post("/predict/batch")
 async def batch_predict(
     request: Request,
-    files: List[UploadFile] = File(...),
-    model_name: Optional[str] = None,
+    files: list[UploadFile] = File(...),
+    model_name: str | None = None,
     save_to_history: bool = True,
-    user_session: Optional[str] = None,
+    user_session: str | None = None,
     db: Session = Depends(get_db),
 ):
     """Batch prediction endpoint with WebSocket progress updates.
@@ -272,7 +271,7 @@ async def batch_predict(
 async def compare_predictions(
     request: Request,
     file: UploadFile = File(...),
-    model_names: Optional[List[str]] = None,
+    model_names: list[str] | None = None,
 ):
     """Compare predictions across multiple models for a single image.
 
@@ -292,7 +291,7 @@ async def compare_predictions(
     if not model_names:
         raise HTTPException(400, "No models available for comparison")
 
-    predictions: Dict[str, PredictionResponse] = {}
+    predictions: dict[str, PredictionResponse] = {}
 
     for model_name in model_names:
         try:

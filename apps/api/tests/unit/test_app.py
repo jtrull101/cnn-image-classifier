@@ -561,6 +561,65 @@ class TestApiEndpoints:
         assert "Error loading model" in response.json()["detail"]
 
 
+class TestUploadSizeLimit:
+    """Edge-case tests for the upload size guard."""
+
+    @pytest.fixture
+    def client(self):
+        return TestClient(app)
+
+    @patch("img_classifier_api.routers.predictions._MAX_UPLOAD_BYTES", 100)
+    def test_file_over_limit_returns_413(self, client):
+        """A file one byte over the limit must be rejected with HTTP 413."""
+        data = b"x" * 101
+        response = client.post("/api/predict", files={"file": ("test.jpg", data, "image/jpeg")})
+        assert response.status_code == 413
+
+    @patch("img_classifier_api.routers.predictions._MAX_UPLOAD_BYTES", 100)
+    def test_file_at_exact_limit_passes_size_check(self, client):
+        """A file exactly at the limit must not be rejected with 413.
+
+        The request will still fail (no model loaded → 404 or 400),
+        but the size check itself must succeed.
+        """
+        data = b"x" * 100
+        response = client.post("/api/predict", files={"file": ("test.jpg", data, "image/jpeg")})
+        assert response.status_code != 413
+
+
+class TestBatchPredictionBoundaries:
+    """Edge-case tests for the batch prediction endpoint."""
+
+    @pytest.fixture
+    def client(self):
+        return TestClient(app)
+
+    @patch("img_classifier_api.routers.predictions._run_prediction")
+    def test_single_file_batch_returns_one_result(self, mock_run, client):
+        """Batch with exactly 1 file should produce exactly 1 result entry."""
+        from img_classifier_api.routers.predictions import PredictionResponse as PredResp
+
+        mock_run.return_value = (
+            PredResp(
+                class_name="cat",
+                confidence=0.9,
+                probabilities={"cat": 0.9, "dog": 0.1},
+                model_name="m",
+            ),
+            b"bytes",
+            Mock(),
+        )
+        response = client.post(
+            "/api/predict/batch",
+            files=[("files", ("img.jpg", b"data", "image/jpeg"))],
+            params={"save_to_history": "false"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["successful"] == 1
+
+
 class TestPredictionResponse:
     """Test the PredictionResponse model."""
 

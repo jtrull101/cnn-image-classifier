@@ -43,6 +43,7 @@ build-backend = "hatchling.build"
 packages = ["img_classifier_api"]
 
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
 pythonpath = ["."]
 testpaths = ["tests"]
 markers = [
@@ -61,4 +62,7 @@ target-version = "py313"
 
 [tool.pyright]
 typeCheckingMode = "basic"
-pythonVersion = "3.13"
+venvPath = "../.."
+venv = ".venv"
+pythonVersion = "3.11"
+reportPrivateImportUsage = false

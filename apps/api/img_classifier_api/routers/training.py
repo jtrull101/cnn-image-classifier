@@ -7,13 +7,14 @@ import uuid
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Literal
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
 
-from img_classifier_config import DatasetDetector
+from img_classifier_config import ArchitectureComplexity, DatasetDetector
 from img_classifier_training import TrainingOrchestrator, HyperparameterSpace
+from img_classifier_api.schemas import MessageResponse
 
 logger = logging.getLogger(__name__)
 
@@ -51,11 +52,11 @@ class DatasetInfoResponse(BaseModel):
     dataset_path: str
     has_train_test_split: bool
     num_classes: int
-    class_names: List[str]
+    class_names: list[str]
     total_images: int
-    class_distribution: Dict[str, int]
-    sample_image_shape: Optional[tuple]
-    recommended_complexity: str
+    class_distribution: dict[str, int]
+    sample_image_shape: tuple | None
+    recommended_complexity: ArchitectureComplexity
     is_balanced: bool
 
 
@@ -70,8 +71,8 @@ class TrainingJobRequest(BaseModel):
     num_epochs: int = Field(25, ge=1, le=200, description="Number of training epochs")
     batch_size: int = Field(32, ge=1, le=256, description="Batch size")
     learning_rate: float = Field(0.001, gt=0, le=1, description="Learning rate")
-    architecture_complexity: str = Field(
-        "auto", description="Model complexity: auto, simple, medium, deep"
+    architecture_complexity: ArchitectureComplexity = Field(
+        ArchitectureComplexity.AUTO, description="Model complexity: auto, simple, medium, deep"
     )
 
     # Advanced parameters
@@ -88,16 +89,20 @@ class TrainingJobRequest(BaseModel):
 
     # Hyperparameter optimization
     optimize_hyperparameters: bool = Field(False, description="Enable hyperparameter optimization")
-    optimizer_type: str = Field("random", description="Optimizer type: random, grid, bayesian")
+    optimizer_type: Literal["grid", "random", "bayesian"] = Field(
+        "random", description="Optimizer type: random, grid, bayesian"
+    )
     max_trials: int = Field(20, ge=1, le=100, description="Maximum optimization trials")
-    search_space_type: str = Field("default", description="Search space: quick, default, full")
+    search_space_type: Literal["quick", "default", "full"] = Field(
+        "default", description="Search space: quick, default, full"
+    )
 
 
 class TrainingJobResponse(BaseModel):
     """Response after starting a training job."""
 
     job_id: str
-    status: str
+    status: JobStatus
     message: str
     created_at: datetime
 
@@ -106,22 +111,22 @@ class TrainingStatusResponse(BaseModel):
     """Response with training job status."""
 
     job_id: str
-    status: str  # JobStatus: queued, running, completed, failed
+    status: JobStatus
     progress: float  # 0-100
-    current_epoch: Optional[int]
-    total_epochs: Optional[int]
-    current_metrics: Optional[Dict[str, float]]
-    final_results: Optional[Dict[str, Any]]
-    error: Optional[str]
+    current_epoch: int | None
+    total_epochs: int | None
+    current_metrics: dict[str, float] | None
+    final_results: dict[str, Any] | None
+    error: str | None
     created_at: datetime
-    started_at: Optional[datetime]
-    completed_at: Optional[datetime]
+    started_at: datetime | None
+    completed_at: datetime | None
 
 
 class TrainingJobsListResponse(BaseModel):
     """Response with list of training jobs."""
 
-    jobs: List[TrainingStatusResponse]
+    jobs: list[TrainingStatusResponse]
     total: int
 
 
@@ -130,7 +135,7 @@ router = APIRouter()
 # In-memory storage for training jobs.
 # Known limitation: all job status is lost on server restart.
 # Future improvement: persist to the SQLite database used by the predictions router.
-training_jobs: Dict[str, Dict[str, Any]] = {}
+training_jobs: dict[str, dict[str, Any]] = {}
 
 
 @router.post("/training/dataset-info", response_model=DatasetInfoResponse)
@@ -160,7 +165,7 @@ async def get_dataset_info(request: DatasetInfoRequest) -> DatasetInfoResponse:
 
     try:
         detector = DatasetDetector(dataset_path)
-        info = detector.detect()
+        info = await asyncio.to_thread(detector.detect)
 
         return DatasetInfoResponse(
             dataset_path=str(info["dataset_path"]),
@@ -304,8 +309,8 @@ async def list_training_jobs(limit: int = 50, skip: int = 0) -> TrainingJobsList
     )
 
 
-@router.delete("/training/jobs/{job_id}")
-async def cancel_training_job(job_id: str) -> Dict[str, str]:
+@router.delete("/training/jobs/{job_id}", response_model=MessageResponse)
+async def cancel_training_job(job_id: str) -> MessageResponse:
     """
     Cancel a training job.
 
@@ -325,7 +330,7 @@ async def cancel_training_job(job_id: str) -> Dict[str, str]:
         raise HTTPException(404, f"Training job not found: {job_id}")
 
     del training_jobs[job_id]
-    return {"message": "Training job cancelled successfully"}
+    return MessageResponse(message="Training job cancelled successfully")
 
 
 async def run_training_job(job_id: str, request: TrainingJobRequest) -> None:

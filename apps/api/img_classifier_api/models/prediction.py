@@ -5,7 +5,7 @@ Stores prediction results for tracking and analytics.
 """
 
 import json
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 from sqlalchemy import Column, DateTime, Float, Index, Integer, String, Text
 from sqlalchemy.sql import func
@@ -51,7 +51,7 @@ class PredictionHistory(Base):
         Index("idx_predicted_class", "predicted_class"),
     )
 
-    def get_probabilities(self) -> Dict[str, float]:
+    def get_probabilities(self) -> dict[str, float]:
         """Parse probabilities JSON string to dictionary."""
         try:
             # Cast to str for type checker - at runtime this is always a string
@@ -60,11 +60,11 @@ class PredictionHistory(Base):
         except (json.JSONDecodeError, TypeError):
             return {}
 
-    def set_probabilities(self, probs: Dict[str, float]) -> None:
+    def set_probabilities(self, probs: dict[str, float]) -> None:
         """Convert probabilities dictionary to JSON string."""
         self.probabilities = json.dumps(probs)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert model to dictionary for API responses."""
         # Cast timestamp to datetime for type checker - at runtime this is always datetime
         timestamp_val = cast(Any, self.timestamp)

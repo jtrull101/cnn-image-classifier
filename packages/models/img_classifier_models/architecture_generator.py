@@ -2,7 +2,6 @@
 
 import math
 from enum import Enum
-from typing import Dict, List, Optional
 
 import tensorflow as tf
 from img_classifier_config import BaseConfig
@@ -17,6 +16,21 @@ from keras.layers import (
     MaxPooling2D,
 )
 from keras.models import Sequential
+
+
+# Thresholds for automatic complexity selection (used by _auto_select_complexity)
+_SIMPLE_MAX_CLASSES = 3
+_MEDIUM_MAX_CLASSES = 10
+_SIMPLE_MAX_IMAGE_AREA = 64 * 64  # 4 096 px²
+_MEDIUM_MAX_IMAGE_AREA = 128 * 128  # 16 384 px²
+
+# Thresholds for filter scaling and depth recommendation (ModelScaler)
+_SCALE_SMALL_DATASET = 1_000
+_SCALE_MEDIUM_DATASET = 5_000
+_SCALE_LARGE_DATASET = 20_000
+_DEPTH_SMALL_DATASET = 1_000
+_DEPTH_MEDIUM_DATASET = 5_000
+_DEPTH_MANY_CLASSES = 20
 
 
 class ArchitectureComplexity(Enum):
@@ -38,8 +52,8 @@ class ArchitectureSpec:
     def __init__(
         self,
         name: str,
-        conv_blocks: List[Dict],
-        dense_layers: List[int],
+        conv_blocks: list[dict],
+        dense_layers: list[int],
         use_batch_norm: bool = False,
         use_global_pooling: bool = False,
         dropout_rate: float = 0.3,
@@ -69,8 +83,8 @@ class ArchitectureFactory:
     @staticmethod
     def create(
         config: BaseConfig,
-        complexity: Optional[str] = None,
-        custom_spec: Optional[ArchitectureSpec] = None,
+        complexity: str | None = None,
+        custom_spec: ArchitectureSpec | None = None,
     ) -> tf.keras.Model:
         """Create a CNN model based on configuration and complexity.
 
@@ -113,9 +127,9 @@ class ArchitectureFactory:
         # Use image size and number of classes as heuristics
         image_area = config.image_size[0] * config.image_size[1]
 
-        if config.num_classes <= 3 and image_area <= 64 * 64:
+        if config.num_classes <= _SIMPLE_MAX_CLASSES and image_area <= _SIMPLE_MAX_IMAGE_AREA:
             return "simple"
-        elif config.num_classes <= 10 and image_area <= 128 * 128:
+        elif config.num_classes <= _MEDIUM_MAX_CLASSES and image_area <= _MEDIUM_MAX_IMAGE_AREA:
             return "medium"
         else:
             return "deep"
@@ -258,11 +272,11 @@ class ModelScaler:
         Returns:
             Scaled filter count
         """
-        if dataset_size < 1000:
+        if dataset_size < _SCALE_SMALL_DATASET:
             multiplier = 0.5
-        elif dataset_size < 5000:
+        elif dataset_size < _SCALE_MEDIUM_DATASET:
             multiplier = 0.75
-        elif dataset_size < 20000:
+        elif dataset_size < _SCALE_LARGE_DATASET:
             multiplier = 1.0
         else:
             multiplier = 1.5
@@ -295,15 +309,15 @@ class ModelScaler:
         max_depth = int(math.log2(float(max_dimension))) - 2
 
         # Adjust based on dataset size and complexity
-        if dataset_size < 1000:
+        if dataset_size < _DEPTH_SMALL_DATASET:
             recommended = min(3, max_depth)
-        elif dataset_size < 5000:
+        elif dataset_size < _DEPTH_MEDIUM_DATASET:
             recommended = min(4, max_depth)
         else:
             recommended = min(5, max_depth)
 
         # Adjust for number of classes
-        if num_classes > 20:
+        if num_classes > _DEPTH_MANY_CLASSES:
             recommended = min(recommended + 1, max_depth)
 
         return max(2, recommended)  # At least 2 blocks
