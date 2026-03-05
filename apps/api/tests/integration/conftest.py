@@ -11,7 +11,7 @@ import io
 import subprocess
 import time
 from pathlib import Path
-from typing import Generator, Tuple
+from typing import Generator
 
 import httpx
 import numpy as np
@@ -119,7 +119,7 @@ def built_image() -> Generator[str, None, None]:
 @pytest.fixture(scope="session")
 def api_server(
     built_image: str,
-) -> Generator[Tuple[str, str], None, None]:
+) -> Generator[tuple[str, str], None, None]:
     """Start the API container and wait until it is healthy.
 
     Yields ``(base_url, api_key)`` so tests can construct their own clients
@@ -151,7 +151,7 @@ def api_server(
 
 
 @pytest.fixture(scope="session")
-def authed(api_server: Tuple[str, str]) -> Generator[httpx.Client, None, None]:
+def authed(api_server: tuple[str, str]) -> Generator[httpx.Client, None, None]:
     """httpx.Client with correct API key header."""
     base_url, api_key = api_server
     with httpx.Client(
@@ -163,7 +163,7 @@ def authed(api_server: Tuple[str, str]) -> Generator[httpx.Client, None, None]:
 
 
 @pytest.fixture(scope="session")
-def anon(api_server: Tuple[str, str]) -> Generator[httpx.Client, None, None]:
+def anon(api_server: tuple[str, str]) -> Generator[httpx.Client, None, None]:
     """httpx.Client with no authentication headers."""
     base_url, _ = api_server
     with httpx.Client(base_url=base_url, timeout=30) as client:
@@ -171,7 +171,7 @@ def anon(api_server: Tuple[str, str]) -> Generator[httpx.Client, None, None]:
 
 
 @pytest.fixture(scope="session")
-def wrong_key(api_server: Tuple[str, str]) -> Generator[httpx.Client, None, None]:
+def wrong_key(api_server: tuple[str, str]) -> Generator[httpx.Client, None, None]:
     """httpx.Client with a deliberately incorrect API key."""
     base_url, _ = api_server
     with httpx.Client(

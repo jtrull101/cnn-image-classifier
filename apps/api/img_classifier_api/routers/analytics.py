@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse
@@ -20,28 +20,30 @@ class AnalyticsSummaryResponse(BaseModel):
     """Analytics summary response."""
 
     total_predictions: int
-    predictions_by_model: Dict[str, int]
-    predictions_by_class: Dict[str, int]
+    predictions_by_model: dict[str, int]
+    predictions_by_class: dict[str, int]
     average_confidence: float
-    average_confidence_by_model: Dict[str, float]
+    average_confidence_by_model: dict[str, float]
 
 
 class ModelPerformanceResponse(BaseModel):
     """Model performance comparison response."""
 
-    models: Dict[str, Dict[str, Any]]
+    models: dict[str, dict[str, Any]]
 
+
+_SUMMARY_TOP_N = 3  # Maximum rows shown per section in the HTMX summary widget
 
 router = APIRouter()
 
 
-@router.get("/analytics/summary")
+@router.get("/analytics/summary", response_model=None)
 async def get_summary(
     request: Request,
-    start_date: Optional[datetime] = Query(None, description="Filter start date"),
-    end_date: Optional[datetime] = Query(None, description="Filter end date"),
+    start_date: datetime | None = Query(None, description="Filter start date"),
+    end_date: datetime | None = Query(None, description="Filter end date"),
     db: Session = Depends(get_db),
-):
+) -> HTMLResponse | AnalyticsSummaryResponse:
     """
     Get overall analytics summary.
 
@@ -73,7 +75,7 @@ async def get_summary(
         predictions_by_class = summary.get("predictions_by_class", {})
 
         model_rows = []
-        for model, count in list(predictions_by_model.items())[:3]:
+        for model, count in list(predictions_by_model.items())[:_SUMMARY_TOP_N]:
             model_rows.append(
                 f"""
                 <div class="flex justify-between text-sm py-1">
@@ -84,7 +86,7 @@ async def get_summary(
             )
 
         class_rows = []
-        for cls, count in list(predictions_by_class.items())[:3]:
+        for cls, count in list(predictions_by_class.items())[:_SUMMARY_TOP_N]:
             class_rows.append(
                 f"""
                 <div class="flex justify-between text-sm py-1">
@@ -124,10 +126,10 @@ async def get_summary(
 
 @router.get("/analytics/performance", response_model=ModelPerformanceResponse)
 async def get_performance(
-    start_date: Optional[datetime] = Query(None, description="Filter start date"),
-    end_date: Optional[datetime] = Query(None, description="Filter end date"),
+    start_date: datetime | None = Query(None, description="Filter start date"),
+    end_date: datetime | None = Query(None, description="Filter end date"),
     db: Session = Depends(get_db),
-):
+) -> ModelPerformanceResponse:
     """
     Get detailed model performance comparison.
 
@@ -172,11 +174,11 @@ async def get_performance(
         .group_by(PredictionHistory.model_name, PredictionHistory.predicted_class)
         .all()
     )
-    class_dist_by_model: Dict[str, Dict[str, int]] = defaultdict(dict)
+    class_dist_by_model: dict[str, dict[str, int]] = defaultdict(dict)
     for mn, predicted_class, count in all_class_distributions:
         class_dist_by_model[mn][predicted_class] = count
 
-    models_data: Dict[str, Dict[str, Any]] = {}
+    models_data: dict[str, dict[str, Any]] = {}
     for model_name, total, avg_conf, min_conf, max_conf in model_stats:
         models_data[model_name] = {
             "total_predictions": total,

@@ -2,7 +2,6 @@
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List, Tuple
 
 import numpy as np
 from img_classifier_config import BaseConfig
@@ -22,11 +21,11 @@ class BaseDataLoader(ABC):
             config: Configuration object containing data settings
         """
         self.config = config
-        self.categories: List[str] = []
+        self.categories: list[str] = []
         self.num_categories: int = 0
 
     @abstractmethod
-    def load_train_data(self) -> Tuple[np.ndarray, np.ndarray]:
+    def load_train_data(self) -> tuple[np.ndarray, np.ndarray]:
         """Load training data.
 
         Returns:
@@ -35,7 +34,7 @@ class BaseDataLoader(ABC):
         pass
 
     @abstractmethod
-    def load_test_data(self) -> Tuple[np.ndarray, np.ndarray]:
+    def load_test_data(self) -> tuple[np.ndarray, np.ndarray]:
         """Load test data.
 
         Returns:
@@ -61,7 +60,7 @@ class BaseDataLoader(ABC):
         """
         pass
 
-    def get_categories(self, data_path: Path) -> List[str]:
+    def get_categories(self, data_path: Path) -> list[str]:
         """Get list of categories from a directory.
 
         Args:
@@ -80,7 +79,7 @@ class BaseDataLoader(ABC):
 
     def split_data(
         self, X: np.ndarray, y: np.ndarray, split_ratio: float = 0.5
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Split data into two sets.
 
         Args:
@@ -102,7 +101,7 @@ class BaseDataLoader(ABC):
 
     def reduce_dataset(
         self, X: np.ndarray, y: np.ndarray, percent: float
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Reduce dataset to a percentage of original size.
 
         Args:

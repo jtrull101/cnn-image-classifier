@@ -12,7 +12,12 @@ _api_key_header = APIKeyHeader(name=_API_KEY_HEADER_NAME, auto_error=False)
 
 
 def _get_configured_api_key() -> str | None:
-    """Return the configured API key, or None if authentication is disabled."""
+    """Return the configured API key, or None if authentication is disabled.
+
+    Reads from the environment on every call (rather than caching at module
+    load time) so that tests can change the key at runtime via
+    ``monkeypatch.setenv`` without reloading the module.
+    """
     value = os.environ.get(_API_KEY_ENV_VAR, "").strip()
     return value if value else None
 

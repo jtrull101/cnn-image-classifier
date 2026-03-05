@@ -4,7 +4,6 @@ import logging
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from img_classifier_config import BaseConfig, DatasetConfig, DatasetDetector
 from img_classifier_data import BaseDataLoader, ImageDataLoader
@@ -49,10 +48,10 @@ class TrainingOrchestrator:
     def __init__(
         self,
         config: BaseConfig,
-        data_loader: Optional[BaseDataLoader] = None,
+        data_loader: BaseDataLoader | None = None,
         optimize_hyperparameters: bool = False,
         optimizer_type: OptimizerType = OptimizerType.RANDOM,
-        search_space: Optional[HyperparameterSpace] = None,
+        search_space: HyperparameterSpace | None = None,
         max_trials: int = 20,
     ):
         """Initialize the orchestrator.
@@ -72,16 +71,16 @@ class TrainingOrchestrator:
         self.search_space = search_space
         self.max_trials = max_trials
 
-        self.optimizer: Optional[HyperparameterOptimizer] = None
-        self.best_model: Optional[BaseModel] = None
-        self.best_config: Optional[BaseConfig] = None
+        self.optimizer: HyperparameterOptimizer | None = None
+        self.best_model: BaseModel | None = None
+        self.best_config: BaseConfig | None = None
 
     @classmethod
     def from_dataset_path(
         cls,
         dataset_path: Path,
-        project_name: Optional[str] = None,
-        working_dir: Optional[Path] = None,
+        project_name: str | None = None,
+        working_dir: Path | None = None,
         **kwargs,
     ) -> "TrainingOrchestrator":
         """Create orchestrator by auto-detecting dataset.

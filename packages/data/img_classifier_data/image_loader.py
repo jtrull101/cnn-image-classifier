@@ -3,7 +3,6 @@
 import logging
 import pickle
 from pathlib import Path
-from typing import Optional, Tuple
 
 import cv2
 import numpy as np
@@ -19,6 +18,8 @@ from tqdm import tqdm
 from .base_loader import BaseDataLoader
 
 logger = logging.getLogger(__name__)
+
+_PIXEL_MAX = 255.0
 
 
 class ImageDataLoader(BaseDataLoader):
@@ -103,7 +104,7 @@ class ImageDataLoader(BaseDataLoader):
 
         return True
 
-    def _get_cache_path(self, train: bool) -> Tuple[Path, Path]:
+    def _get_cache_path(self, train: bool) -> tuple[Path, Path]:
         """Get cache file paths for X and y data.
 
         Args:
@@ -117,7 +118,7 @@ class ImageDataLoader(BaseDataLoader):
         y_path = self.config.cache_dir / f"y_data_{split}.pkl"
         return x_path, y_path
 
-    def _load_from_cache(self, train: bool) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+    def _load_from_cache(self, train: bool) -> tuple[np.ndarray, np.ndarray] | None:
         """Load data from cache if available.
 
         Args:
@@ -162,7 +163,7 @@ class ImageDataLoader(BaseDataLoader):
         except Exception:
             logger.exception("Error saving to cache")
 
-    def _process_images(self, data_path: Path) -> Tuple[np.ndarray, np.ndarray]:
+    def _process_images(self, data_path: Path) -> tuple[np.ndarray, np.ndarray]:
         """Process images from a directory.
 
         Args:
@@ -210,14 +211,14 @@ class ImageDataLoader(BaseDataLoader):
         y = np.array([x[1] for x in data_array])
 
         # Normalize pixel values to [0, 1]
-        X = X.astype("float32") / 255.0
+        X = X.astype("float32") / _PIXEL_MAX
 
         # Reshape to proper format
         X = X.reshape(-1, *self.config.image_size, self.config.color_channels)
 
         return X, y
 
-    def load_train_data(self) -> Tuple[np.ndarray, np.ndarray]:
+    def load_train_data(self) -> tuple[np.ndarray, np.ndarray]:
         """Load training data.
 
         Returns:
@@ -239,7 +240,7 @@ class ImageDataLoader(BaseDataLoader):
 
         return X, y
 
-    def load_test_data(self) -> Tuple[np.ndarray, np.ndarray]:
+    def load_test_data(self) -> tuple[np.ndarray, np.ndarray]:
         """Load test data.
 
         Returns:

@@ -75,13 +75,12 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture(scope="session")
-def test_data_dir() -> Generator[Path]:
-    """Provide a temporary directory for test data that persists across the session."""
-    temp_dir = Path("./test_data_temp")
-    temp_dir.mkdir(exist_ok=True)
-    yield temp_dir
-    if temp_dir.exists():
-        shutil.rmtree(temp_dir, ignore_errors=True)
+def test_data_dir(tmp_path_factory) -> Generator[Path]:
+    """Provide a temporary directory for test data that persists across the session.
+
+    Uses tmp_path_factory (xdist-aware) to avoid race conditions under -n auto.
+    """
+    yield tmp_path_factory.mktemp("test_data")
 
 
 @pytest.fixture(scope="function")
@@ -187,12 +186,12 @@ def mock_data_loader(mock_config):
     loader.config = mock_config
 
     # Mock data loading methods
-    x_train = np.random.rand(100, 128, 128, 3).astype("float32")
+    X_train = np.random.rand(100, 128, 128, 3).astype("float32")
     y_train = np.random.randint(0, 4, 100)
     x_test = np.random.rand(40, 128, 128, 3).astype("float32")
     y_test = np.random.randint(0, 4, 40)
 
-    loader.load_train_data = Mock(return_value=(x_train, y_train))
+    loader.load_train_data = Mock(return_value=(X_train, y_train))
     loader.load_test_data = Mock(return_value=(x_test, y_test))
     loader.split_data = Mock(return_value=(x_test[:20], x_test[20:], y_test[:20], y_test[20:]))
     loader.reduce_dataset = Mock(side_effect=lambda x, y: (x[: len(x) // 2], y[: len(y) // 2]))

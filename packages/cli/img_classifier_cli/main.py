@@ -2,7 +2,6 @@
 
 import sys
 from pathlib import Path
-from typing import Optional
 
 import click
 from img_classifier_config import DatasetConfig, DatasetDetector
@@ -27,7 +26,7 @@ def cli() -> None:
 @click.argument("dataset_path", type=click.Path(exists=True, path_type=Path))
 @click.option("--project-name", "-n", help="Name for the project")
 @click.option("--working-dir", "-w", type=click.Path(path_type=Path), help="Working directory")
-def info(dataset_path: Path, project_name: Optional[str], working_dir: Optional[Path]) -> None:
+def info(dataset_path: Path, project_name: str | None, working_dir: Path | None) -> None:
     """Display information about a dataset."""
     detector = DatasetDetector(dataset_path)
     info_dict = detector.detect()
@@ -68,13 +67,13 @@ def info(dataset_path: Path, project_name: Optional[str], working_dir: Optional[
 @click.option("--plot/--no-plot", default=False, help="Plot training history")
 def train(
     dataset_path: Path,
-    project_name: Optional[str],
-    working_dir: Optional[Path],
-    config: Optional[Path],
-    epochs: Optional[int],
-    batch_size: Optional[int],
-    learning_rate: Optional[float],
-    architecture: Optional[str],
+    project_name: str | None,
+    working_dir: Path | None,
+    config: Path | None,
+    epochs: int | None,
+    batch_size: int | None,
+    learning_rate: float | None,
+    architecture: str | None,
     plot: bool,
 ) -> None:
     """Train a model on a dataset."""
@@ -133,9 +132,9 @@ def train(
 @click.option("--quick/--full", default=False, help="Use quick search space")
 def optimize(
     dataset_path: Path,
-    project_name: Optional[str],
-    working_dir: Optional[Path],
-    config: Optional[Path],
+    project_name: str | None,
+    working_dir: Path | None,
+    config: Path | None,
     optimizer_type: str,
     max_trials: int,
     target_accuracy: float,
@@ -208,7 +207,7 @@ def optimize(
 def create_config(
     dataset_path: Path,
     output_path: Path,
-    project_name: Optional[str],
+    project_name: str | None,
     epochs: int,
     batch_size: int,
     learning_rate: float,
