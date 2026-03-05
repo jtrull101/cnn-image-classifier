@@ -17,6 +17,7 @@ from img_classifier_api.crud.predictions import (
     get_predictions,
     get_predictions_by_model,
 )
+from img_classifier_api.schemas import ExportFormat
 from img_classifier_api.database import Base
 from img_classifier_api.models.prediction import PredictionHistory  # noqa: F401 — registers table with Base
 
@@ -221,24 +222,24 @@ class TestGetPredictionsByModel:
 class TestExportPredictions:
     def test_json_export_is_valid_list(self, db):
         create_prediction(db, _pred())
-        parsed = json.loads(export_predictions(db, format="json"))
+        parsed = json.loads(export_predictions(db, export_format=ExportFormat.JSON))
         assert isinstance(parsed, list)
         assert len(parsed) == 1
         assert parsed[0]["image_name"] == "test.jpg"
 
     def test_json_export_empty_db_returns_empty_array(self, db):
-        parsed = json.loads(export_predictions(db, format="json"))
+        parsed = json.loads(export_predictions(db, export_format=ExportFormat.JSON))
         assert parsed == []
 
     def test_csv_export_contains_headers_and_data(self, db):
         create_prediction(db, _pred())
-        csv_text = export_predictions(db, format="csv")
+        csv_text = export_predictions(db, export_format=ExportFormat.CSV)
         assert "image_name" in csv_text
         assert "model_name" in csv_text
         assert "test.jpg" in csv_text
 
     def test_csv_first_line_is_header_row(self, db):
-        csv_text = export_predictions(db, format="csv")
+        csv_text = export_predictions(db, export_format=ExportFormat.CSV)
         headers = csv_text.strip().split("\n")[0]
         assert "id" in headers
         assert "confidence" in headers
@@ -246,7 +247,9 @@ class TestExportPredictions:
     def test_json_export_filters_by_model(self, db):
         create_prediction(db, _pred(model_name="model_a"))
         create_prediction(db, _pred(model_name="model_b"))
-        parsed = json.loads(export_predictions(db, format="json", model_name="model_a"))
+        parsed = json.loads(
+            export_predictions(db, export_format=ExportFormat.JSON, model_name="model_a")
+        )
         assert len(parsed) == 1
         assert parsed[0]["model_name"] == "model_a"
 
@@ -254,7 +257,9 @@ class TestExportPredictions:
         create_prediction(db, _pred())  # created now
         start = datetime(2000, 1, 1, tzinfo=timezone.utc)
         end = datetime(2000, 12, 31, tzinfo=timezone.utc)
-        parsed = json.loads(export_predictions(db, format="json", start_date=start, end_date=end))
+        parsed = json.loads(
+            export_predictions(db, export_format=ExportFormat.JSON, start_date=start, end_date=end)
+        )
         assert parsed == []
 
 

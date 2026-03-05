@@ -153,13 +153,17 @@ class DatasetDetector:
             dataset_path: Root path of the dataset
         """
         self.dataset_path = Path(dataset_path)
+        self._cached_info: dict[str, Any] | None = None
 
     def detect(self) -> dict[str, Any]:
-        """Detect dataset characteristics.
+        """Detect dataset characteristics (result is cached after the first call).
 
         Returns:
             Dictionary with dataset information
         """
+        if self._cached_info is not None:
+            return self._cached_info
+
         if not self.dataset_path.exists():
             raise ValueError(f"Dataset path does not exist: {self.dataset_path}")
 
@@ -196,7 +200,7 @@ class DatasetDetector:
         # Calculate recommended settings
         complexity = self._recommend_complexity(total_images, len(classes))
 
-        return {
+        self._cached_info = {
             "dataset_path": str(self.dataset_path),
             "has_train_test_split": has_train_test,
             "num_classes": len(classes),
@@ -207,6 +211,7 @@ class DatasetDetector:
             "recommended_complexity": complexity,
             "is_balanced": self._check_balance(class_distribution),
         }
+        return self._cached_info
 
     def _detect_train_test_split(self) -> bool:
         """Check if dataset has train/test directory structure.
@@ -321,7 +326,8 @@ class DatasetDetector:
 
         config_dict = {
             "project_name": project_name or self.dataset_path.name,
-            "working_dir": working_dir or Path(f"/tmp/{self.dataset_path.name}_classifier/"),
+            "working_dir": working_dir
+            or Path.home() / ".local" / "share" / "img_classifier" / self.dataset_path.name,
             "dataset_name": self.dataset_path.name,
             "data_path": self.dataset_path,
             "num_classes": info["num_classes"],

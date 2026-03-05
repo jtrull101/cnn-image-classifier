@@ -24,7 +24,7 @@ class BaseConfig(BaseSettings):
 
     # Project settings
     project_name: str = "img_classifier"
-    working_dir: Path = Field(default=Path("/tmp/img_classifier/"))
+    working_dir: Path = Field(default=Path.home() / ".local" / "share" / "img_classifier")
 
     # Data settings
     dataset_name: str = "dataset"

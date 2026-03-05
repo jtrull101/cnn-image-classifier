@@ -10,6 +10,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from img_classifier_api.models.prediction import PredictionHistory
+from img_classifier_api.schemas import ExportFormat
 
 
 def create_prediction(db: Session, prediction_data: dict[str, Any]) -> PredictionHistory:
@@ -107,6 +108,31 @@ def delete_prediction(db: Session, prediction_id: int) -> bool:
     return False
 
 
+def count_predictions(
+    db: Session,
+    model_name: str | None = None,
+    user_session: str | None = None,
+) -> int:
+    """Count predictions with optional filters.
+
+    Args:
+        db: Database session
+        model_name: Filter by model name (optional)
+        user_session: Filter by user session (optional)
+
+    Returns:
+        int: Number of matching prediction records
+    """
+    from sqlalchemy import func
+
+    query = db.query(func.count(PredictionHistory.id))
+    if model_name:
+        query = query.filter(PredictionHistory.model_name == model_name)
+    if user_session:
+        query = query.filter(PredictionHistory.user_session == user_session)
+    return query.scalar() or 0
+
+
 def get_predictions_by_model(
     db: Session,
     model_name: str,
@@ -136,7 +162,7 @@ def get_predictions_by_model(
 
 def export_predictions(
     db: Session,
-    format: str = "json",
+    export_format: ExportFormat = ExportFormat.JSON,
     model_name: str | None = None,
     start_date: datetime | None = None,
     end_date: datetime | None = None,
@@ -166,7 +192,7 @@ def export_predictions(
 
     predictions = query.order_by(PredictionHistory.timestamp.desc()).all()
 
-    if format == "csv":
+    if export_format == ExportFormat.CSV:
         output = io.StringIO()
         writer = csv.DictWriter(
             output,
@@ -192,7 +218,7 @@ def export_predictions(
                 }
             )
         return output.getvalue()
-    else:  # JSON format
+    else:  # ExportFormat.JSON
         return json.dumps([pred.to_dict() for pred in predictions], indent=2)
 
 

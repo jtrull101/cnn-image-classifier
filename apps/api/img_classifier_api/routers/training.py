@@ -361,7 +361,11 @@ async def run_training_job(job_id: str, request: TrainingJobRequest) -> None:
                     learning_rates=[0.0001, 0.0005, 0.001, 0.005, 0.01],
                     batch_sizes=[16, 32, 64, 128],
                     dropout_rates=[0.2, 0.3, 0.4, 0.5],
-                    architectures=["simple", "medium", "deep"],
+                    architectures=[
+                        ArchitectureComplexity.SIMPLE,
+                        ArchitectureComplexity.MEDIUM,
+                        ArchitectureComplexity.DEEP,
+                    ],
                     num_epochs=[20, 30, 40, 50],
                 )
 

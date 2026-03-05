@@ -50,7 +50,7 @@ class BaseModel(ABC):
         loss: str | None = None,
         metrics: list[str] | None = None,
         learning_rate: float | None = None,
-    ):
+    ) -> None:
         """Compile the model.
 
         Args:

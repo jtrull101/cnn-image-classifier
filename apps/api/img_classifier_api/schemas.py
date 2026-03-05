@@ -1,6 +1,15 @@
 """Shared Pydantic models for API requests and responses."""
 
+from enum import StrEnum
+
 from pydantic import BaseModel, Field
+
+
+class ExportFormat(StrEnum):
+    """Supported export formats for prediction history."""
+
+    JSON = "json"
+    CSV = "csv"
 
 
 class MessageResponse(BaseModel):
