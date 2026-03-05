@@ -1,15 +1,18 @@
 """Router for analytics endpoints."""
 
+from collections import defaultdict
 from datetime import datetime
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from img_classifier_api.crud.predictions import get_analytics_summary
 from img_classifier_api.database import get_db
+from img_classifier_api.models.prediction import PredictionHistory
 from img_classifier_api.routers._constants import _HTMX_REQUEST_HEADER, _HTMX_REQUEST_VALUE
 
 
@@ -138,11 +141,6 @@ async def get_performance(
     Returns:
         ModelPerformanceResponse: Performance metrics by model
     """
-    from collections import defaultdict
-
-    from img_classifier_api.models.prediction import PredictionHistory
-    from sqlalchemy import func
-
     query = db.query(PredictionHistory)
 
     if start_date:

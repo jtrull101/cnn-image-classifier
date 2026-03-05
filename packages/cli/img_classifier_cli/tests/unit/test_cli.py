@@ -160,9 +160,7 @@ class TestTrainCommand:
             MockConfig.from_yaml.return_value = mock_cfg
             MockOrchestrator.return_value.run.return_value = {}
 
-            result = runner.invoke(
-                cli, ["train", str(dataset_dir), "--config", str(config_file)]
-            )
+            result = runner.invoke(cli, ["train", str(dataset_dir), "--config", str(config_file)])
 
         assert result.exit_code == 0
         MockConfig.from_yaml.assert_called_once()
@@ -298,9 +296,7 @@ class TestOptimizeCommand:
 class TestCreateConfigCommand:
     """Tests for the `create-config` subcommand."""
 
-    def test_create_config_success(
-        self, runner: CliRunner, dataset_dir: Path, tmp_path: Path
-    ):
+    def test_create_config_success(self, runner: CliRunner, dataset_dir: Path, tmp_path: Path):
         """create-config should write config to output path."""
         output = tmp_path / "config.yaml"
 
@@ -308,9 +304,7 @@ class TestCreateConfigCommand:
             mock_cfg = MagicMock()
             MockDetector.return_value.create_config.return_value = mock_cfg
 
-            result = runner.invoke(
-                cli, ["create-config", str(dataset_dir), str(output)]
-            )
+            result = runner.invoke(cli, ["create-config", str(dataset_dir), str(output)])
 
         assert result.exit_code == 0
         mock_cfg.to_yaml.assert_called_once_with(output)
@@ -332,9 +326,7 @@ class TestCreateConfigCommand:
 class TestPredictCommand:
     """Tests for the `predict` subcommand."""
 
-    def test_predict_success(
-        self, runner: CliRunner, model_file: Path, image_file: Path
-    ):
+    def test_predict_success(self, runner: CliRunner, model_file: Path, image_file: Path):
         """predict should output predicted class and confidence."""
         import numpy as np
 
@@ -358,9 +350,12 @@ class TestPredictCommand:
                     "predict",
                     str(model_file),
                     str(image_file),
-                    "--class-names", "cat",
-                    "--class-names", "dog",
-                    "--class-names", "fish",
+                    "--class-names",
+                    "cat",
+                    "--class-names",
+                    "dog",
+                    "--class-names",
+                    "fish",
                 ],
             )
 
@@ -378,15 +373,11 @@ class TestPredictCommand:
             patch("tensorflow.keras.models.load_model", return_value=mock_model),
             patch("cv2.imread", return_value=None),  # Simulate decode failure
         ):
-            result = runner.invoke(
-                cli, ["predict", str(model_file), str(image_file)]
-            )
+            result = runner.invoke(cli, ["predict", str(model_file), str(image_file)])
 
         assert result.exit_code == 1
 
-    def test_predict_no_class_names(
-        self, runner: CliRunner, model_file: Path, image_file: Path
-    ):
+    def test_predict_no_class_names(self, runner: CliRunner, model_file: Path, image_file: Path):
         """predict without --class-names should show class index."""
         import numpy as np
 

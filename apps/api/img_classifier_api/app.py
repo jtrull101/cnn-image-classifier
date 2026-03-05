@@ -13,7 +13,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import tensorflow as tf
 from fastapi import (
@@ -44,10 +44,9 @@ static_dir.mkdir(exist_ok=True)
 
 def _default_model_dirs() -> List[Path]:
     """Return the default model search directories, respecting env config."""
+    _model_dir_env = os.environ.get("IMG_CLASSIFIER_MODEL_DIR")
     dirs = [
-        Path(os.environ.get("IMG_CLASSIFIER_MODEL_DIR", "")).expanduser()
-        if os.environ.get("IMG_CLASSIFIER_MODEL_DIR")
-        else None,
+        Path(_model_dir_env).expanduser() if _model_dir_env else None,
         Path(
             os.environ.get(
                 "IMG_CLASSIFIER_WORKING_DIR",
@@ -104,7 +103,7 @@ class ModelManager:
                     acc_str = before_percent[before_percent.rfind("_") + 1 :]
                     accuracy = float(acc_str) / 100.0
             except (ValueError, IndexError):
-                pass
+                logger.debug("Could not parse accuracy from filename %r", filename)
 
         metadata_path = model_path.with_suffix(".json")
         if metadata_path.exists():
@@ -115,7 +114,7 @@ class ModelManager:
                     if "accuracy" in metadata:
                         accuracy = metadata["accuracy"]
             except (FileNotFoundError, json.JSONDecodeError, OSError):
-                pass
+                logger.warning("Failed to load model metadata from %s", metadata_path)
 
         self.models[model_name] = model
         self.model_info[model_name] = ModelInfo(
@@ -158,13 +157,13 @@ class ModelManager:
 
         return self.model_info[model_name]
 
-    def set_current_model(self, model_name: str):
+    def set_current_model(self, model_name: str) -> None:
         """Set the current active model."""
         if model_name not in self.models:
             raise ValueError(f"Model not found: {model_name}")
         self.current_model_name = model_name
 
-    def auto_load_best_model(self):
+    def auto_load_best_model(self) -> None:
         """Automatically load the best available model."""
         available = self.discover_models()
         if not available:
@@ -187,7 +186,7 @@ class ModelManager:
                             best_accuracy = accuracy
                             best_model = model_path
                 except (ValueError, IndexError):
-                    pass
+                    logger.debug("Could not parse accuracy from filename %r", filename)
 
         if best_model:
             self.load_model(best_model)
@@ -215,7 +214,7 @@ class CSPMiddleware(BaseHTTPMiddleware):
         "font-src 'self';"
     )
 
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(self, request: Request, call_next: Any) -> Response:
         response = await call_next(request)
         content_type = response.headers.get("content-type", "")
         if "text/html" in content_type:
@@ -271,7 +270,7 @@ app.include_router(training.router, prefix="/api", tags=["training"], dependenci
 
 
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
+async def home(request: Request) -> HTMLResponse:
     """Serve the main web interface."""
     try:
         info = model_manager.get_info()
@@ -292,7 +291,7 @@ async def home(request: Request):
 
 
 @app.get("/health")
-async def health_check():
+async def health_check() -> Dict[str, object]:
     """Health check endpoint."""
     return {
         "status": "healthy",
@@ -303,7 +302,7 @@ async def health_check():
 
 
 @app.get("/train", response_class=HTMLResponse)
-async def training_page(request: Request):
+async def training_page(request: Request) -> HTMLResponse:
     """Serve the training interface."""
     return templates.TemplateResponse(request=request, name="training.html", context={})
 

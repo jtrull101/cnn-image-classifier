@@ -4,7 +4,7 @@ import logging
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
 
 from img_classifier_config import BaseConfig, DatasetConfig, DatasetDetector
 from img_classifier_data import BaseDataLoader, ImageDataLoader
@@ -13,6 +13,7 @@ from img_classifier_models import ArchitectureFactory, BaseModel
 from .optimizer import (
     HyperparameterOptimizer,
     HyperparameterSpace,
+    OptimizerType,
     TrialResult,
     create_optimizer,
 )
@@ -50,8 +51,7 @@ class TrainingOrchestrator:
         config: BaseConfig,
         data_loader: Optional[BaseDataLoader] = None,
         optimize_hyperparameters: bool = False,
-        # TODO: enum not literal?
-        optimizer_type: Literal["grid", "random", "bayesian"] = "random",
+        optimizer_type: OptimizerType = OptimizerType.RANDOM,
         search_space: Optional[HyperparameterSpace] = None,
         max_trials: int = 20,
     ):
@@ -124,9 +124,7 @@ class TrainingOrchestrator:
         logger.info("Project: %s", self.config.project_name)
         logger.info("Dataset: %s", self.config.dataset_name)
         logger.info("Classes: %d", self.config.num_classes)
-        logger.info(
-            "Optimization: %s", "Enabled" if self.optimize_hyperparameters else "Disabled"
-        )
+        logger.info("Optimization: %s", "Enabled" if self.optimize_hyperparameters else "Disabled")
 
         # Prepare dataset
         if not self._prepare_dataset():
@@ -210,7 +208,9 @@ class TrainingOrchestrator:
             # Get hyperparameters for this trial
             hyperparams = self.optimizer.suggest_hyperparameters(trial_number)
 
-            logger.info("Trial %d/%d — hyperparameters: %s", trial_number, self.max_trials, hyperparams)
+            logger.info(
+                "Trial %d/%d — hyperparameters: %s", trial_number, self.max_trials, hyperparams
+            )
 
             # Create config for this trial
             trial_config = self._create_trial_config(hyperparams)

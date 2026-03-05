@@ -3,7 +3,7 @@
 from typing import Optional
 
 import tensorflow as tf
-from img_classifier_config import BaseConfig
+from img_classifier_config import ArchitectureComplexity, BaseConfig
 from keras.layers import Conv2D, Dense, Dropout, Flatten, Input, MaxPooling2D
 from keras.models import Sequential
 
@@ -28,7 +28,9 @@ class CnnClassifier(BaseModel):
         self.seed = seed
         tf.random.set_seed(seed)
 
-    def build(self, complexity: Optional[str] = None, seed: Optional[int] = None) -> tf.keras.Model:
+    def build(
+        self, complexity: Optional[ArchitectureComplexity] = None, seed: Optional[int] = None
+    ) -> tf.keras.Model:
         """Build the CNN architecture.
 
         Args:
@@ -42,9 +44,11 @@ class CnnClassifier(BaseModel):
             tf.random.set_seed(seed)
             self.seed = seed
 
-        complexity_key = (
-            complexity or getattr(self.config, "architecture_complexity", "medium") or "medium"
-        ).lower()
+        complexity_key = str(
+            complexity
+            or getattr(self.config, "architecture_complexity", ArchitectureComplexity.MEDIUM)
+            or ArchitectureComplexity.MEDIUM
+        )
         filters_by_complexity = {
             "simple": [32, 64, 64, 128],
             "medium": [64, 64, 64, 128],

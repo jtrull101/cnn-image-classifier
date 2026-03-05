@@ -6,12 +6,21 @@ import random
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from img_classifier_config import BaseConfig
 
 logger = logging.getLogger(__name__)
+
+
+class OptimizerType(StrEnum):
+    """Hyperparameter optimizer algorithm types."""
+
+    GRID = "grid"
+    RANDOM = "random"
+    BAYESIAN = "bayesian"
 
 
 @dataclass
@@ -328,7 +337,7 @@ class BayesianOptimizer(HyperparameterOptimizer):
 
 
 def create_optimizer(
-    optimizer_type: str,
+    optimizer_type: OptimizerType,
     config: BaseConfig,
     search_space: Optional[HyperparameterSpace] = None,
     **kwargs,
@@ -347,11 +356,12 @@ def create_optimizer(
     if search_space is None:
         search_space = HyperparameterSpace.default()
 
-    if optimizer_type.lower() == "grid":
+    optimizer_type = OptimizerType(str(optimizer_type).lower())
+    if optimizer_type == OptimizerType.GRID:
         return GridSearchOptimizer(config, search_space, **kwargs)
-    elif optimizer_type.lower() == "random":
+    elif optimizer_type == OptimizerType.RANDOM:
         return RandomSearchOptimizer(config, search_space, **kwargs)
-    elif optimizer_type.lower() == "bayesian":
+    elif optimizer_type == OptimizerType.BAYESIAN:
         return BayesianOptimizer(config, search_space, **kwargs)
     else:
         raise ValueError(f"Unknown optimizer type: {optimizer_type}")

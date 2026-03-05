@@ -1,11 +1,10 @@
 """Dynamic CNN architecture generator based on dataset characteristics."""
 
 import math
-from enum import Enum
 from typing import Dict, List, Optional
 
 import tensorflow as tf
-from img_classifier_config import BaseConfig
+from img_classifier_config import ArchitectureComplexity, BaseConfig
 from keras.layers import (
     BatchNormalization,
     Conv2D,
@@ -17,15 +16,6 @@ from keras.layers import (
     MaxPooling2D,
 )
 from keras.models import Sequential
-
-
-class ArchitectureComplexity(Enum):
-    """Enum for architecture complexity levels."""
-
-    SIMPLE = "simple"
-    MEDIUM = "medium"
-    DEEP = "deep"
-    CUSTOM = "custom"
 
 
 class ArchitectureSpec:
@@ -69,15 +59,14 @@ class ArchitectureFactory:
     @staticmethod
     def create(
         config: BaseConfig,
-        complexity: Optional[str] = None,
+        complexity: Optional[ArchitectureComplexity] = None,
         custom_spec: Optional[ArchitectureSpec] = None,
     ) -> tf.keras.Model:
         """Create a CNN model based on configuration and complexity.
 
         Args:
             config: Configuration object with dataset info
-            complexity: Complexity level ('simple', 'medium', 'deep', 'auto')
-                If None, uses config.architecture_complexity if available
+            complexity: Complexity level. If None, uses config.architecture_complexity if available.
             custom_spec: Custom architecture specification
 
         Returns:
@@ -88,9 +77,10 @@ class ArchitectureFactory:
 
         # Determine complexity
         if complexity is None:
-            complexity = str(getattr(config, "architecture_complexity", "auto"))
+            raw = getattr(config, "architecture_complexity", ArchitectureComplexity.AUTO)
+            complexity = ArchitectureComplexity(str(raw).lower())
 
-        if complexity == "auto":
+        if complexity == ArchitectureComplexity.AUTO:
             complexity = ArchitectureFactory._auto_select_complexity(config)
 
         # Get architecture spec based on complexity
