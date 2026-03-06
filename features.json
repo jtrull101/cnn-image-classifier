@@ -400,10 +400,14 @@
       "phase": "phase_3",
       "name": "Refactor and Add API Endpoints",
       "description": "Organize endpoints into routers and add new endpoints for history, batch, comparison",
-      "status": "pending",
+      "status": "completed",
       "priority": "critical",
       "estimated_hours": 4,
-      "dependencies": ["feature_3_4", "feature_2_1"]
+      "actual_hours": 0,
+      "started_at": "2026-03-06T00:03:00Z",
+      "completed_at": "2026-03-06T00:03:00Z",
+      "dependencies": ["feature_3_4", "feature_2_1"],
+      "notes": "All routers already implemented: models, predictions, history, analytics, training — code preceded feature tracker"
     },
 
     "feature_3_6": {
@@ -563,13 +567,13 @@
 
   "progress_tracking": {
     "total_features": 24,
-    "completed_features": 11,
+    "completed_features": 12,
     "in_progress_features": 0,
     "blocked_features": 0,
-    "pending_features": 13,
+    "pending_features": 12,
     "total_estimated_hours": 71,
     "elapsed_hours": 7.25,
-    "completion_percentage": 45.8,
+    "completion_percentage": 50.0,
     "phases_completed": 2,
     "phases_remaining": 4
   },
