@@ -353,6 +353,7 @@ function dashboardData() {
                     const data = await modelsRes.json();
                     this.stats.modelsLoaded = data.models.length;
                     this.stats.activeModel = data.current_model;
+                    Alpine.store('app').setActiveModel(data.current_model);
                 }
             } catch (error) {
                 console.error('Failed to load stats:', error);

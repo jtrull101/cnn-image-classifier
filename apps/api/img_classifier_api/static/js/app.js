@@ -9,20 +9,35 @@ document.addEventListener('alpine:init', () => {
         loadingMessage: 'Loading...',
         wsConnected: false,   // updated by websocket.js via Alpine.store('app').wsConnected
         currentPrediction: null,
-        
+        activeModel: null,    // updated by fetchActiveModel() and model selection
+
         setLoading(loading, message = 'Loading...') {
             this.loading = loading;
             this.loadingMessage = message;
         },
-        
+
         setPrediction(prediction) {
             this.currentPrediction = prediction;
         },
-        
+
         clearPrediction() {
             this.currentPrediction = null;
+        },
+
+        setActiveModel(name) {
+            this.activeModel = name;
         }
     });
+
+    // Fetch and populate the active model name from the API
+    fetch('/api/models')
+        .then(r => (r.ok ? r.json() : null))
+        .then(data => {
+            if (data && window.Alpine) {
+                Alpine.store('app').activeModel = data.current_model;
+            }
+        })
+        .catch(() => {});
     
     // History management store
     Alpine.store('history', {
@@ -323,15 +338,16 @@ function modelSelectorComponent() {
         
         async selectModel(modelName) {
             if (modelName === this.currentModel) return;
-            
+
             try {
                 await window.utils.api.post(`/api/models/${modelName}/activate`);
                 this.currentModel = modelName;
+                Alpine.store('app').setActiveModel(modelName);
                 window.showToast(`Switched to model: ${modelName}`, 'success');
-                
+
                 // Trigger update events
-                document.body.dispatchEvent(new CustomEvent('modelChange', { 
-                    detail: { modelName } 
+                document.body.dispatchEvent(new CustomEvent('modelChange', {
+                    detail: { modelName }
                 }));
             } catch (e) {
                 console.error('Error switching model:', e);
