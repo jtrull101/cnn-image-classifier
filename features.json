@@ -415,10 +415,21 @@
       "phase": "phase_3",
       "name": "Add More Download Options for Datasets",
       "description": "Add downloads from GitHub releases for packaged datasets, options to download from Kaggle via CURL, and more",
-      "status": "pending",
+      "status": "completed",
       "priority": "critical",
       "estimated_hours": 4,
-      "dependencies": []
+      "actual_hours": 1,
+      "started_at": "2026-03-07T00:00:00Z",
+      "completed_at": "2026-03-07T01:00:00Z",
+      "dependencies": [],
+      "files_created": [
+        "apps/api/img_classifier_api/routers/datasets.py",
+        "apps/api/tests/unit/test_datasets_router.py"
+      ],
+      "files_affected": [
+        "apps/api/img_classifier_api/routers/__init__.py",
+        "apps/api/img_classifier_api/app.py"
+      ]
     },
 
     "feature_4_1": {
@@ -567,13 +578,13 @@
 
   "progress_tracking": {
     "total_features": 24,
-    "completed_features": 12,
+    "completed_features": 13,
     "in_progress_features": 0,
     "blocked_features": 0,
-    "pending_features": 12,
+    "pending_features": 11,
     "total_estimated_hours": 71,
-    "elapsed_hours": 7.25,
-    "completion_percentage": 50.0,
+    "elapsed_hours": 8.25,
+    "completion_percentage": 54.2,
     "phases_completed": 2,
     "phases_remaining": 4
   },

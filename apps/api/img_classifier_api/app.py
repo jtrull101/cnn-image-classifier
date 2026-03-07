@@ -31,7 +31,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from .auth import require_api_key
 from .database import init_db
-from .routers import analytics, history, models, predictions, training
+from .routers import analytics, datasets, history, models, predictions, training
 from .schemas import HealthCheckResponse, ModelInfo
 from .websocket_manager import manager as ws_manager
 
@@ -283,6 +283,7 @@ app.include_router(predictions.router, prefix="/api", tags=["predictions"], depe
 app.include_router(history.router, prefix="/api", tags=["history"], dependencies=_api_deps)
 app.include_router(analytics.router, prefix="/api", tags=["analytics"], dependencies=_api_deps)
 app.include_router(training.router, prefix="/api", tags=["training"], dependencies=_api_deps)
+app.include_router(datasets.router, prefix="/api", tags=["datasets"], dependencies=_api_deps)
 
 
 # ---------------------------------------------------------------------------
