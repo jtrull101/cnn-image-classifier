@@ -1,0 +1,529 @@
+{% extends "base.html" %}
+
+{% block title %}Predict - Image Classification System{% endblock %}
+
+{% block extra_head %}
+<style>
+.prob-bar { transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8" x-data="predictPage()">
+
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-4xl font-bold text-gray-900 mb-2">Single Image Prediction</h1>
+        <p class="text-gray-600">Upload an image and classify it with any loaded model</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <!-- Left: Upload + Options -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Upload Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Upload Image</h2>
+                    <span x-show="wsConnected" class="badge badge-success text-xs">⚡ Live</span>
+                </div>
+                <div class="card-body space-y-5">
+
+                    <!-- Drop Zone -->
+                    <div
+                        class="upload-zone relative"
+                        :class="{ 'border-blue-500 bg-blue-50': isDragging }"
+                        @click="!previewUrl && $refs.fileInput.click()"
+                        @dragover.prevent="isDragging = true"
+                        @dragleave.prevent="isDragging = false"
+                        @drop.prevent="handleDrop($event)"
+                    >
+                        <input
+                            type="file"
+                            x-ref="fileInput"
+                            accept="image/*"
+                            class="hidden"
+                            @change="handleFileSelect($event)"
+                        >
+
+                        <!-- Placeholder -->
+                        <template x-if="!previewUrl">
+                            <div class="text-center py-4">
+                                <div class="text-6xl mb-3">📤</div>
+                                <p class="text-lg font-semibold text-gray-700 mb-1">
+                                    Click to upload or drag &amp; drop
+                                </p>
+                                <p class="text-sm text-gray-500">PNG, JPG, GIF, BMP — up to 10 MB</p>
+                            </div>
+                        </template>
+
+                        <!-- Preview -->
+                        <template x-if="previewUrl">
+                            <div class="space-y-4">
+                                <img
+                                    :src="previewUrl"
+                                    class="max-h-72 mx-auto rounded-xl shadow-lg object-contain"
+                                    :alt="fileName"
+                                >
+                                <p class="text-center text-sm text-gray-500" x-text="fileName"></p>
+                                <div class="flex justify-center gap-3">
+                                    <button
+                                        type="button"
+                                        class="btn btn-secondary btn-sm"
+                                        @click.stop="clearFile()"
+                                    >
+                                        Clear
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="btn btn-primary btn-sm"
+                                        @click.stop="runPrediction()"
+                                        :disabled="isProcessing || !selectedModel"
+                                    >
+                                        <span x-show="!isProcessing">Classify Image</span>
+                                        <span x-show="isProcessing" class="flex items-center gap-2">
+                                            <span class="spinner-sm"></span>
+                                            Classifying…
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Error banner -->
+                    <div
+                        x-show="error"
+                        class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm"
+                        x-text="error"
+                    ></div>
+
+                    <!-- Progress bar (WebSocket real-time) -->
+                    <div x-show="isProcessing" class="space-y-1">
+                        <p class="text-xs text-gray-500 text-center" x-text="progressMessage"></p>
+                        <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                            <div
+                                class="h-2 bg-blue-500 rounded-full prob-bar"
+                                :style="`width: ${progress}%`"
+                            ></div>
+                        </div>
+                    </div>
+
+                    <!-- Options row -->
+                    <div class="flex flex-wrap gap-6 items-center pt-2 border-t border-gray-100">
+                        <!-- Model selector -->
+                        <div class="flex-1 min-w-[200px]">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Model</label>
+                            <select
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+                                       focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                x-model="selectedModel"
+                            >
+                                <option value="">— select a model —</option>
+                                <template x-for="m in models" :key="m.name">
+                                    <option :value="m.name" x-text="m.name + (m.accuracy ? ` (${(m.accuracy*100).toFixed(1)}%)` : '')"></option>
+                                </template>
+                            </select>
+                            <p x-show="models.length === 0" class="text-xs text-red-500 mt-1">
+                                No models loaded. <a href="/models-ui" class="underline">Load one →</a>
+                            </p>
+                        </div>
+
+                        <!-- Save to history toggle -->
+                        <div class="flex items-center gap-2">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer" x-model="saveToHistory">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2
+                                            peer-focus:ring-blue-300 rounded-full peer
+                                            peer-checked:after:translate-x-full peer-checked:after:border-white
+                                            after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                                            after:bg-white after:border-gray-300 after:border after:rounded-full
+                                            after:h-5 after:w-5 after:transition-all
+                                            peer-checked:bg-blue-600"></div>
+                            </label>
+                            <span class="text-sm text-gray-700">Save to history</span>
+                        </div>
+
+                        <!-- User session -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Session tag</label>
+                            <input
+                                type="text"
+                                class="w-36 px-3 py-2 border border-gray-300 rounded-lg text-sm
+                                       focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="optional"
+                                x-model="userSession"
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Result Card -->
+            <div class="card" x-show="result" x-cloak>
+                <div class="card-header">
+                    <h2 class="card-title">Result</h2>
+                    <span class="text-xs text-gray-400" x-text="resultModel && `Model: ${resultModel}`"></span>
+                </div>
+                <div class="card-body space-y-6">
+
+                    <!-- Top result banner -->
+                    <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 text-white text-center">
+                        <p class="text-sm font-medium opacity-80 mb-2">Predicted Class</p>
+                        <p class="text-4xl font-bold mb-4" x-text="result && result.class_name"></p>
+                        <p class="text-lg font-semibold mb-2">
+                            Confidence:
+                            <span x-text="result && (result.confidence * 100).toFixed(2) + '%'"></span>
+                        </p>
+                        <div class="confidence-bar">
+                            <div
+                                class="confidence-bar-fill"
+                                :style="`width: ${result ? result.confidence * 100 : 0}%`"
+                            ></div>
+                        </div>
+                    </div>
+
+                    <!-- Probability breakdown -->
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-700 mb-3">All Classes</h3>
+                        <div class="space-y-2">
+                            <template x-for="[cls, prob] in sortedProbs()" :key="cls">
+                                <div class="flex items-center gap-3">
+                                    <span
+                                        class="w-32 text-sm font-medium text-gray-800 truncate"
+                                        x-text="cls"
+                                    ></span>
+                                    <div class="flex-1 bg-gray-100 rounded-full h-4 overflow-hidden">
+                                        <div
+                                            class="h-4 bg-blue-500 rounded-full prob-bar"
+                                            :style="`width: ${prob * 100}%`"
+                                            :class="{ 'bg-purple-600': cls === (result && result.class_name) }"
+                                        ></div>
+                                    </div>
+                                    <span
+                                        class="w-16 text-sm text-right font-semibold text-gray-700"
+                                        x-text="(prob * 100).toFixed(2) + '%'"
+                                    ></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Chart -->
+                    <div class="chart-container" style="height:220px;">
+                        <canvas id="prob-chart"></canvas>
+                    </div>
+
+                    <!-- Classify another -->
+                    <div class="flex justify-end">
+                        <button
+                            type="button"
+                            class="btn btn-secondary btn-sm"
+                            @click="clearResult()"
+                        >
+                            Classify another image
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Sidebar -->
+        <div class="space-y-6">
+
+            <!-- Loaded models info -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Loaded Models</h2>
+                    <a href="/models-ui" class="text-blue-600 hover:text-blue-800 text-xs font-medium">Manage →</a>
+                </div>
+                <div class="card-body">
+                    <template x-if="models.length === 0">
+                        <p class="text-sm text-gray-400 text-center py-4">No models loaded</p>
+                    </template>
+                    <div class="space-y-3">
+                        <template x-for="m in models" :key="m.name">
+                            <div
+                                class="model-card cursor-pointer"
+                                :class="{ 'model-card-active': m.name === selectedModel }"
+                                @click="selectedModel = m.name"
+                            >
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="font-semibold text-sm text-gray-900" x-text="m.name"></p>
+                                        <p class="text-xs text-gray-500"
+                                           x-text="`${m.num_classes} classes` + (m.accuracy ? ` · ${(m.accuracy*100).toFixed(1)}% acc` : '')">
+                                        </p>
+                                    </div>
+                                    <span x-show="m.name === selectedModel" class="badge badge-success text-xs">Selected</span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Session history -->
+            <div class="card" x-show="sessionHistory.length > 0">
+                <div class="card-header">
+                    <h2 class="card-title">This Session</h2>
+                    <span class="badge badge-info" x-text="sessionHistory.length"></span>
+                </div>
+                <div class="card-body space-y-3">
+                    <template x-for="(h, i) in sessionHistory.slice().reverse()" :key="i">
+                        <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
+                            <div class="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                                <img
+                                    x-show="h.previewUrl"
+                                    :src="h.previewUrl"
+                                    class="w-full h-full object-cover"
+                                    :alt="h.fileName"
+                                >
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-medium text-gray-900 truncate" x-text="h.className"></p>
+                                <p class="text-xs text-gray-400"
+                                   x-text="`${(h.confidence * 100).toFixed(1)}% · ${h.modelName}`"></p>
+                            </div>
+                        </div>
+                    </template>
+                    <a href="/history" class="block text-center text-xs text-blue-600 hover:text-blue-800 mt-2">
+                        View full history →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function predictPage() {
+    return {
+        // Upload state
+        file: null,
+        fileName: "",
+        previewUrl: null,
+        isDragging: false,
+        error: null,
+
+        // Options
+        selectedModel: "",
+        saveToHistory: true,
+        userSession: "",
+
+        // Models
+        models: [],
+
+        // Processing
+        isProcessing: false,
+        progress: 0,
+        progressMessage: "Running inference…",
+
+        // Result
+        result: null,
+        resultModel: null,
+
+        // WebSocket status
+        wsConnected: false,
+
+        // Session history
+        sessionHistory: [],
+
+        // Chart instance
+        _chart: null,
+
+        async init() {
+            await this.loadModels();
+
+            // Track WS connection state
+            window.addEventListener("ws-status", (e) => {
+                this.wsConnected = e.detail.connected;
+            });
+            this.wsConnected = Alpine.store("app").wsConnected;
+
+            // Listen for batch_progress / prediction_progress from WS
+            if (window.wsClient) {
+                window.wsClient.on("prediction_progress", (payload) => {
+                    this.progress = Math.round((payload.step / payload.total) * 100);
+                    this.progressMessage = payload.message || "Running inference…";
+                });
+            }
+
+            // Refresh models when one is loaded/unloaded
+            window.addEventListener("ws:model_loaded", () => this.loadModels());
+        },
+
+        async loadModels() {
+            try {
+                const data = await window.utils.api.get("/api/models");
+                this.models = data.models || [];
+                // Auto-select the active model
+                if (!this.selectedModel && data.current_model) {
+                    this.selectedModel = data.current_model;
+                }
+            } catch (e) {
+                console.error("Failed to load models:", e);
+            }
+        },
+
+        handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) this.setFile(file);
+        },
+
+        handleDrop(event) {
+            this.isDragging = false;
+            const file = event.dataTransfer.files[0];
+            if (file) this.setFile(file);
+        },
+
+        setFile(file) {
+            if (!window.utils.isValidImageFile(file)) {
+                this.error = `Invalid file type: ${file.name}. Please upload an image.`;
+                return;
+            }
+            if (!window.utils.isValidFileSize(file)) {
+                this.error = `File too large: ${window.utils.formatBytes(file.size)}. Maximum is 10 MB.`;
+                return;
+            }
+            this.file = file;
+            this.fileName = file.name;
+            this.error = null;
+            this.result = null;
+            window.utils.createImagePreview(file).then(url => { this.previewUrl = url; });
+        },
+
+        clearFile() {
+            this.file = null;
+            this.fileName = "";
+            this.previewUrl = null;
+            this.error = null;
+            this.result = null;
+            this.resultModel = null;
+            this.progress = 0;
+        },
+
+        clearResult() {
+            this.result = null;
+            this.resultModel = null;
+            this.clearFile();
+        },
+
+        async runPrediction() {
+            if (!this.file || this.isProcessing || !this.selectedModel) return;
+
+            this.isProcessing = true;
+            this.error = null;
+            this.progress = 10;
+            this.progressMessage = "Uploading image…";
+
+            try {
+                const form = new FormData();
+                form.append("file", this.file);
+
+                const params = new URLSearchParams({
+                    model_name: this.selectedModel,
+                    save_to_history: this.saveToHistory.toString(),
+                });
+                if (this.userSession.trim()) {
+                    params.set("user_session", this.userSession.trim());
+                }
+
+                this.progress = 40;
+                this.progressMessage = "Running inference…";
+
+                const response = await fetch(`/api/predict?${params}`, {
+                    method: "POST",
+                    body: form,
+                });
+
+                this.progress = 90;
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.detail || `HTTP ${response.status}`);
+                }
+
+                this.result = await response.json();
+                this.resultModel = this.result.model_name;
+                this.progress = 100;
+
+                // Update global store
+                Alpine.store("app").setPrediction(this.result);
+
+                // Add to session history
+                this.sessionHistory.push({
+                    previewUrl: this.previewUrl,
+                    fileName: this.fileName,
+                    className: this.result.class_name,
+                    confidence: this.result.confidence,
+                    modelName: this.result.model_name,
+                });
+
+                // Dispatch so dashboard Recent section updates
+                document.body.dispatchEvent(new CustomEvent("historyUpdate"));
+
+                window.showToast(`Classified as: ${this.result.class_name}`, "success");
+
+                // Render chart after DOM update
+                this.$nextTick(() => this.renderChart());
+
+            } catch (e) {
+                this.error = e.message;
+                window.showToast(e.message, "error");
+            } finally {
+                this.isProcessing = false;
+                // Reset progress bar after a moment
+                setTimeout(() => { this.progress = 0; }, 800);
+            }
+        },
+
+        sortedProbs() {
+            if (!this.result || !this.result.probabilities) return [];
+            return Object.entries(this.result.probabilities)
+                .sort((a, b) => b[1] - a[1]);
+        },
+
+        renderChart() {
+            const canvas = document.getElementById("prob-chart");
+            if (!canvas || !this.result) return;
+
+            const probs = this.sortedProbs();
+            const labels = probs.map(([cls]) => cls);
+            const values = probs.map(([, p]) => parseFloat((p * 100).toFixed(2)));
+            const topClass = this.result.class_name;
+
+            if (this._chart) this._chart.destroy();
+
+            this._chart = new Chart(canvas, {
+                type: "bar",
+                data: {
+                    labels,
+                    datasets: [{
+                        label: "Probability (%)",
+                        data: values,
+                        backgroundColor: labels.map(l =>
+                            l === topClass ? "rgba(124, 58, 237, 0.8)" : "rgba(59, 130, 246, 0.6)"
+                        ),
+                        borderRadius: 6,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { callback: v => v + "%" },
+                        },
+                    },
+                },
+            });
+        },
+    };
+}
+</script>
+{% endblock %}
