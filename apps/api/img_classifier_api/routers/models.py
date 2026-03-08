@@ -6,8 +6,13 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from ..auth import require_api_key
-from ..schemas import AvailableModelsResponse, LoadModelResponse, MessageResponse, ModelInfo
+from img_classifier_api.auth import require_api_key
+from img_classifier_api.schemas import (
+    AvailableModelsResponse,
+    LoadModelResponse,
+    MessageResponse,
+    ModelInfo,
+)
 
 
 def _get_allowed_model_dirs() -> list[Path]:
@@ -110,6 +115,36 @@ async def activate_model(model_name: str, request: Request) -> MessageResponse:
     try:
         model_manager.set_current_model(model_name)
         return MessageResponse(message=f"Model '{model_name}' is now active")
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@router.delete(
+    "/models/{model_name}",
+    dependencies=[Depends(require_api_key)],
+    response_model=MessageResponse,
+)
+async def unload_model(model_name: str, request: Request) -> MessageResponse:
+    """Unload a model from memory.
+
+    Removes the model from the in-memory registry. The model file on disk is not
+    affected.  If the unloaded model was the active model, the active model is
+    automatically switched to another loaded model if one is available.
+
+    Args:
+        model_name: Name of the model to unload
+        request: FastAPI request object
+
+    Returns:
+        MessageResponse: Success message
+
+    Raises:
+        HTTPException: 404 if model not found
+    """
+    model_manager = request.app.state.model_manager
+    try:
+        model_manager.unload_model(model_name)
+        return MessageResponse(message=f"Model '{model_name}' unloaded successfully")
     except ValueError as e:
         raise HTTPException(404, str(e))
 

@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+
+{% block title %}Models - Image Classification System{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8" x-data="modelManagerPage()">
+
+    <!-- Page Header -->
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Model Management</h1>
+            <p class="text-gray-600">Load, activate, and manage your trained models</p>
+        </div>
+        <button
+            class="btn btn-primary flex items-center gap-2"
+            @click="discoverModels()"
+            :disabled="discovering"
+        >
+            <span x-show="!discovering">🔍 Discover Models</span>
+            <span x-show="discovering" class="flex items-center gap-2">
+                <span class="spinner-sm"></span>
+                Scanning...
+            </span>
+        </button>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="stats-card bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-purple-100 text-sm font-medium mb-1">Models Loaded</p>
+                    <p class="text-3xl font-bold" x-text="models.length">0</p>
+                </div>
+                <div class="text-purple-200 text-4xl">📦</div>
+            </div>
+        </div>
+        <div class="stats-card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-blue-100 text-sm font-medium mb-1">Active Model</p>
+                    <p class="text-xl font-bold truncate" x-text="currentModel || 'None'">None</p>
+                </div>
+                <div class="text-blue-200 text-4xl">🤖</div>
+            </div>
+        </div>
+        <div class="stats-card bg-gradient-to-br from-green-500 to-green-600 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-green-100 text-sm font-medium mb-1">Discovered on Disk</p>
+                    <p class="text-3xl font-bold" x-text="discoveredFiles.length">0</p>
+                </div>
+                <div class="text-green-200 text-4xl">💾</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <!-- Loaded Models (left 2/3) -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Loaded Models List -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Loaded Models</h2>
+                    <span class="badge badge-info" x-text="`${models.length} model${models.length !== 1 ? 's' : ''}`"></span>
+                </div>
+                <div class="card-body">
+
+                    <!-- Empty state -->
+                    <template x-if="models.length === 0 && !loading">
+                        <div class="text-center py-12 text-gray-400">
+                            <div class="text-6xl mb-4">📭</div>
+                            <p class="text-lg font-medium">No models loaded</p>
+                            <p class="text-sm mt-1">Use the Load Model panel to add a model from disk.</p>
+                        </div>
+                    </template>
+
+                    <!-- Loading skeleton -->
+                    <template x-if="loading">
+                        <div class="space-y-4">
+                            <template x-for="i in [1,2]" :key="i">
+                                <div class="skeleton-loader p-4 border border-gray-200 rounded-lg">
+                                    <div class="skeleton-line w-1/3 mb-2"></div>
+                                    <div class="skeleton-line w-1/2"></div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <!-- Model cards -->
+                    <div class="space-y-4" x-show="!loading">
+                        <template x-for="model in models" :key="model.name">
+                            <div
+                                class="model-card"
+                                :class="{ 'model-card-active': model.name === currentModel }"
+                            >
+                                <div class="flex items-start justify-between gap-4">
+                                    <!-- Info -->
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 mb-2 flex-wrap">
+                                            <h3 class="font-bold text-gray-900 text-lg" x-text="model.name"></h3>
+                                            <span x-show="model.name === currentModel" class="badge badge-success">
+                                                ✓ Active
+                                            </span>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-sm text-gray-600">
+                                            <div>
+                                                <span class="font-medium">Classes:</span>
+                                                <span x-text="model.num_classes"></span>
+                                            </div>
+                                            <div x-show="model.accuracy">
+                                                <span class="font-medium">Accuracy:</span>
+                                                <span x-text="(model.accuracy * 100).toFixed(1) + '%'"></span>
+                                            </div>
+                                            <div>
+                                                <span class="font-medium">Input:</span>
+                                                <span x-text="model.input_shape.join(' × ')"></span>
+                                            </div>
+                                            <div class="col-span-2 mt-1">
+                                                <span class="font-medium">Labels:</span>
+                                                <span class="text-xs text-gray-500" x-text="model.class_names.join(', ')"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Actions -->
+                                    <div class="flex flex-col gap-2 shrink-0">
+                                        <button
+                                            class="btn btn-primary btn-sm"
+                                            :disabled="model.name === currentModel || activating === model.name"
+                                            @click="activateModel(model.name)"
+                                        >
+                                            <span x-show="activating !== model.name">Activate</span>
+                                            <span x-show="activating === model.name" class="flex items-center gap-1">
+                                                <span class="spinner-sm"></span>
+                                            </span>
+                                        </button>
+                                        <button
+                                            class="btn btn-sm bg-red-100 text-red-700 hover:bg-red-200 focus:ring-red-400"
+                                            :disabled="unloading === model.name"
+                                            @click="confirmUnload(model.name)"
+                                        >
+                                            <span x-show="unloading !== model.name">Unload</span>
+                                            <span x-show="unloading === model.name" class="flex items-center gap-1">
+                                                <span class="spinner-sm border-red-400 border-t-transparent"></span>
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Path (collapsed, shown on expand) -->
+                                <div class="mt-2 pt-2 border-t border-gray-100">
+                                    <p class="text-xs text-gray-400 truncate" x-text="model.path || '(path unknown)'"></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Discovered Files -->
+            <div class="card" x-show="discoveredFiles.length > 0">
+                <div class="card-header">
+                    <h2 class="card-title">Available on Disk</h2>
+                    <span class="badge badge-info" x-text="`${discoveredFiles.length} file${discoveredFiles.length !== 1 ? 's' : ''}`"></span>
+                </div>
+                <div class="card-body">
+                    <p class="text-sm text-gray-500 mb-4">
+                        Model files found in the configured model directories. Click a path to pre-fill the load form.
+                    </p>
+                    <div class="space-y-2">
+                        <template x-for="filePath in discoveredFiles" :key="filePath">
+                            <div
+                                class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-200 cursor-pointer transition-colors"
+                                @click="prefillLoad(filePath)"
+                            >
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span class="text-gray-400">💾</span>
+                                    <span class="text-sm text-gray-700 font-mono truncate" x-text="filePath"></span>
+                                </div>
+                                <span class="text-xs text-blue-500 shrink-0 ml-2">Use →</span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right panel: Load Model -->
+        <div class="space-y-6">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Load Model</h2>
+                </div>
+                <div class="card-body space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="model-path">
+                            Model Path <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                            id="model-path"
+                            type="text"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="/path/to/model.keras"
+                            x-model="loadForm.path"
+                        >
+                        <p class="text-xs text-gray-400 mt-1">
+                            Must be inside a configured model directory.
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="model-alias">
+                            Alias (optional)
+                        </label>
+                        <input
+                            id="model-alias"
+                            type="text"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="my-model-v2"
+                            x-model="loadForm.name"
+                        >
+                        <p class="text-xs text-gray-400 mt-1">
+                            Leave blank to use the filename stem.
+                        </p>
+                    </div>
+
+                    <!-- Error -->
+                    <div x-show="loadError" class="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p class="text-sm text-red-700" x-text="loadError"></p>
+                    </div>
+
+                    <button
+                        class="btn btn-primary w-full"
+                        :disabled="!loadForm.path.trim() || loadingModel"
+                        @click="loadModel()"
+                    >
+                        <span x-show="!loadingModel">Load Model</span>
+                        <span x-show="loadingModel" class="flex items-center justify-center gap-2">
+                            <span class="spinner-sm"></span>
+                            Loading...
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tips -->
+            <div class="card bg-blue-50 border border-blue-200">
+                <div class="card-body">
+                    <h3 class="font-semibold text-blue-800 mb-2">💡 Tips</h3>
+                    <ul class="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                        <li>Click <strong>Discover Models</strong> to scan configured directories for <code>.keras</code> / <code>.h5</code> files.</li>
+                        <li>Click any discovered path to pre-fill the load form.</li>
+                        <li>Activating a model makes it the default for predictions.</li>
+                        <li>Unloading only removes the model from memory — the file is not deleted.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Unload Dialog -->
+    <div
+        x-show="confirmUnloadName"
+        x-cloak
+        class="fixed inset-0 z-50 flex items-center justify-center"
+        @keydown.escape.window="confirmUnloadName = null"
+    >
+        <div class="absolute inset-0 modal-overlay" @click="confirmUnloadName = null"></div>
+        <div class="relative bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4 z-10">
+            <h3 class="text-lg font-bold text-gray-900 mb-2">Unload Model?</h3>
+            <p class="text-gray-600 text-sm mb-6">
+                Are you sure you want to unload
+                <strong x-text="confirmUnloadName"></strong>?
+                The model file will not be deleted.
+            </p>
+            <div class="flex gap-3">
+                <button
+                    class="btn btn-secondary flex-1"
+                    @click="confirmUnloadName = null"
+                >
+                    Cancel
+                </button>
+                <button
+                    class="btn flex-1 bg-red-600 text-white hover:bg-red-700 focus:ring-red-500"
+                    @click="unloadModel(confirmUnloadName)"
+                >
+                    Unload
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+function modelManagerPage() {
+    return {
+        models: [],
+        currentModel: null,
+        discoveredFiles: [],
+        loading: true,
+        discovering: false,
+        activating: null,
+        unloading: null,
+        confirmUnloadName: null,
+        loadingModel: false,
+        loadError: null,
+        loadForm: { path: "", name: "" },
+
+        async init() {
+            await this.fetchModels();
+        },
+
+        async fetchModels() {
+            this.loading = true;
+            try {
+                const data = await window.utils.api.get("/api/models");
+                this.models = data.models || [];
+                this.currentModel = data.current_model;
+                Alpine.store("app").setActiveModel(data.current_model);
+            } catch (e) {
+                window.showToast("Failed to load models", "error");
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async discoverModels() {
+            this.discovering = true;
+            try {
+                const data = await window.utils.api.get("/api/models/discover");
+                this.discoveredFiles = data.model_files || [];
+                if (this.discoveredFiles.length === 0) {
+                    window.showToast("No model files found in configured directories", "info");
+                } else {
+                    window.showToast(`Found ${this.discoveredFiles.length} model file(s)`, "success");
+                }
+            } catch (e) {
+                window.showToast("Discovery scan failed", "error");
+            } finally {
+                this.discovering = false;
+            }
+        },
+
+        async activateModel(modelName) {
+            if (modelName === this.currentModel) return;
+            this.activating = modelName;
+            try {
+                await window.utils.api.post(`/api/models/${modelName}/activate`);
+                this.currentModel = modelName;
+                Alpine.store("app").setActiveModel(modelName);
+                window.showToast(`Activated: ${modelName}`, "success");
+            } catch (e) {
+                window.showToast(`Failed to activate ${modelName}`, "error");
+            } finally {
+                this.activating = null;
+            }
+        },
+
+        confirmUnload(modelName) {
+            this.confirmUnloadName = modelName;
+        },
+
+        async unloadModel(modelName) {
+            this.confirmUnloadName = null;
+            this.unloading = modelName;
+            try {
+                await window.utils.api.delete(`/api/models/${modelName}`);
+                this.models = this.models.filter(m => m.name !== modelName);
+                if (this.currentModel === modelName) {
+                    this.currentModel = this.models.length > 0 ? this.models[0].name : null;
+                    Alpine.store("app").setActiveModel(this.currentModel);
+                }
+                window.showToast(`Unloaded: ${modelName}`, "success");
+            } catch (e) {
+                window.showToast(`Failed to unload ${modelName}`, "error");
+            } finally {
+                this.unloading = null;
+            }
+        },
+
+        prefillLoad(filePath) {
+            this.loadForm.path = filePath;
+            this.loadForm.name = "";
+            this.loadError = null;
+        },
+
+        async loadModel() {
+            if (!this.loadForm.path.trim() || this.loadingModel) return;
+            this.loadingModel = true;
+            this.loadError = null;
+            try {
+                const body = { model_path: this.loadForm.path.trim() };
+                if (this.loadForm.name.trim()) {
+                    body.model_name = this.loadForm.name.trim();
+                }
+                await window.utils.api.post("/api/models/load", body);
+                window.showToast("Model loaded successfully", "success");
+                this.loadForm = { path: "", name: "" };
+                await this.fetchModels();
+            } catch (e) {
+                this.loadError = e.message || "Failed to load model";
+            } finally {
+                this.loadingModel = false;
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

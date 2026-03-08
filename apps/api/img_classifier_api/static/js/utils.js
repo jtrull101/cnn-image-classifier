@@ -191,7 +191,8 @@ const api = {
         try {
             const response = await fetch(url, { method: 'DELETE' });
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
             }
             return await response.json();
         } catch (e) {
