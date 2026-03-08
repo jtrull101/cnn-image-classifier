@@ -341,6 +341,12 @@ async def health_check() -> HealthCheckResponse:
     )
 
 
+@app.get("/predict", response_class=HTMLResponse)
+async def predict_page(request: Request) -> HTMLResponse:
+    """Serve the enhanced single-prediction interface."""
+    return templates.TemplateResponse(request=request, name="predict.html", context={})
+
+
 @app.get("/models-ui", response_class=HTMLResponse)
 async def models_page(request: Request) -> HTMLResponse:
     """Serve the model management interface."""

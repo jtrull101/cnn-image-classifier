@@ -18,6 +18,11 @@
                           {% if request.url.path == '/' %}bg-primary-100 text-primary-700 font-medium{% endif %}">
                     Dashboard
                 </a>
+                <a href="/predict"
+                   class="px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors duration-200
+                          {% if request.url.path == '/predict' %}bg-primary-100 text-primary-700 font-medium{% endif %}">
+                    Predict
+                </a>
                 <a href="/models-ui"
                    class="px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors duration-200
                           {% if request.url.path == '/models-ui' %}bg-primary-100 text-primary-700 font-medium{% endif %}">
@@ -101,6 +106,11 @@
                    class="px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-50 hover:text-primary-600
                           {% if request.url.path == '/' %}bg-primary-100 text-primary-700 font-medium{% endif %}">
                     Dashboard
+                </a>
+                <a href="/predict"
+                   class="px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-50 hover:text-primary-600
+                          {% if request.url.path == '/predict' %}bg-primary-100 text-primary-700 font-medium{% endif %}">
+                    Predict
                 </a>
                 <a href="/models-ui"
                    class="px-4 py-2 rounded-lg text-gray-700 hover:bg-primary-50 hover:text-primary-600
