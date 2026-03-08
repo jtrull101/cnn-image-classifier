@@ -32,7 +32,7 @@ class TestModelManager:
     """Test the ModelManager class."""
 
     @pytest.fixture
-    def manager(self):
+    def manager(self) -> ModelManager:
         """Create a fresh ModelManager for each test."""
         return ModelManager()
 
@@ -261,6 +261,89 @@ class TestModelManager:
         with pytest.raises(ValueError, match="Model not found"):
             manager.set_current_model("nonexistent")
 
+    @patch("tensorflow.keras.models.load_model")
+    def test_unload_model_removes_from_registry(self, mock_load, manager, tmp_path):
+        """Test unload_model removes model from models and model_info dicts."""
+        mock_model = Mock()
+        mock_model.input_shape = (None, 224, 224, 3)
+        mock_model.output_shape = (None, 4)
+        mock_load.return_value = mock_model
+
+        model_path = tmp_path / "model.keras"
+        model_path.touch()
+        manager.load_model(model_path, "test_model")
+
+        assert "test_model" in manager.models
+        manager.unload_model("test_model")
+
+        assert "test_model" not in manager.models
+        assert "test_model" not in manager.model_info
+
+    @patch("tensorflow.keras.models.load_model")
+    def test_unload_active_model_falls_back_to_another(self, mock_load, manager, tmp_path):
+        """Test unloading the active model switches current_model to remaining one."""
+        mock_model = Mock()
+        mock_model.input_shape = (None, 224, 224, 3)
+        mock_model.output_shape = (None, 4)
+        mock_load.return_value = mock_model
+
+        p1 = tmp_path / "m1.keras"
+        p2 = tmp_path / "m2.keras"
+        p1.touch()
+        p2.touch()
+        manager.load_model(p1, "m1")
+        manager.load_model(p2, "m2")
+
+        assert manager.current_model_name == "m1"
+        manager.unload_model("m1")
+
+        assert "m1" not in manager.models
+        assert manager.current_model_name == "m2"
+
+    @patch("tensorflow.keras.models.load_model")
+    def test_unload_only_model_clears_current(self, mock_load, manager, tmp_path):
+        """Test unloading the sole model sets current_model_name to None."""
+        mock_model = Mock()
+        mock_model.input_shape = (None, 224, 224, 3)
+        mock_model.output_shape = (None, 4)
+        mock_load.return_value = mock_model
+
+        model_path = tmp_path / "model.keras"
+        model_path.touch()
+        manager.load_model(model_path, "only_model")
+
+        assert manager.current_model_name == "only_model"
+        manager.unload_model("only_model")
+
+        assert manager.models == {}
+        assert manager.current_model_name is None
+
+    @patch("tensorflow.keras.models.load_model")
+    def test_unload_non_active_model_keeps_current(self, mock_load, manager, tmp_path):
+        """Test unloading a non-active model leaves current_model_name unchanged."""
+        mock_model = Mock()
+        mock_model.input_shape = (None, 224, 224, 3)
+        mock_model.output_shape = (None, 4)
+        mock_load.return_value = mock_model
+
+        p1 = tmp_path / "m1.keras"
+        p2 = tmp_path / "m2.keras"
+        p1.touch()
+        p2.touch()
+        manager.load_model(p1, "m1")
+        manager.load_model(p2, "m2")
+        manager.set_current_model("m2")
+
+        manager.unload_model("m1")
+
+        assert "m1" not in manager.models
+        assert manager.current_model_name == "m2"
+
+    def test_unload_model_not_found_raises(self, manager):
+        """Test unload_model raises ValueError for unknown model name."""
+        with pytest.raises(ValueError, match="Model not found"):
+            manager.unload_model("ghost")
+
     @patch("img_classifier_api.app.ModelManager.discover_models")
     @patch("img_classifier_api.app.ModelManager.load_model")
     def test_auto_load_best_model_no_models(self, mock_load, mock_discover, manager):
@@ -310,7 +393,7 @@ class TestApiEndpoints:
     """Test FastAPI endpoints."""
 
     @pytest.fixture
-    def client(self):
+    def client(self) -> TestClient:
         """Create a test client."""
         return TestClient(app)
 
@@ -563,12 +646,43 @@ class TestApiEndpoints:
         assert response.status_code == 500
         assert "Error loading model" in response.json()["detail"]
 
+    @patch("img_classifier_api.app.model_manager.unload_model")
+    def test_delete_model_endpoint_success(self, mock_unload, client):
+        """Test DELETE /api/models/{name} successfully unloads a model."""
+        response = client.delete("/api/models/my_model")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "unloaded successfully" in data["message"]
+        mock_unload.assert_called_once_with("my_model")
+
+    @patch("img_classifier_api.app.model_manager.unload_model")
+    def test_delete_model_endpoint_not_found(self, mock_unload, client):
+        """Test DELETE /api/models/{name} returns 404 for unknown model."""
+        mock_unload.side_effect = ValueError("Model not found: ghost")
+
+        response = client.delete("/api/models/ghost")
+
+        assert response.status_code == 404
+        assert "Model not found" in response.json()["detail"]
+
+    def test_delete_model_endpoint_path_not_intercepted_by_load(self, client):
+        """Ensure DELETE /api/models/load is not mistakenly routed to the load POST endpoint."""
+        # This verifies route ordering: POST /models/load should not intercept DELETE requests.
+        # If routing is wrong, this would 405 or 422 rather than reaching the DELETE handler.
+        with patch("img_classifier_api.app.model_manager.unload_model") as mock_unload:
+            response = client.delete("/api/models/load")
+            # "load" is treated as a model name for DELETE; should reach unload handler
+            assert response.status_code in {200, 404}
+            # Either it tries to unload "load" (200 if mock doesn't raise) or 404
+            mock_unload.assert_called_once_with("load")
+
 
 class TestUploadSizeLimit:
     """Edge-case tests for the upload size guard."""
 
     @pytest.fixture
-    def client(self):
+    def client(self) -> TestClient:
         return TestClient(app)
 
     @patch("img_classifier_api.routers.predictions._MAX_UPLOAD_BYTES", 100)
@@ -594,7 +708,7 @@ class TestBatchPredictionBoundaries:
     """Edge-case tests for the batch prediction endpoint."""
 
     @pytest.fixture
-    def client(self):
+    def client(self) -> TestClient:
         return TestClient(app)
 
     @patch("img_classifier_api.routers.predictions._run_prediction")

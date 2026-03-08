@@ -72,6 +72,58 @@ async def discover_models(request: Request) -> DiscoveredModelsResponse:
     )
 
 
+class LoadModelRequest(BaseModel):
+    """Request body for loading a model."""
+
+    model_path: str = Field(..., description="File path to the model")
+    model_name: str | None = Field(None, description="Optional custom name for the model")
+
+
+@router.post(
+    "/models/load", dependencies=[Depends(require_api_key)], response_model=LoadModelResponse
+)
+async def load_model_endpoint(
+    request_body: LoadModelRequest, request: Request
+) -> LoadModelResponse:
+    """Load a model from a file path.
+
+    The supplied path must resolve to a location inside one of the configured
+    allowed model directories (``IMG_CLASSIFIER_MODEL_DIR`` env var or the
+    built-in defaults).  Paths outside those directories are rejected with 403
+    to prevent path-traversal attacks.
+
+    Args:
+        request_body: LoadModelRequest with model_path and optional model_name
+        request: FastAPI request object
+
+    Returns:
+        dict: Success message with loaded model name
+
+    Raises:
+        HTTPException: 403 if path not allowed, 404 if file not found, 500 on load error
+    """
+    model_manager = request.app.state.model_manager
+    try:
+        safe_path = Path(request_body.model_path).resolve()
+        allowed_dirs = _get_allowed_model_dirs()
+        if not any(safe_path.is_relative_to(allowed) for allowed in allowed_dirs):
+            raise HTTPException(
+                403,
+                "Model path is not within an allowed directory. "
+                f"Allowed locations: {[str(d) for d in allowed_dirs]}",
+            )
+        loaded_name = await asyncio.to_thread(
+            model_manager.load_model, safe_path, request_body.model_name
+        )
+        return LoadModelResponse(message="Model loaded successfully", model_name=loaded_name)
+    except HTTPException:
+        raise
+    except FileNotFoundError as e:
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        raise HTTPException(500, f"Error loading model: {str(e)}")
+
+
 @router.get("/models/{model_name}", response_model=ModelInfo)
 async def get_model_info(model_name: str, request: Request) -> ModelInfo:
     """Get information about a specific loaded model.
@@ -147,55 +199,3 @@ async def unload_model(model_name: str, request: Request) -> MessageResponse:
         return MessageResponse(message=f"Model '{model_name}' unloaded successfully")
     except ValueError as e:
         raise HTTPException(404, str(e))
-
-
-class LoadModelRequest(BaseModel):
-    """Request body for loading a model."""
-
-    model_path: str = Field(..., description="File path to the model")
-    model_name: str | None = Field(None, description="Optional custom name for the model")
-
-
-@router.post(
-    "/models/load", dependencies=[Depends(require_api_key)], response_model=LoadModelResponse
-)
-async def load_model_endpoint(
-    request_body: LoadModelRequest, request: Request
-) -> LoadModelResponse:
-    """Load a model from a file path.
-
-    The supplied path must resolve to a location inside one of the configured
-    allowed model directories (``IMG_CLASSIFIER_MODEL_DIR`` env var or the
-    built-in defaults).  Paths outside those directories are rejected with 403
-    to prevent path-traversal attacks.
-
-    Args:
-        request_body: LoadModelRequest with model_path and optional model_name
-        request: FastAPI request object
-
-    Returns:
-        dict: Success message with loaded model name
-
-    Raises:
-        HTTPException: 403 if path not allowed, 404 if file not found, 500 on load error
-    """
-    model_manager = request.app.state.model_manager
-    try:
-        safe_path = Path(request_body.model_path).resolve()
-        allowed_dirs = _get_allowed_model_dirs()
-        if not any(safe_path.is_relative_to(allowed) for allowed in allowed_dirs):
-            raise HTTPException(
-                403,
-                "Model path is not within an allowed directory. "
-                f"Allowed locations: {[str(d) for d in allowed_dirs]}",
-            )
-        loaded_name = await asyncio.to_thread(
-            model_manager.load_model, safe_path, request_body.model_name
-        )
-        return LoadModelResponse(message="Model loaded successfully", model_name=loaded_name)
-    except HTTPException:
-        raise
-    except FileNotFoundError as e:
-        raise HTTPException(404, str(e))
-    except Exception as e:
-        raise HTTPException(500, f"Error loading model: {str(e)}")
