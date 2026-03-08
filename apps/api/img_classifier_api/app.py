@@ -29,11 +29,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from .auth import require_api_key
-from .database import init_db
-from .routers import analytics, datasets, history, models, predictions, training
-from .schemas import HealthCheckResponse, ModelInfo
-from .websocket_manager import manager as ws_manager
+from img_classifier_api.auth import require_api_key
+from img_classifier_api.database import init_db
+from img_classifier_api.routers import analytics, datasets, history, models, predictions, training
+from img_classifier_api.schemas import HealthCheckResponse, ModelInfo
+from img_classifier_api.websocket_manager import manager as ws_manager
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ def _default_model_dirs() -> list[Path]:
         Path(
             os.environ.get(
                 "IMG_CLASSIFIER_WORKING_DIR",
-                os.path.join(Path.home(), ".local", "share", "img_classifier"),
+                str(Path.home() / ".local" / "share" / "img_classifier"),
             )
         )
         / "models",
@@ -83,7 +83,7 @@ def _default_model_dirs() -> list[Path]:
 class ModelManager:
     """Manages multiple loaded models."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.models: dict[str, tf.keras.Model] = {}
         self.model_info: dict[str, ModelInfo] = {}
         self.current_model_name: str | None = None
@@ -121,7 +121,7 @@ class ModelManager:
         metadata_path = model_path.with_suffix(".json")
         if metadata_path.exists():
             try:
-                with open(metadata_path, "r") as f:
+                with metadata_path.open("r") as f:
                     metadata = json.load(f)
                     class_names = metadata.get("class_names", class_names)
                     if "accuracy" in metadata:
@@ -175,6 +175,22 @@ class ModelManager:
         if model_name not in self.models:
             raise ValueError(f"Model not found: {model_name}")
         self.current_model_name = model_name
+
+    def unload_model(self, model_name: str) -> None:
+        """Remove a model from memory.
+
+        If the unloaded model was the active model, the active model is reset to
+        another loaded model (if any) or cleared entirely.
+
+        Raises:
+            ValueError: If the model is not currently loaded.
+        """
+        if model_name not in self.models:
+            raise ValueError(f"Model not found: {model_name}")
+        del self.models[model_name]
+        del self.model_info[model_name]
+        if self.current_model_name == model_name:
+            self.current_model_name = next(iter(self.models), None)
 
     def auto_load_best_model(self) -> None:
         """Automatically load the best available model."""
@@ -258,7 +274,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         model_manager.auto_load_best_model()
     except Exception:
-        logger.warning("Could not auto-load model on startup; server will run without a model")
+        logger.warning(
+            "Could not auto-load model on startup; server will run without a model", exc_info=True
+        )
     yield
 
 
@@ -321,6 +339,12 @@ async def health_check() -> HealthCheckResponse:
         current_model=model_manager.current_model_name,
         websocket_connections=ws_manager.get_connection_count(),
     )
+
+
+@app.get("/models-ui", response_class=HTMLResponse)
+async def models_page(request: Request) -> HTMLResponse:
+    """Serve the model management interface."""
+    return templates.TemplateResponse(request=request, name="models.html", context={})
 
 
 @app.get("/train", response_class=HTMLResponse)
