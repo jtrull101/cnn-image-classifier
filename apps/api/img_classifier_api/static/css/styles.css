@@ -244,16 +244,8 @@
     transition: width 0.5s ease;
 }
 
-/* Badge styles */
-.badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
+/* Badge colour overrides — DaisyUI provides the .badge base class; these
+   semantic-colour variants extend it with project-specific Tailwind values. */
 .badge-success {
     background-color: #d1fae5;
     color: #065f46;
@@ -299,7 +291,7 @@
     background-color: #f9fafb;
 }
 
-/* Modal overlay */
+/* Custom modal overlay (backdrop blur beyond DaisyUI default) */
 .modal-overlay {
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
