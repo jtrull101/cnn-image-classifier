@@ -11,6 +11,8 @@ This API provides endpoints for:
 import json
 import logging
 import os
+import shutil
+import tempfile
 from contextlib import asynccontextmanager
 from enum import StrEnum
 from pathlib import Path
@@ -107,7 +109,21 @@ class ModelManager:
             model_name = model_path.stem
 
         logger.info("Loading model '%s' from %s", model_name, model_path)
-        model = tf.keras.models.load_model(str(model_path))
+        # TF/Keras URL-decodes paths internally, so '%' in filenames causes a false
+        # "file not found" even when the file exists. Copy to a temp path to work around it.
+        tmp_dir: str | None = None
+        load_path = model_path
+        if "%" in model_path.name:
+            tmp_dir = tempfile.mkdtemp()
+            safe_name = model_path.name.replace("%", "_pct_")
+            tmp_path = Path(tmp_dir) / safe_name
+            shutil.copy2(model_path, tmp_path)
+            load_path = tmp_path
+        try:
+            model = tf.keras.models.load_model(str(load_path))
+        finally:
+            if tmp_dir:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
 
         input_shape = list(model.input_shape[1:])
         num_classes = int(model.output_shape[-1])
@@ -240,7 +256,7 @@ class CSPMiddleware(BaseHTTPMiddleware):
 
     _POLICY = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
         "https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net; "
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data: blob:; "
@@ -351,6 +367,12 @@ async def predict_page(request: Request) -> HTMLResponse:
 async def models_page(request: Request) -> HTMLResponse:
     """Serve the model management interface."""
     return templates.TemplateResponse(request=request, name="models.html", context={})
+
+
+@app.get("/datasets-ui", response_class=HTMLResponse)
+async def datasets_page(request: Request) -> HTMLResponse:
+    """Serve the dataset management interface."""
+    return templates.TemplateResponse(request=request, name="datasets.html", context={})
 
 
 @app.get("/train", response_class=HTMLResponse)
