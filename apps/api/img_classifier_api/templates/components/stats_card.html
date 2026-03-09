@@ -1,0 +1,31 @@
+{#
+  Stats Card Component
+  Parameters (set in calling template before including):
+    - title: Card label/title string
+    - value: Main metric value to display
+    - icon: SVG path `d` attribute string for the icon
+    - color: Gradient color scheme — "blue", "purple", "green", or "orange"
+    - subtitle: (optional) Secondary text shown below the value
+#}
+{% set _color_map = {
+    "blue":   "from-blue-500 to-blue-600",
+    "purple": "from-purple-500 to-purple-600",
+    "green":  "from-green-500 to-green-600",
+    "orange": "from-orange-500 to-orange-600"
+} %}
+{% set _gradient = _color_map.get(color, "from-blue-500 to-blue-600") %}
+
+<div class="bg-gradient-to-br {{ _gradient }} rounded-xl p-6 text-white shadow-lg">
+    <div class="flex items-center justify-between mb-4">
+        <div class="bg-white bg-opacity-20 rounded-lg p-2">
+            <svg class="w-6 h-6" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ icon }}"/>
+            </svg>
+        </div>
+    </div>
+    <p class="text-white text-opacity-80 text-sm font-medium uppercase tracking-wide">{{ title }}</p>
+    <p class="text-3xl font-bold mt-1">{{ value }}</p>
+    {% if subtitle %}
+    <p class="text-white text-opacity-70 text-xs mt-1">{{ subtitle }}</p>
+    {% endif %}
+</div>
