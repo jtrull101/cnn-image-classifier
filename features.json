@@ -56,6 +56,16 @@
 
   "phases": [
     {
+      "id": "phase_0",
+      "name": "UI Architecture",
+      "description": "Add DaisyUI, shared component JS, and consolidate CSS — runs independently of other phases",
+      "status": "in_progress",
+      "estimated_days": 0.5,
+      "dependencies": [],
+      "features": ["feature_ui_0"],
+      "checkpoint": "DaisyUI integrated, components.js created, styles.css consolidated"
+    },
+    {
       "id": "phase_1",
       "name": "Foundation Setup",
       "description": "Set up base infrastructure including dependencies, templates, and static asset structure",
@@ -567,6 +577,25 @@
       ]
     },
 
+    "feature_ui_0": {
+      "id": "feature_ui_0",
+      "phase": "phase_0",
+      "name": "UI Architecture — DaisyUI + Shared Components",
+      "description": "Add DaisyUI CDN, extract shared Alpine.js component factories into components.js, and remove duplicate CSS definitions from styles.css",
+      "status": "in_progress",
+      "priority": "high",
+      "estimated_hours": 3,
+      "dependencies": ["feature_1_2", "feature_1_4"],
+      "started_at": "2026-03-09T04:00:00Z",
+      "files_created": [
+        "apps/api/img_classifier_api/static/js/components.js"
+      ],
+      "files_modified": [
+        "apps/api/img_classifier_api/templates/base.html",
+        "apps/api/img_classifier_api/static/css/styles.css"
+      ]
+    },
+
     "feature_5_2": {
       "id": "feature_5_2",
       "phase": "phase_5",
@@ -717,16 +746,16 @@
   },
 
   "progress_tracking": {
-    "total_features": 26,
+    "total_features": 27,
     "completed_features": 20,
-    "in_progress_features": 0,
+    "in_progress_features": 1,
     "blocked_features": 0,
     "pending_features": 6,
-    "total_estimated_hours": 75,
+    "total_estimated_hours": 78,
     "elapsed_hours": 10.75,
-    "completion_percentage": 76.9,
+    "completion_percentage": 74.1,
     "phases_completed": 2,
-    "phases_remaining": 5
+    "phases_remaining": 6
   },
 
   "quality_metrics": {
