@@ -1,0 +1,37 @@
+{#
+  Page Header Component
+  Parameters (set in calling template before including):
+    - title: Page heading text
+    - subtitle: (optional) Supporting subheading text
+  Blocks:
+    - actions: (optional) Slot for right-side action buttons/controls.
+                Wrap your buttons in {% call render_page_header() %} ... {% endcall %}
+                or simply include the component and place actions outside this file.
+                Because Jinja2 `include` does not support caller blocks, callers should
+                use `{% from "components/page_header.html" import page_header %}` macro
+                syntax (see macro variant below) for the actions slot.
+
+  Macro variant (preferred when actions slot is needed):
+    {% from "components/page_header.html" import page_header %}
+    {% call(slot) page_header(title="My Page", subtitle="Optional subtitle") %}
+      {% if slot == "actions" %}
+        <button ...>Action</button>
+      {% endif %}
+    {% endcall %}
+#}
+{% macro page_header(title, subtitle=None) %}
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
+        {% if subtitle %}
+        <p class="text-gray-500 text-sm mt-1">{{ subtitle }}</p>
+        {% endif %}
+    </div>
+    {% set _slot_content = caller("actions") if caller is defined else "" %}
+    {% if _slot_content %}
+    <div class="flex items-center gap-3 flex-shrink-0">
+        {{ _slot_content }}
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
