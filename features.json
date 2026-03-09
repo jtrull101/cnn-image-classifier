@@ -118,6 +118,16 @@
       "dependencies": ["phase_5"],
       "features": ["feature_6_0", "feature_6_1", "feature_6_2", "feature_6_3", "feature_6_4"],
       "checkpoint": "Project complete - all tests passing, documentation updated, production-ready"
+    },
+    {
+      "id": "phase_7",
+      "name": "Containerisation & Container Integration Tests",
+      "description": "Dockerfile for the API and testcontainers-based integration test suite that spins up the real image",
+      "status": "pending",
+      "estimated_days": 1,
+      "dependencies": [],
+      "features": ["feature_7_1"],
+      "checkpoint": "Docker image builds cleanly; container integration tests pass in CI"
     }
   ],
 
@@ -521,10 +531,20 @@
       "phase": "phase_4",
       "name": "Add Dataset Management Page",
       "description": "Build page for managing datasets with upload, view, and delete functionality",
-      "status": "pending",
+      "status": "completed",
       "priority": "high",
       "estimated_hours": 4,
-      "dependencies": ["feature_4_4","feature_3_6"]
+      "actual_hours": 0.5,
+      "dependencies": ["feature_4_4","feature_3_6"],
+      "started_at": "2026-03-09T01:00:00Z",
+      "completed_at": "2026-03-09T01:30:00Z",
+      "files_created": [
+        "apps/api/img_classifier_api/templates/datasets.html"
+      ],
+      "files_modified": [
+        "apps/api/img_classifier_api/app.py",
+        "apps/api/img_classifier_api/templates/components/navbar.html"
+      ]
     },
 
     "feature_5_1": {
@@ -650,20 +670,54 @@
       "priority": "high",
       "estimated_hours": 2,
       "dependencies": ["feature_6_3"]
+    },
+
+    "feature_7_1": {
+      "id": "feature_7_1",
+      "phase": "phase_7",
+      "name": "Dockerfile and Testcontainers Integration Tests",
+      "description": "Add a Dockerfile for running the API as a container, and use testcontainers-python to spin up that image in pytest integration tests. Covers health check, prediction endpoint, model management, and WebSocket connectivity against a real containerised server.",
+      "status": "pending",
+      "priority": "high",
+      "estimated_hours": 4,
+      "dependencies": [],
+      "files_created": [
+        "apps/api/Dockerfile",
+        "apps/api/tests/integration/test_container.py"
+      ],
+      "files_modified": [
+        "apps/api/pyproject.toml",
+        "Makefile",
+        "features.json"
+      ],
+      "acceptance_criteria": [
+        "Dockerfile builds without errors (multi-stage recommended: build deps → runtime)",
+        "Container starts and /health returns 200 within the timeout",
+        "pytest integration tests using testcontainers.DockerContainer run against the image",
+        "Tests cover: health check, unauthenticated /health, authenticated /api/models, /api/predict (no-model path), WebSocket /ws handshake",
+        "make test-container target runs these tests",
+        "make check still passes"
+      ],
+      "validation": {
+        "type": "command",
+        "command": "make test-container",
+        "success_criteria": "All container integration tests pass"
+      },
+      "notes": "Use testcontainers-python (pip: testcontainers). Mark tests with @pytest.mark.integration and @pytest.mark.slow. Dockerfile should not embed model weights — tests run without a model loaded (no-model paths)."
     }
   },
 
   "progress_tracking": {
-    "total_features": 25,
-    "completed_features": 18,
+    "total_features": 26,
+    "completed_features": 19,
     "in_progress_features": 0,
     "blocked_features": 0,
     "pending_features": 7,
-    "total_estimated_hours": 71,
-    "elapsed_hours": 9.25,
-    "completion_percentage": 72.0,
+    "total_estimated_hours": 75,
+    "elapsed_hours": 9.75,
+    "completion_percentage": 73.1,
     "phases_completed": 2,
-    "phases_remaining": 4
+    "phases_remaining": 5
   },
 
   "quality_metrics": {
