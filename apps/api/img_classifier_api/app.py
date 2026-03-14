@@ -78,6 +78,7 @@ def _default_model_dirs() -> list[Path]:
         )
         / "models",
         Path.cwd() / "models",
+        Path(__file__).parent / "static",
     ]
     return [d for d in dirs if d is not None]
 

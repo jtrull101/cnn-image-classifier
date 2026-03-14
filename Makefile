@@ -171,8 +171,20 @@ build-api:
 	uv build --directory apps/api
 
 # Application commands
-run:
-	uv run python apps/api/run_api.py
+run: docker-up
+
+# Docker Compose stack
+certs:
+	@bash scripts/generate-certs.sh
+
+docker-up: certs
+	docker compose up --build -d
+
+docker-down:
+	docker compose down
+
+docker-logs:
+	docker compose logs -f
 
 # Git hooks
 install-hooks:

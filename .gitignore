@@ -201,3 +201,6 @@ apps/api/data/predictions.db
 
 # Claude
 .claude/settings*
+
+# TLS certificates (generate with scripts/generate-certs.sh)
+nginx/certs/*.pem
