@@ -1,4 +1,4 @@
-.PHONY: help install sync clean test test-coverage test-parallel test-unit test-integration test-slow test-config test-data test-models test-training test-utils test-cli test-api lint format typecheck build build-config build-utils build-data build-models build-training build-cli build-api serve-api install-hooks pre-commit pre-commit-fix check ci download-datasets list-datasets
+.PHONY: help install sync clean test test-coverage test-parallel test-unit test-integration test-slow test-config test-data test-models test-training test-utils test-cli test-api test-e2e install-playwright lint format typecheck build build-config build-utils build-data build-models build-training build-cli build-api serve-api install-hooks pre-commit pre-commit-fix check ci download-datasets list-datasets
 
 # Platform detection
 ifeq ($(OS),Windows_NT)
@@ -59,6 +59,8 @@ help:
 	@echo "  make test-utils     - Run utils package tests"
 	@echo "  make test-cli       - Run CLI package tests"
 	@echo "  make test-api       - Run API app tests"
+	@echo "  make test-e2e       - Run browser E2E tests (Playwright)"
+	@echo "  make install-playwright - Download Playwright Chromium binary"
 	@echo ""
 	@echo "Package-specific commands:"
 	@echo "  make build-config   - Build config package"
@@ -231,6 +233,31 @@ test-cli:
 test-api:
 	@echo "Running API app tests..."
 	@uv run python -m pytest -c pyproject.toml --rootdir . apps/api/img_classifier_api/tests -v
+
+test-e2e:
+	@echo "Running browser E2E tests (Playwright)..."
+	@LD_LIBRARY_PATH=$(PLAYWRIGHT_LIBS):$$LD_LIBRARY_PATH \
+		uv run pytest -c pyproject.toml --rootdir . apps/api/tests/e2e -v \
+		--override-ini="addopts=" \
+		-p no:xdist \
+		-m "e2e" \
+		--timeout=120 \
+		--tb=short \
+		-ra
+
+install-playwright:
+	@echo "Installing Playwright Chromium browser..."
+	uv run playwright install chromium
+	@echo "Downloading Chromium system library dependencies (for minimal envs)..."
+	@mkdir -p $(PLAYWRIGHT_LIBS)
+	@cd /tmp && apt-get download libnspr4 libnss3 libasound2t64 2>/dev/null || true
+	@for deb in /tmp/libnspr4*.deb /tmp/libnss3*.deb /tmp/libasound2t64*.deb; do \
+		[ -f "$$deb" ] && dpkg-deb -x "$$deb" /tmp/pw-libs 2>/dev/null || true; \
+	done
+	@cp -rn /tmp/pw-libs/usr/lib/x86_64-linux-gnu/. $(PLAYWRIGHT_LIBS)/ 2>/dev/null || true
+	@echo "Playwright install complete. Library path: $(PLAYWRIGHT_LIBS)"
+
+PLAYWRIGHT_LIBS ?= /tmp/nspr-libs/usr/lib/x86_64-linux-gnu
 
 # CI workflow
 ci: lint typecheck test build

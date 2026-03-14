@@ -9,14 +9,14 @@ from img_classifier_config import BaseConfig, DatasetConfig, DatasetDetector
 from img_classifier_data import BaseDataLoader, ImageDataLoader
 from img_classifier_models import ArchitectureFactory, BaseModel
 
-from .optimizer import (
+from img_classifier_training.optimizer import (
     HyperparameterOptimizer,
     HyperparameterSpace,
     OptimizerType,
     TrialResult,
     create_optimizer,
 )
-from .trainer import Trainer
+from img_classifier_training.trainer import Trainer
 
 import tensorflow as tf
 

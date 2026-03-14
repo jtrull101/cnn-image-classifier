@@ -9,7 +9,7 @@ from typing import Any
 import yaml
 from pydantic import Field, field_validator
 
-from .base_config import BaseConfig
+from img_classifier_config.base_config import BaseConfig
 
 logger = logging.getLogger(__name__)
 

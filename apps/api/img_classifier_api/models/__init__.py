@@ -1,5 +1,5 @@
 """Database models for the image classifier API."""
 
-from .prediction import PredictionHistory
+from img_classifier_api.models.prediction import PredictionHistory
 
 __all__ = ["PredictionHistory"]

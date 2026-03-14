@@ -10,17 +10,29 @@ Manages WebSocket connections with support for:
 
 import asyncio
 import logging
+from enum import StrEnum
 from typing import Any
+
 from fastapi import WebSocket, WebSocketDisconnect
 
 
 logger = logging.getLogger(__name__)
 
 
+class WebSocketServerMessageType(StrEnum):
+    """Server-side WebSocket message type strings broadcast to clients."""
+
+    CONNECTED = "connected"
+    MODEL_LOADING = "model_loading"
+    PREDICTION_PROGRESS = "prediction_progress"
+    BATCH_PROGRESS = "batch_progress"
+    ERROR = "error"
+
+
 class WebSocketManager:
     """Manages WebSocket connections and message broadcasting."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Active connections: Set of WebSocket objects
         self.active_connections: set[WebSocket] = set()
 
@@ -44,7 +56,7 @@ class WebSocketManager:
         # Store metadata
         self.connection_metadata[websocket] = {
             "client_id": client_id,
-            "connected_at": asyncio.get_event_loop().time(),
+            "connected_at": asyncio.get_running_loop().time(),
         }
 
         logger.info("WebSocket connected. Total connections: %d", len(self.active_connections))
@@ -52,14 +64,14 @@ class WebSocketManager:
         # Send welcome message
         await self.send_personal_message(
             {
-                "type": "connected",
+                "type": WebSocketServerMessageType.CONNECTED,
                 "message": "WebSocket connection established",
                 "client_id": client_id,
             },
             websocket,
         )
 
-    def disconnect(self, websocket: WebSocket):
+    def disconnect(self, websocket: WebSocket) -> None:
         """
         Unregister a WebSocket connection.
 
@@ -197,7 +209,7 @@ class WebSocketManager:
             error: Optional error message
         """
         message: dict[str, Any] = {
-            "type": "model_loading",
+            "type": WebSocketServerMessageType.MODEL_LOADING,
             "model_name": model_name,
             "status": status,
         }
@@ -222,7 +234,7 @@ class WebSocketManager:
             status: Processing status
         """
         message = {
-            "type": "prediction_progress",
+            "type": WebSocketServerMessageType.PREDICTION_PROGRESS,
             "image_name": image_name,
             "progress": progress,
             "status": status,
@@ -243,7 +255,7 @@ class WebSocketManager:
             current_image: Optional name of current image being processed
         """
         message = {
-            "type": "batch_progress",
+            "type": WebSocketServerMessageType.BATCH_PROGRESS,
             "batch_id": batch_id,
             "completed": completed,
             "total": total,
@@ -263,7 +275,10 @@ class WebSocketManager:
             error_message: Error message to broadcast
             details: Optional additional error details
         """
-        message: dict[str, Any] = {"type": "error", "message": error_message}
+        message: dict[str, Any] = {
+            "type": WebSocketServerMessageType.ERROR,
+            "message": error_message,
+        }
 
         if details:
             message["details"] = details

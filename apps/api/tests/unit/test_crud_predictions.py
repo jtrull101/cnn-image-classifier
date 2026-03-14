@@ -9,13 +9,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from img_classifier_api.crud.predictions import (
+    count_predictions,
     create_prediction,
     delete_prediction,
     export_predictions,
     get_analytics_summary,
     get_prediction_by_id,
     get_predictions,
-    get_predictions_by_model,
 )
 from img_classifier_api.schemas import ExportFormat
 from img_classifier_api.database import Base
@@ -191,27 +191,48 @@ class TestDeletePrediction:
 
 
 # ---------------------------------------------------------------------------
-# get_predictions_by_model
+# count_predictions
 # ---------------------------------------------------------------------------
 
 
-class TestGetPredictionsByModel:
-    def test_returns_only_matching_model(self, db):
+class TestCountPredictions:
+    def test_empty_db_returns_zero(self, db):
+        assert count_predictions(db) == 0
+
+    def test_counts_all_records(self, db):
+        create_prediction(db, _pred())
+        create_prediction(db, _pred())
+        assert count_predictions(db) == 2
+
+    def test_filter_by_model_name(self, db):
         create_prediction(db, _pred(model_name="model_a"))
         create_prediction(db, _pred(model_name="model_b"))
-        results = get_predictions_by_model(db, "model_a")
-        assert len(results) == 1
-        assert results[0].model_name == "model_a"
+        assert count_predictions(db, model_name="model_a") == 1
 
-    def test_empty_for_unknown_model(self, db):
+    def test_filter_model_name_none_counts_all(self, db):
         create_prediction(db, _pred(model_name="model_a"))
-        assert get_predictions_by_model(db, "unknown") == []
+        create_prediction(db, _pred(model_name="model_b"))
+        assert count_predictions(db, model_name=None) == 2
 
-    def test_respects_skip_and_limit(self, db):
-        for _ in range(5):
-            create_prediction(db, _pred(model_name="model_a"))
-        results = get_predictions_by_model(db, "model_a", skip=2, limit=2)
-        assert len(results) == 2
+    def test_filter_by_user_session(self, db):
+        create_prediction(db, _pred(user_session="sess_a"))
+        create_prediction(db, _pred(user_session="sess_b"))
+        assert count_predictions(db, user_session="sess_a") == 1
+
+    def test_filter_user_session_none_counts_all(self, db):
+        create_prediction(db, _pred(user_session="sess_a"))
+        create_prediction(db, _pred(user_session="sess_b"))
+        assert count_predictions(db, user_session=None) == 2
+
+    def test_combined_model_and_session_filter(self, db):
+        create_prediction(db, _pred(model_name="m1", user_session="s1"))
+        create_prediction(db, _pred(model_name="m1", user_session="s2"))
+        create_prediction(db, _pred(model_name="m2", user_session="s1"))
+        assert count_predictions(db, model_name="m1", user_session="s1") == 1
+
+    def test_unmatched_filter_returns_zero(self, db):
+        create_prediction(db, _pred(model_name="model_a"))
+        assert count_predictions(db, model_name="nonexistent") == 0
 
 
 # ---------------------------------------------------------------------------
@@ -322,3 +343,50 @@ class TestGetAnalyticsSummary:
         result = get_analytics_summary(db)
         assert result["average_confidence_by_model"]["m1"] == pytest.approx(0.9)
         assert result["average_confidence_by_model"]["m2"] == pytest.approx(0.5)
+
+    def _create_with_timestamp(self, db: Session, ts: datetime) -> None:
+        """Insert a PredictionHistory row with an explicit timestamp."""
+        from img_classifier_api.models.prediction import PredictionHistory as PH
+        import json as _json
+
+        record = PH(
+            image_name="test.jpg",
+            model_name="model_a",
+            predicted_class="cat",
+            confidence=0.75,
+            probabilities=_json.dumps({"cat": 0.75, "dog": 0.25}),
+            timestamp=ts,
+        )
+        db.add(record)
+        db.commit()
+
+    def test_start_date_excludes_older_records(self, db):
+        past = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        recent = datetime(2025, 6, 1, tzinfo=timezone.utc)
+        self._create_with_timestamp(db, past)
+        self._create_with_timestamp(db, recent)
+        cutoff = datetime(2023, 1, 1, tzinfo=timezone.utc)
+        result = get_analytics_summary(db, start_date=cutoff)
+        assert result["total_predictions"] == 1
+
+    def test_end_date_excludes_newer_records(self, db):
+        past = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        recent = datetime(2025, 6, 1, tzinfo=timezone.utc)
+        self._create_with_timestamp(db, past)
+        self._create_with_timestamp(db, recent)
+        cutoff = datetime(2023, 1, 1, tzinfo=timezone.utc)
+        result = get_analytics_summary(db, end_date=cutoff)
+        assert result["total_predictions"] == 1
+
+    def test_date_range_inclusive_boundaries(self, db):
+        ts = datetime(2022, 6, 15, tzinfo=timezone.utc)
+        self._create_with_timestamp(db, ts)
+        result = get_analytics_summary(db, start_date=ts, end_date=ts)
+        assert result["total_predictions"] == 1
+
+    def test_date_range_excludes_all_records(self, db):
+        self._create_with_timestamp(db, datetime(2020, 1, 1, tzinfo=timezone.utc))
+        start = datetime(2025, 1, 1, tzinfo=timezone.utc)
+        end = datetime(2025, 12, 31, tzinfo=timezone.utc)
+        result = get_analytics_summary(db, start_date=start, end_date=end)
+        assert result["total_predictions"] == 0

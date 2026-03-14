@@ -15,7 +15,7 @@ from img_classifier_utils import (
 )
 from tqdm import tqdm
 
-from .base_loader import BaseDataLoader
+from img_classifier_data.base_loader import BaseDataLoader
 
 logger = logging.getLogger(__name__)
 

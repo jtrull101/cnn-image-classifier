@@ -1,5 +1,6 @@
 """Router for analytics endpoints."""
 
+import html
 from collections import defaultdict
 from datetime import datetime
 from typing import Any
@@ -79,7 +80,7 @@ async def get_summary(
             model_rows.append(
                 f"""
                 <div class="flex justify-between text-sm py-1">
-                    <span class="text-gray-600">{model}</span>
+                    <span class="text-gray-600">{html.escape(model)}</span>
                     <span class="font-semibold">{count}</span>
                 </div>
                 """
@@ -90,13 +91,13 @@ async def get_summary(
             class_rows.append(
                 f"""
                 <div class="flex justify-between text-sm py-1">
-                    <span class="text-gray-600">{cls}</span>
+                    <span class="text-gray-600">{html.escape(cls)}</span>
                     <span class="font-semibold">{count}</span>
                 </div>
                 """
             )
 
-        html = f"""
+        html_content = f"""
         <div class="space-y-4">
             <div>
                 <p class="text-sm font-medium text-gray-700 mb-2">By Model</p>
@@ -112,7 +113,7 @@ async def get_summary(
             </div>
         </div>
         """
-        return HTMLResponse(html)
+        return HTMLResponse(html_content)
 
     # Return JSON for API requests
     return AnalyticsSummaryResponse(

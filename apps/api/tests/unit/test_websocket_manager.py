@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from fastapi import WebSocketDisconnect
 
-from img_classifier_api.websocket_manager import WebSocketManager
+from img_classifier_api.websocket_manager import WebSocketManager, WebSocketServerMessageType
 
 
 pytestmark = pytest.mark.unit
@@ -50,7 +50,7 @@ class TestConnect:
         await manager.connect(ws)
         ws.send_json.assert_awaited_once()
         payload = ws.send_json.call_args[0][0]
-        assert payload["type"] == "connected"
+        assert payload["type"] == WebSocketServerMessageType.CONNECTED
 
     async def test_multiple_connects_increment_count(self):
         manager = WebSocketManager()
@@ -250,7 +250,7 @@ class TestSendModelLoadingUpdate:
 
         await manager.send_model_loading_update("my_model", "started")
         payload = ws.send_json.call_args[0][0]
-        assert payload["type"] == "model_loading"
+        assert payload["type"] == WebSocketServerMessageType.MODEL_LOADING
         assert payload["model_name"] == "my_model"
         assert payload["status"] == "started"
 
@@ -295,7 +295,7 @@ class TestSendPredictionProgress:
 
         await manager.send_prediction_progress("image.jpg", 75.0)
         payload = ws.send_json.call_args[0][0]
-        assert payload["type"] == "prediction_progress"
+        assert payload["type"] == WebSocketServerMessageType.PREDICTION_PROGRESS
         assert payload["image_name"] == "image.jpg"
         assert payload["progress"] == 75.0
         assert payload["status"] == "processing"
@@ -320,7 +320,7 @@ class TestSendBatchProgress:
 
         await manager.send_batch_progress("batch-123", 5, 10)
         payload = ws.send_json.call_args[0][0]
-        assert payload["type"] == "batch_progress"
+        assert payload["type"] == WebSocketServerMessageType.BATCH_PROGRESS
         assert payload["batch_id"] == "batch-123"
         assert payload["completed"] == 5
         assert payload["total"] == 10
@@ -366,7 +366,7 @@ class TestSendError:
 
         await manager.send_error("Something went wrong")
         payload = ws.send_json.call_args[0][0]
-        assert payload["type"] == "error"
+        assert payload["type"] == WebSocketServerMessageType.ERROR
         assert payload["message"] == "Something went wrong"
 
     async def test_includes_details_when_provided(self):

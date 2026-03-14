@@ -123,41 +123,12 @@ def count_predictions(
     Returns:
         int: Number of matching prediction records
     """
-    from sqlalchemy import func
-
     query = db.query(func.count(PredictionHistory.id))
     if model_name:
         query = query.filter(PredictionHistory.model_name == model_name)
     if user_session:
         query = query.filter(PredictionHistory.user_session == user_session)
     return query.scalar() or 0
-
-
-def get_predictions_by_model(
-    db: Session,
-    model_name: str,
-    skip: int = 0,
-    limit: int = 100,
-) -> list[PredictionHistory]:
-    """Get all predictions for a specific model.
-
-    Args:
-        db: Database session
-        model_name: Model name to filter by
-        skip: Number of records to skip
-        limit: Maximum number of records to return
-
-    Returns:
-        list[PredictionHistory]: List of prediction records
-    """
-    return (
-        db.query(PredictionHistory)
-        .filter(PredictionHistory.model_name == model_name)
-        .order_by(PredictionHistory.timestamp.desc())
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
 
 
 def export_predictions(

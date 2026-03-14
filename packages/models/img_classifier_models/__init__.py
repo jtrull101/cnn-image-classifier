@@ -1,14 +1,14 @@
 """Neural network models package for image classification."""
 
-from .architecture_generator import (
+from img_classifier_models.architecture_generator import (
     ArchitectureComplexity,
     ArchitectureFactory,
     ArchitectureSpec,
     ModelScaler,
     create_architecture_from_config,
 )
-from .base_model import BaseModel
-from .cnn_classifier import CnnClassifier, SimpleCnn
+from img_classifier_models.base_model import BaseModel
+from img_classifier_models.cnn_classifier import CnnClassifier, SimpleCnn
 
 __all__ = [
     "BaseModel",

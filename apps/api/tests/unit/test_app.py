@@ -711,6 +711,12 @@ class TestBatchPredictionBoundaries:
     def client(self) -> TestClient:
         return TestClient(app)
 
+    def test_batch_over_limit_returns_400(self, client):
+        """101 files must be rejected with HTTP 400 before any inference runs."""
+        files = [("files", (f"img_{i}.jpg", b"data", "image/jpeg")) for i in range(101)]
+        response = client.post("/api/predict/batch", files=files)
+        assert response.status_code == 400
+
     @patch("img_classifier_api.routers.predictions._run_prediction")
     def test_single_file_batch_returns_one_result(self, mock_run, client):
         """Batch with exactly 1 file should produce exactly 1 result entry."""

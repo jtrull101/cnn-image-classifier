@@ -6,11 +6,12 @@ import hashlib
 import logging
 import os
 import uuid
+from typing import Any
 
 import cv2
 import numpy as np
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from img_classifier_api.crud.predictions import create_prediction
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 _DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 _THUMBNAIL_SIZE = (100, 100)
 _MAX_BATCH_FILES = 100
+_DEFAULT_FILENAME = "unknown.jpg"
 
 try:
     _MAX_UPLOAD_BYTES: int = int(
@@ -30,13 +32,6 @@ try:
     )
 except ValueError:
     _MAX_UPLOAD_BYTES = _DEFAULT_MAX_UPLOAD_BYTES
-
-
-class BatchPredictionRequest(BaseModel):
-    """Request for batch predictions."""
-
-    image_count: int = Field(..., description="Number of images to process")
-    model_name: str | None = Field(None, description="Model to use (defaults to current)")
 
 
 class ComparePredictionResponse(BaseModel):
@@ -134,7 +129,7 @@ async def predict_image(
     save_to_history: bool = True,
     user_session: str | None = None,
     db: Session = Depends(get_db),
-):
+) -> PredictionResponse:
     """Predict the class of an uploaded image.
 
     Args:
@@ -164,7 +159,7 @@ async def predict_image(
         create_prediction(
             db,
             {
-                "image_name": file.filename or "unknown.jpg",
+                "image_name": file.filename or _DEFAULT_FILENAME,
                 "image_hash": image_hash,
                 "model_name": info.name,
                 "predicted_class": result.class_name,
@@ -186,7 +181,7 @@ async def batch_predict(
     save_to_history: bool = True,
     user_session: str | None = None,
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """Batch prediction endpoint with WebSocket progress updates.
 
     Args:
@@ -206,6 +201,9 @@ async def batch_predict(
     results = []
     errors = []
 
+    if total_files > _MAX_BATCH_FILES:
+        raise HTTPException(400, f"Too many files. Maximum batch size is {_MAX_BATCH_FILES}.")
+
     if ws_manager:
         await ws_manager.send_batch_progress(batch_id, 0, total_files, "Starting batch processing")
 
@@ -222,7 +220,7 @@ async def batch_predict(
                 create_prediction(
                     db,
                     {
-                        "image_name": file.filename or "unknown.jpg",
+                        "image_name": file.filename or _DEFAULT_FILENAME,
                         "image_hash": image_hash,
                         "model_name": info.name,
                         "predicted_class": result.class_name,
@@ -264,8 +262,8 @@ async def batch_predict(
 async def compare_predictions(
     request: Request,
     file: UploadFile = File(...),
-    model_names: list[str] | None = None,
-):
+    model_names: list[str] | None = Query(None),
+) -> ComparePredictionResponse:
     """Compare predictions across multiple models for a single image.
 
     Args:
@@ -301,6 +299,6 @@ async def compare_predictions(
             )
 
     return ComparePredictionResponse(
-        image_name=file.filename or "unknown.jpg",
+        image_name=file.filename or _DEFAULT_FILENAME,
         predictions=predictions,
     )

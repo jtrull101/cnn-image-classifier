@@ -1,5 +1,6 @@
 """Router for prediction history endpoints."""
 
+import html
 import logging
 from datetime import datetime
 from typing import Any, cast
@@ -144,14 +145,14 @@ async def get_history(
                 <div class="flex items-center justify-between p-3 border-b border-gray-200 hover:bg-gray-50 transition">
                     <div class="flex-1">
                         <div class="flex items-center gap-2 mb-1">
-                            <p class="font-semibold text-gray-900">{p.predicted_class}</p>
+                            <p class="font-semibold text-gray-900">{html.escape(str(p.predicted_class))}</p>
                             <span class="badge badge-sm badge-success">{confidence_pct}</span>
                         </div>
-                        <p class="text-xs text-gray-500">{p.image_name}</p>
+                        <p class="text-xs text-gray-500">{html.escape(str(p.image_name))}</p>
                         <p class="text-xs text-gray-400">{timestamp_str}</p>
                     </div>
                     <div class="text-xs text-gray-600">
-                        {p.model_name}
+                        {html.escape(str(p.model_name))}
                     </div>
                 </div>
                 """
@@ -225,67 +226,6 @@ async def export_history(
     )
 
 
-@router.get("/history/{prediction_id}", response_model=PredictionHistoryItem)
-async def get_history_item(
-    prediction_id: int,
-    db: Session = Depends(get_db),
-) -> PredictionHistoryItem:
-    """
-    Get a single prediction by ID.
-
-    Args:
-        prediction_id: Prediction ID
-        db: Database session
-
-    Returns:
-        PredictionHistoryItem: Prediction details
-
-    Raises:
-        HTTPException: 404 if not found
-    """
-    prediction = get_prediction_by_id(db, prediction_id)
-    if not prediction:
-        raise HTTPException(404, "Prediction not found")
-
-    return PredictionHistoryItem(
-        id=cast(int, prediction.id),
-        timestamp=cast(datetime, prediction.timestamp),
-        image_name=cast(str, prediction.image_name),
-        image_hash=cast(str | None, prediction.image_hash),
-        model_name=cast(str, prediction.model_name),
-        predicted_class=cast(str, prediction.predicted_class),
-        confidence=cast(float, prediction.confidence),
-        probabilities=prediction.get_probabilities(),
-        image_thumbnail=cast(str | None, prediction.image_thumbnail),
-        user_session=cast(str | None, prediction.user_session),
-    )
-
-
-@router.delete("/history/{prediction_id}", response_model=MessageResponse)
-async def delete_history_item(
-    prediction_id: int,
-    db: Session = Depends(get_db),
-) -> MessageResponse:
-    """
-    Delete a prediction by ID.
-
-    Args:
-        prediction_id: Prediction ID
-        db: Database session
-
-    Returns:
-        MessageResponse: Success message
-
-    Raises:
-        HTTPException: 404 if not found
-    """
-    success = delete_prediction(db, prediction_id)
-    if not success:
-        raise HTTPException(404, "Prediction not found")
-
-    return MessageResponse(message="Prediction deleted successfully")
-
-
 @router.post("/history/sync", response_model=SyncResponse)
 async def sync_history(
     request: SyncRequest,
@@ -345,3 +285,64 @@ async def sync_history(
         errors=[SyncError(**e) for e in errors],
         total_processed=len(request.predictions),
     )
+
+
+@router.get("/history/{prediction_id}", response_model=PredictionHistoryItem)
+async def get_history_item(
+    prediction_id: int,
+    db: Session = Depends(get_db),
+) -> PredictionHistoryItem:
+    """
+    Get a single prediction by ID.
+
+    Args:
+        prediction_id: Prediction ID
+        db: Database session
+
+    Returns:
+        PredictionHistoryItem: Prediction details
+
+    Raises:
+        HTTPException: 404 if not found
+    """
+    prediction = get_prediction_by_id(db, prediction_id)
+    if not prediction:
+        raise HTTPException(404, "Prediction not found")
+
+    return PredictionHistoryItem(
+        id=cast(int, prediction.id),
+        timestamp=cast(datetime, prediction.timestamp),
+        image_name=cast(str, prediction.image_name),
+        image_hash=cast(str | None, prediction.image_hash),
+        model_name=cast(str, prediction.model_name),
+        predicted_class=cast(str, prediction.predicted_class),
+        confidence=cast(float, prediction.confidence),
+        probabilities=prediction.get_probabilities(),
+        image_thumbnail=cast(str | None, prediction.image_thumbnail),
+        user_session=cast(str | None, prediction.user_session),
+    )
+
+
+@router.delete("/history/{prediction_id}", response_model=MessageResponse)
+async def delete_history_item(
+    prediction_id: int,
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    """
+    Delete a prediction by ID.
+
+    Args:
+        prediction_id: Prediction ID
+        db: Database session
+
+    Returns:
+        MessageResponse: Success message
+
+    Raises:
+        HTTPException: 404 if not found
+    """
+    success = delete_prediction(db, prediction_id)
+    if not success:
+        raise HTTPException(404, "Prediction not found")
+
+    return MessageResponse(message="Prediction deleted successfully")

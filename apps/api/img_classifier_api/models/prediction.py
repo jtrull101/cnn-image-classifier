@@ -10,7 +10,7 @@ from typing import Any, cast
 from sqlalchemy import Column, DateTime, Float, Index, Integer, String, Text
 from sqlalchemy.sql import func
 
-from ..database import Base
+from img_classifier_api.database import Base
 
 
 class PredictionHistory(Base):
@@ -59,10 +59,6 @@ class PredictionHistory(Base):
             return json.loads(probs_str)
         except (json.JSONDecodeError, TypeError):
             return {}
-
-    def set_probabilities(self, probs: dict[str, float]) -> None:
-        """Convert probabilities dictionary to JSON string."""
-        self.probabilities = json.dumps(probs)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert model to dictionary for API responses."""

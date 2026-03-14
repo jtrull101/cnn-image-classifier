@@ -3,7 +3,7 @@
 from unittest.mock import patch
 
 import pytest
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import Engine, create_engine, inspect, text
 from sqlalchemy.orm import Session
 
 pytestmark = pytest.mark.unit
@@ -14,7 +14,7 @@ pytestmark = pytest.mark.unit
 # ---------------------------------------------------------------------------
 
 
-def _make_in_memory_engine():
+def _make_in_memory_engine() -> Engine:
     """Return a fresh in-memory SQLite engine for isolated testing."""
     return create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 
@@ -27,7 +27,7 @@ def _make_in_memory_engine():
 class TestInitDb:
     """init_db() creates all ORM-mapped tables on the bound engine."""
 
-    def test_creates_prediction_history_table(self):
+    def test_creates_prediction_history_table(self) -> None:
         """After init_db() the prediction_history table must exist."""
         from img_classifier_api.models import prediction  # noqa: F401 — registers models
 
@@ -40,7 +40,7 @@ class TestInitDb:
         table_names = inspect(engine).get_table_names()
         assert "prediction_history" in table_names
 
-    def test_init_db_is_idempotent(self):
+    def test_init_db_is_idempotent(self) -> None:
         """Calling init_db() twice must not raise."""
         from img_classifier_api.models import prediction  # noqa: F401
 
@@ -53,7 +53,7 @@ class TestInitDb:
 
         assert "prediction_history" in inspect(engine).get_table_names()
 
-    def test_tables_have_expected_columns(self):
+    def test_tables_have_expected_columns(self) -> None:
         """prediction_history table must have the id and model_name columns."""
         from img_classifier_api.models import prediction  # noqa: F401
 
@@ -78,7 +78,7 @@ class TestInitDb:
 class TestGetDb:
     """get_db() yields a SQLAlchemy Session and closes it after use."""
 
-    def test_yields_session_instance(self):
+    def test_yields_session_instance(self) -> None:
         """get_db() must yield a SQLAlchemy Session."""
         from img_classifier_api.database import get_db
 
@@ -92,7 +92,7 @@ class TestGetDb:
             except StopIteration:
                 pass
 
-    def test_session_is_closed_after_generator_exhausted(self):
+    def test_session_is_closed_after_generator_exhausted(self) -> None:
         """session.close() must be called once the generator is exhausted."""
         from unittest.mock import patch
 
@@ -109,7 +109,7 @@ class TestGetDb:
 
             mock_close.assert_called_once()
 
-    def test_session_closed_on_exception(self):
+    def test_session_closed_on_exception(self) -> None:
         """session.close() must be called via the finally block even when a route raises."""
         from unittest.mock import patch
 
@@ -127,7 +127,7 @@ class TestGetDb:
 
             mock_close.assert_called_once()
 
-    def test_each_call_returns_new_session(self):
+    def test_each_call_returns_new_session(self) -> None:
         """Two successive calls to get_db() must return distinct session objects."""
         from img_classifier_api.database import get_db
 
@@ -144,7 +144,7 @@ class TestGetDb:
             except StopIteration:
                 pass
 
-    def test_session_can_execute_query(self):
+    def test_session_can_execute_query(self) -> None:
         """A session yielded by get_db() must be able to run a trivial query."""
         from img_classifier_api.database import get_db
 

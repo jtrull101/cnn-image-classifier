@@ -8,12 +8,14 @@ Downloaded archives (ZIP) are automatically extracted.
 """
 
 import asyncio
+import base64
 import logging
 import os
 import shutil
 import uuid
 import zipfile
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +31,15 @@ router = APIRouter()
 
 # In-memory storage for download jobs (lost on server restart, same pattern as training jobs)
 download_jobs: dict[str, dict[str, Any]] = {}
+
+
+class DownloadJobStatus(StrEnum):
+    """Download job status values."""
+
+    QUEUED = "queued"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 # ---------------------------------------------------------------------------
@@ -86,6 +97,19 @@ def _dataset_name_from_url(url: str, override: str | None) -> str:
     return filename
 
 
+def _list_datasets_sync(datasets_dir: Path) -> list["DatasetSummary"]:
+    """Enumerate datasets directory (blocking I/O, run in a thread)."""
+    summaries: list[DatasetSummary] = []
+    if datasets_dir.exists():
+        for entry in sorted(datasets_dir.iterdir()):
+            if entry.is_dir():
+                num_items = sum(1 for _ in entry.iterdir())
+                summaries.append(
+                    DatasetSummary(name=entry.name, path=str(entry), num_items=num_items)
+                )
+    return summaries
+
+
 # ---------------------------------------------------------------------------
 # Pydantic schemas
 # ---------------------------------------------------------------------------
@@ -138,7 +162,7 @@ class DownloadJobResponse(BaseModel):
     """Response after queuing a download job."""
 
     job_id: str
-    status: str
+    status: DownloadJobStatus
     message: str
     created_at: datetime
 
@@ -147,7 +171,7 @@ class DownloadStatusResponse(BaseModel):
     """Full status of a download job."""
 
     job_id: str
-    status: str
+    status: DownloadJobStatus
     message: str | None
     dataset_name: str | None
     dataset_path: str | None
@@ -165,16 +189,7 @@ class DownloadStatusResponse(BaseModel):
 async def list_datasets() -> ListDatasetsResponse:
     """List datasets available in the local datasets directory."""
     datasets_dir = _datasets_dir()
-    summaries: list[DatasetSummary] = []
-
-    if datasets_dir.exists():
-        for entry in sorted(datasets_dir.iterdir()):
-            if entry.is_dir():
-                num_items = sum(1 for _ in entry.iterdir())
-                summaries.append(
-                    DatasetSummary(name=entry.name, path=str(entry), num_items=num_items)
-                )
-
+    summaries = await asyncio.to_thread(_list_datasets_sync, datasets_dir)
     return ListDatasetsResponse(
         datasets=summaries,
         datasets_dir=str(datasets_dir),
@@ -198,7 +213,7 @@ async def download_dataset_from_url(
     created_at = datetime.now()
     download_jobs[job_id] = {
         "job_id": job_id,
-        "status": "queued",
+        "status": DownloadJobStatus.QUEUED,
         "message": "Download queued",
         "dataset_name": None,
         "dataset_path": None,
@@ -209,7 +224,7 @@ async def download_dataset_from_url(
     background_tasks.add_task(_run_url_download, job_id, request)
     return DownloadJobResponse(
         job_id=job_id,
-        status="queued",
+        status=DownloadJobStatus.QUEUED,
         message="Dataset download queued",
         created_at=created_at,
     )
@@ -233,7 +248,7 @@ async def download_dataset_from_kaggle(
     created_at = datetime.now()
     download_jobs[job_id] = {
         "job_id": job_id,
-        "status": "queued",
+        "status": DownloadJobStatus.QUEUED,
         "message": "Kaggle download queued",
         "dataset_name": None,
         "dataset_path": None,
@@ -244,7 +259,7 @@ async def download_dataset_from_kaggle(
     background_tasks.add_task(_run_kaggle_download, job_id, request)
     return DownloadJobResponse(
         job_id=job_id,
-        status="queued",
+        status=DownloadJobStatus.QUEUED,
         message="Kaggle dataset download queued",
         created_at=created_at,
     )
@@ -292,7 +307,7 @@ async def delete_dataset(dataset_name: str) -> MessageResponse:
 async def _run_url_download(job_id: str, request: DownloadUrlRequest) -> None:
     """Background task: download a dataset from an arbitrary URL."""
     try:
-        download_jobs[job_id]["status"] = "running"
+        download_jobs[job_id]["status"] = DownloadJobStatus.RUNNING
         download_jobs[job_id]["message"] = "Downloading…"
 
         datasets_dir = _datasets_dir()
@@ -319,7 +334,7 @@ async def _run_url_download(job_id: str, request: DownloadUrlRequest) -> None:
 
         download_jobs[job_id].update(
             {
-                "status": "completed",
+                "status": DownloadJobStatus.COMPLETED,
                 "message": "Download completed successfully",
                 "dataset_name": dataset_name,
                 "dataset_path": str(final_path),
@@ -331,7 +346,7 @@ async def _run_url_download(job_id: str, request: DownloadUrlRequest) -> None:
         logger.exception("URL download job %s failed", job_id)
         download_jobs[job_id].update(
             {
-                "status": "failed",
+                "status": DownloadJobStatus.FAILED,
                 "message": None,
                 "error": str(exc),
                 "completed_at": datetime.now(),
@@ -341,10 +356,8 @@ async def _run_url_download(job_id: str, request: DownloadUrlRequest) -> None:
 
 async def _run_kaggle_download(job_id: str, request: KaggleDownloadRequest) -> None:
     """Background task: download a dataset from Kaggle."""
-    import base64
-
     try:
-        download_jobs[job_id]["status"] = "running"
+        download_jobs[job_id]["status"] = DownloadJobStatus.RUNNING
         download_jobs[job_id]["message"] = "Downloading from Kaggle…"
 
         datasets_dir = _datasets_dir()
@@ -374,7 +387,7 @@ async def _run_kaggle_download(job_id: str, request: KaggleDownloadRequest) -> N
 
         download_jobs[job_id].update(
             {
-                "status": "completed",
+                "status": DownloadJobStatus.COMPLETED,
                 "message": "Kaggle download completed successfully",
                 "dataset_name": dataset_name,
                 "dataset_path": str(final_path),
@@ -386,7 +399,7 @@ async def _run_kaggle_download(job_id: str, request: KaggleDownloadRequest) -> N
         logger.exception("Kaggle download job %s failed", job_id)
         download_jobs[job_id].update(
             {
-                "status": "failed",
+                "status": DownloadJobStatus.FAILED,
                 "message": None,
                 "error": str(exc),
                 "completed_at": datetime.now(),
