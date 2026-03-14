@@ -52,17 +52,25 @@
 }
 
 ::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: oklch(var(--b2));
     border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #888;
+    background: oklch(var(--bc) / 0.3);
     border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: oklch(var(--bc) / 0.5);
+}
+
+/* Global form input theming — ensures inputs/selects look correct in dark themes */
+input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]):not([type=range]):not([class*="sr-only"]),
+select,
+textarea {
+    background-color: oklch(var(--b1));
+    color: oklch(var(--bc));
 }
 
 /* Drag and drop zone styles */
@@ -71,8 +79,8 @@
 }
 
 .drag-drop-zone.dragover {
-    border-color: #3b82f6;
-    background-color: #eff6ff;
+    border-color: oklch(var(--p));
+    background-color: oklch(var(--p) / 0.05);
     transform: scale(1.02);
 }
 
@@ -83,7 +91,7 @@
 
 .card-hover:hover {
     transform: translateY(-4px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
 }
 
 /* Progress bar animation */
@@ -93,9 +101,9 @@
 
 /* Spinner */
 .spinner {
-    border: 3px solid rgba(59, 130, 246, 0.1);
+    border: 3px solid oklch(var(--p) / 0.1);
     border-radius: 50%;
-    border-top: 3px solid #3b82f6;
+    border-top: 3px solid oklch(var(--p));
     width: 40px;
     height: 40px;
     animation: spin 1s linear infinite;
@@ -108,7 +116,7 @@
 
 /* Loading skeleton */
 .skeleton {
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background: linear-gradient(90deg, oklch(var(--b2)) 25%, oklch(var(--b3)) 50%, oklch(var(--b2)) 75%);
     background-size: 200% 100%;
     animation: loading 1.5s ease-in-out infinite;
 }
@@ -136,12 +144,12 @@
 }
 
 .model-card.active {
-    border-color: #3b82f6;
-    background-color: #eff6ff;
+    border-color: oklch(var(--p));
+    background-color: oklch(var(--p) / 0.08);
 }
 
 .model-card:hover {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.08);
 }
 
 /* Image preview grid */
@@ -156,7 +164,7 @@
     aspect-ratio: 1;
     overflow: hidden;
     border-radius: 0.5rem;
-    border: 2px solid #e5e7eb;
+    border: 2px solid oklch(var(--b3));
 }
 
 .image-preview img {
@@ -169,8 +177,8 @@
     position: absolute;
     top: 0.25rem;
     right: 0.25rem;
-    background: rgba(239, 68, 68, 0.9);
-    color: white;
+    background: oklch(var(--er) / 0.9);
+    color: oklch(var(--erc));
     border: none;
     border-radius: 50%;
     width: 24px;
@@ -199,7 +207,7 @@
 
 .confidence-bar-fill {
     height: 100%;
-    background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
+    background: linear-gradient(90deg, oklch(var(--su)) 0%, oklch(var(--p)) 100%);
     border-radius: 12px;
     transition: width 0.5s ease;
     display: flex;
@@ -244,28 +252,6 @@
     transition: width 0.5s ease;
 }
 
-/* Badge colour overrides — DaisyUI provides the .badge base class; these
-   semantic-colour variants extend it with project-specific Tailwind values. */
-.badge-success {
-    background-color: #d1fae5;
-    color: #065f46;
-}
-
-.badge-error {
-    background-color: #fee2e2;
-    color: #991b1b;
-}
-
-.badge-warning {
-    background-color: #fef3c7;
-    color: #92400e;
-}
-
-.badge-info {
-    background-color: #dbeafe;
-    color: #1e40af;
-}
-
 /* Table styles */
 .data-table {
     width: 100%;
@@ -273,27 +259,27 @@
 }
 
 .data-table th {
-    background-color: #f9fafb;
+    background-color: oklch(var(--b2));
     padding: 0.75rem;
     text-align: left;
     font-weight: 600;
     font-size: 0.875rem;
-    color: #374151;
-    border-bottom: 2px solid #e5e7eb;
+    color: oklch(var(--bc));
+    border-bottom: 2px solid oklch(var(--b3));
 }
 
 .data-table td {
     padding: 0.75rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid oklch(var(--b3));
 }
 
 .data-table tr:hover {
-    background-color: #f9fafb;
+    background-color: oklch(var(--b2));
 }
 
 /* Custom modal overlay (backdrop blur beyond DaisyUI default) */
 .modal-overlay {
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
 }
 
@@ -305,25 +291,16 @@
 }
 
 /* Dashboard specific styles */
-.stats-card {
-    @apply p-6 rounded-xl shadow-lg transition-all duration-300;
-}
-
-.stats-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
-}
-
 .card {
-    @apply bg-white rounded-xl shadow-md overflow-hidden;
+    @apply bg-base-100 rounded-xl shadow-md overflow-hidden;
 }
 
 .card-header {
-    @apply px-6 py-4 border-b border-gray-200 flex items-center justify-between;
+    @apply px-6 py-4 border-b border-base-300 flex items-center justify-between;
 }
 
 .card-title {
-    @apply text-xl font-semibold text-gray-800;
+    @apply text-xl font-semibold text-base-content;
 }
 
 .card-body {
@@ -332,56 +309,18 @@
 
 /* Upload zone */
 .upload-zone {
-    @apply border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer transition-all duration-300 hover:border-gray-400 hover:bg-gray-50;
+    @apply border-2 border-dashed border-base-300 rounded-lg p-12 text-center cursor-pointer transition-all duration-300 hover:border-base-content/30 hover:bg-base-200;
 }
 
 .upload-zone.dragover {
-    @apply border-blue-500 bg-blue-50;
+    @apply border-primary;
+    background-color: oklch(var(--p) / 0.05);
     transform: scale(1.02);
-}
-
-/* Button styles */
-.btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
-}
-
-.btn-primary {
-    @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
-}
-
-.btn-secondary {
-    @apply bg-gray-200 text-gray-700 hover:bg-gray-300 focus:ring-gray-500;
-}
-
-.btn-sm {
-    @apply px-3 py-1.5 text-sm;
-}
-
-.btn:disabled {
-    @apply opacity-50 cursor-not-allowed;
-}
-
-/* Model card */
-.model-card {
-    @apply p-4 rounded-lg border-2 border-gray-200 cursor-pointer transition-all duration-200 hover:shadow-md;
-}
-
-.model-card-active {
-    @apply border-blue-500 bg-blue-50;
-}
-
-/* Confidence bar */
-.confidence-bar {
-    @apply w-full h-3 bg-white bg-opacity-30 rounded-full overflow-hidden mt-2;
-}
-
-.confidence-bar-fill {
-    @apply h-full bg-white rounded-full transition-all duration-500;
 }
 
 /* Spinner small */
 .spinner-sm {
-    @apply inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin;
+    @apply inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin;
 }
 
 /* Skeleton loader */
@@ -390,7 +329,7 @@
 }
 
 .skeleton-line {
-    @apply h-4 bg-gray-200 rounded animate-pulse;
+    @apply h-4 bg-base-300 rounded animate-pulse;
 }
 
 /* Print styles */
@@ -414,9 +353,3 @@
 .training-job-card:hover {
     @apply transform scale-105;
 }
-
-/* Badge variations */
-.badge-sm {
-    @apply px-2 py-0.5 text-xs;
-}
-

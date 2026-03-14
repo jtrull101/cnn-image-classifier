@@ -42,7 +42,7 @@ class TestModelManager:
         assert manager.models == {}
         assert manager.model_info == {}
         assert manager.current_model_name is None
-        assert len(manager.default_model_dirs) == 2
+        assert len(manager.default_model_dirs) == 3
 
     def test_discover_models_no_models(self, manager, tmp_path):
         """Test discover_models when no models exist."""
