@@ -369,6 +369,12 @@ async def models_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request=request, name="models.html", context={})
 
 
+@app.get("/compare", response_class=HTMLResponse)
+async def compare_page(request: Request) -> HTMLResponse:
+    """Serve the multi-model comparison interface."""
+    return templates.TemplateResponse(request=request, name="compare.html", context={})
+
+
 @app.get("/datasets-ui", response_class=HTMLResponse)
 async def datasets_page(request: Request) -> HTMLResponse:
     """Serve the dataset management interface."""

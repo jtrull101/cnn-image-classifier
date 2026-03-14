@@ -1,5 +1,6 @@
 """Unit tests for the training router."""
 
+from collections.abc import Generator
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -18,12 +19,12 @@ pytestmark = pytest.mark.unit
 
 
 @pytest.fixture
-def client():
+def client() -> TestClient:
     return TestClient(app)
 
 
 @pytest.fixture(autouse=True)
-def clear_jobs():
+def clear_jobs() -> Generator[None, None, None]:
     """Ensure a clean training_jobs store for every test."""
     training_module.training_jobs.clear()
     yield

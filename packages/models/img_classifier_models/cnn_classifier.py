@@ -1,13 +1,11 @@
 """CNN classifier model for image classification."""
 
-from typing import Optional
-
 import tensorflow as tf
 from img_classifier_config import ArchitectureComplexity, BaseConfig
 from keras.layers import Conv2D, Dense, Dropout, Flatten, Input, MaxPooling2D
 from keras.models import Sequential
 
-from .base_model import BaseModel
+from img_classifier_models.base_model import BaseModel
 
 
 class CnnClassifier(BaseModel):
@@ -29,7 +27,7 @@ class CnnClassifier(BaseModel):
         tf.random.set_seed(seed)
 
     def build(
-        self, complexity: Optional[ArchitectureComplexity] = None, seed: Optional[int] = None
+        self, complexity: ArchitectureComplexity | None = None, seed: int | None = None
     ) -> tf.keras.Model:
         """Build the CNN architecture.
 

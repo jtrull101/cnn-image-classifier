@@ -17,7 +17,7 @@ from img_classifier_models import BaseModel
 from keras import backend as K
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
-from .callbacks import AccuracyThresholdCallback
+from img_classifier_training.callbacks import AccuracyThresholdCallback
 
 logger = logging.getLogger(__name__)
 

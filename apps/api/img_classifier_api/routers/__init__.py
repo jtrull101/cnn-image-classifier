@@ -1,5 +1,5 @@
 """API routers package."""
 
-from img_classifier_api.routers import analytics, datasets, history, models, predictions
+from img_classifier_api.routers import analytics, datasets, history, models, predictions, training
 
-__all__ = ["models", "predictions", "history", "analytics", "datasets"]
+__all__ = ["models", "predictions", "history", "analytics", "datasets", "training"]

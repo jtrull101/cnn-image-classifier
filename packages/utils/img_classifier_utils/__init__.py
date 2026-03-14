@@ -1,6 +1,6 @@
 """Utilities package for image classification."""
 
-from .file_utils import (
+from img_classifier_utils.file_utils import (
     clean_directory,
     download_from_google_drive,
     ensure_directory_exists,
