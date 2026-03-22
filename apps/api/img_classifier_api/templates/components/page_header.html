@@ -22,9 +22,9 @@
 {% macro page_header(title, subtitle=None) %}
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
     <div>
-        <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
+        <h1 class="text-2xl font-bold text-base-content">{{ title }}</h1>
         {% if subtitle %}
-        <p class="text-gray-500 text-sm mt-1">{{ subtitle }}</p>
+        <p class="text-base-content/60 text-sm mt-1">{{ subtitle }}</p>
         {% endif %}
     </div>
     {% set _slot_content = caller("actions") if caller is defined else "" %}
