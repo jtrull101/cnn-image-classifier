@@ -1,0 +1,30 @@
+# Production Training Configuration
+# For high-quality models with best performance
+
+project_name: "production_model"
+working_dir: "/models/production/"
+
+dataset_name: "production_dataset"
+
+# High resolution for better quality
+image_size: [224, 224]
+color_channels: 3
+
+# Production training settings
+batch_size: 32
+num_epochs: 100
+learning_rate: 0.0001
+data_percent: 1.0  # Use all data
+
+# Deep architecture for best performance
+architecture_complexity: "deep"
+dropout_rate: 0.4
+
+# Aggressive callbacks for optimal results
+use_early_stopping: true
+early_stopping_patience: 30
+use_model_checkpoint: true
+use_accuracy_threshold_stopping: true
+accuracy_threshold: 0.995
+min_accuracy_to_save: 0.95
+

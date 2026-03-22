@@ -1,0 +1,1 @@
+python src/img_classifier_cnn/front_end.py

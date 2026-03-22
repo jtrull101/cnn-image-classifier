@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Image Classification System{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8" x-data="dashboardData()">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-4xl font-bold text-base-content mb-2">Dashboard</h1>
+        <p class="text-base-content/60">Upload and classify images using trained neural network models</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats stats-horizontal shadow w-full mb-8 bg-base-100 border border-base-300 flex-wrap">
+        <!-- Total Predictions -->
+        <div class="stat">
+            <div class="stat-figure text-primary">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+            </div>
+            <div class="stat-title">Total Predictions</div>
+            <div class="stat-value text-primary" x-text="stats.totalPredictions">0</div>
+        </div>
+
+        <!-- Active Model -->
+        <div class="stat">
+            <div class="stat-figure text-secondary">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                </svg>
+            </div>
+            <div class="stat-title">Active Model</div>
+            <div class="stat-value text-secondary text-xl truncate" x-text="stats.activeModel || 'None'">Loading...</div>
+        </div>
+
+        <!-- Avg Confidence -->
+        <div class="stat">
+            <div class="stat-figure text-success">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <div class="stat-title">Avg Confidence</div>
+            <div class="stat-value text-success" x-text="(stats.avgConfidence * 100).toFixed(1) + '%'">0%</div>
+        </div>
+
+        <!-- Models Loaded -->
+        <div class="stat">
+            <div class="stat-figure text-warning">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                </svg>
+            </div>
+            <div class="stat-title">Models Loaded</div>
+            <div class="stat-value text-warning" x-text="stats.modelsLoaded">0</div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Upload & Prediction Section (2 columns) -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Quick Prediction Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Quick Prediction</h2>
+                    <p class="text-base-content/60 text-sm">Upload an image to classify</p>
+                </div>
+                <div class="card-body">
+                    <!-- File Upload Component -->
+                    <div x-data="fileUploadComponent()">
+                        <div 
+                            class="upload-zone"
+                            :class="{ 'border-primary': isDragging }"
+                            @click="$refs.fileInput.click()"
+                            @dragover.prevent="isDragging = true"
+                            @dragleave.prevent="isDragging = false"
+                            @drop.prevent="handleDrop($event)"
+                        >
+                            <input 
+                                type="file" 
+                                x-ref="fileInput"
+                                accept="image/*"
+                                class="hidden"
+                                @change="handleFileSelect($event)"
+                            >
+                            
+                            <template x-if="!previewUrl">
+                                <div class="text-center">
+                                    <svg class="w-16 h-16 mx-auto mb-4 text-base-content/30" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    <p class="text-lg font-semibold text-base-content mb-2">
+                                        Click to upload or drag and drop
+                                    </p>
+                                    <p class="text-sm text-base-content/50">
+                                        PNG, JPG, GIF up to 10MB
+                                    </p>
+                                </div>
+                            </template>
+
+                            <template x-if="previewUrl">
+                                <div class="space-y-4">
+                                    <img :src="previewUrl" class="max-h-64 mx-auto rounded-lg shadow-lg">
+                                    <div class="flex gap-2 justify-center">
+                                        <button 
+                                            type="button"
+                                            class="btn btn-secondary btn-sm"
+                                            @click.stop="clearFile()"
+                                        >
+                                            Clear
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            class="btn btn-primary btn-sm"
+                                            @click.stop="predictImage()"
+                                            :disabled="isProcessing"
+                                        >
+                                            <span x-show="!isProcessing">Classify Image</span>
+                                            <span x-show="isProcessing" class="flex items-center gap-2">
+                                                <span class="spinner-sm"></span>
+                                                Processing...
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Error Display -->
+                        <div x-show="error" role="alert" class="mt-4 alert alert-error">
+                            <p x-text="error"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prediction Result -->
+            <div x-show="$store.app.currentPrediction" class="card" x-cloak>
+                <div class="card-header">
+                    <h2 class="card-title">Prediction Result</h2>
+                </div>
+                <div class="card-body" x-data="predictionResultComponent()">
+                    <template x-if="prediction">
+                        <div class="space-y-6">
+                            <!-- Main Result -->
+                            <div class="bg-primary rounded-xl p-6 text-primary-content text-center">
+                                <p class="text-sm font-medium opacity-90 mb-2">Predicted Class</p>
+                                <p class="text-4xl font-bold mb-4" x-text="prediction.class_name"></p>
+                                <div class="space-y-2">
+                                    <p class="text-xl font-semibold">
+                                        Confidence: <span x-text="formatConfidence(prediction.confidence)"></span>
+                                    </p>
+                                    <div class="confidence-bar">
+                                        <div 
+                                            class="confidence-bar-fill"
+                                            :style="`width: ${prediction.confidence * 100}%`"
+                                        ></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- All Probabilities -->
+                            <div>
+                                <h3 class="text-lg font-semibold mb-3 text-base-content">All Classes</h3>
+                                <div class="space-y-2">
+                                    <template x-for="(prob, className) in sortedProbabilities()" :key="className">
+                                        <div class="probability-item">
+                                            <span class="font-medium" x-text="className"></span>
+                                            <div class="probability-bar-mini">
+                                                <div 
+                                                    class="probability-bar-fill-mini"
+                                                    :style="`width: ${prob * 100}%`"
+                                                ></div>
+                                            </div>
+                                            <span class="text-sm font-semibold" x-text="formatConfidence(prob)"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- Model Info -->
+                            <div class="text-sm text-base-content/70 text-center">
+                                Model: <span class="font-semibold" x-text="prediction.model_name"></span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Recent Predictions -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Recent Predictions</h2>
+                    <a href="/history" class="text-primary hover:text-primary/80 text-sm font-medium">
+                        View All →
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div 
+                        hx-get="/api/history?limit=5"
+                        hx-trigger="load, historyUpdate from:body"
+                        hx-target="this"
+                        hx-swap="innerHTML"
+                    >
+                        <div class="skeleton-loader">
+                            <div class="skeleton-line"></div>
+                            <div class="skeleton-line"></div>
+                            <div class="skeleton-line"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar (1 column) -->
+        <div class="space-y-6">
+            <!-- Model Selector Card -->
+            <div class="card" x-data="modelSelectorComponent()">
+                <div class="card-header">
+                    <h2 class="card-title">Active Model</h2>
+                </div>
+                <div class="card-body">
+                    <template x-if="models.length === 0">
+                        <div class="text-center text-base-content/60 py-4">
+                            <p>No models loaded</p>
+                        </div>
+                    </template>
+
+                    <template x-if="models.length > 0">
+                        <div class="space-y-3">
+                            <template x-for="model in models" :key="model.name">
+                                <div 
+                                    class="model-card"
+                                    :class="{ 'model-card-active': model.name === currentModel }"
+                                    @click="selectModel(model.name)"
+                                >
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <h3 class="font-semibold text-base-content" x-text="model.name"></h3>
+                                                <span 
+                                                    x-show="model.name === currentModel"
+                                                    class="badge badge-success"
+                                                >
+                                                    Active
+                                                </span>
+                                            </div>
+                                            <p class="text-sm text-base-content/70" x-text="`${model.num_classes} classes`"></p>
+                                            <p 
+                                                x-show="model.accuracy"
+                                                class="text-xs text-base-content/60 mt-1"
+                                            >
+                                                Accuracy: <span x-text="(model.accuracy * 100).toFixed(1) + '%'"></span>
+                                            </p>
+                                        </div>
+                                        <template x-if="model.name === currentModel">
+                                            <div class="text-success text-xl">✓</div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <button 
+                        class="btn btn-secondary btn-sm w-full mt-4"
+                        @click="$dispatch('open-model-manager')"
+                    >
+                        Manage Models
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Quick Stats</h2>
+                </div>
+                <div class="card-body">
+                    <div 
+                        hx-get="/api/analytics/summary"
+                        hx-trigger="load, statsUpdate from:body"
+                        hx-target="this"
+                        hx-swap="innerHTML"
+                    >
+                        <div class="skeleton-loader">
+                            <div class="skeleton-line"></div>
+                            <div class="skeleton-line"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Quick Actions</h2>
+                </div>
+                <div class="card-body space-y-2">
+                    <a href="/batch" class="btn btn-secondary btn-sm w-full">
+                        Batch Upload
+                    </a>
+                    <a href="/compare" class="btn btn-secondary btn-sm w-full">
+                        Compare Models
+                    </a>
+                    <a href="/analytics" class="btn btn-secondary btn-sm w-full">
+                        View Analytics
+                    </a>
+                    <a href="/history" class="btn btn-secondary btn-sm w-full">
+                        View History
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alpine.js Data -->
+<script>
+function dashboardData() {
+    return {
+        stats: {
+            totalPredictions: 0,
+            activeModel: {{ model_name | tojson }},
+            avgConfidence: 0,
+            modelsLoaded: 0
+        },
+        
+        init() {
+            this.loadStats();
+            
+            // Listen for WebSocket updates
+            this.$watch('$store.app.wsConnected', (connected) => {
+                if (connected) {
+                    this.loadStats();
+                }
+            });
+        },
+        
+        async loadStats() {
+            try {
+                // Load analytics summary
+                const analyticsRes = await fetch('/api/analytics/summary');
+                if (analyticsRes.ok) {
+                    const data = await analyticsRes.json();
+                    this.stats.totalPredictions = data.total_predictions;
+                    this.stats.avgConfidence = data.average_confidence;
+                }
+                
+                // Load models info
+                const modelsRes = await fetch('/api/models');
+                if (modelsRes.ok) {
+                    const data = await modelsRes.json();
+                    this.stats.modelsLoaded = data.models.length;
+                    this.stats.activeModel = data.current_model;
+                    Alpine.store('app').setActiveModel(data.current_model);
+                }
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+    };
+}
+</script>
+{% endblock %}
