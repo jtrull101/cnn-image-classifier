@@ -1,21 +1,274 @@
-[build-system]
-requires = ["setuptools>=42.0", "wheel"]
-build-backend = "setuptools.build_meta"
+# Monorepo Workspace Configuration
+[project]
+name = "alz-mri-neural-network"
+version = "0.1.0"
+requires-python = ">=3.11,<3.14"
+# Workspace packages must be listed here to be installed by UV
+# The [tool.uv.sources] section tells UV they come from the workspace
+dependencies = [
+    "img-classifier-api",
+    "img-classifier-config",
+    "img-classifier-data",
+    "img-classifier-models",
+    "img-classifier-training",
+    "img-classifier-utils",
+    "img-classifier-cli",
+]
 
+[tool.uv.workspace]
+members = [
+    "apps/api",
+    "packages/cli",
+    "packages/config",
+    "packages/data",
+    "packages/models",
+    "packages/training",
+    "packages/utils",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.7",
+    "pyright>=1.1.408",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+]
+
+e2e = [
+    "pytest-playwright>=0.4.4",
+    "playwright>=1.44.0",
+    "pytest-timeout>=2.2.0",
+]
+
+test = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    "pytest-ordering>=0.6",
+    "pytest-xdist>=3.5.0",
+    "pytest-timeout>=2.2.0",
+    "pytest-asyncio>=0.23.0",
+    "testcontainers>=4.0",
+]
+
+types = [
+    "pandas-stubs>=2.0.0",
+]
+
+[tool.uv.sources]
+img-classifier-api = { workspace = true }
+img-classifier-cli = { workspace = true }
+img-classifier-config = { workspace = true }
+img-classifier-data = { workspace = true }
+img-classifier-models = { workspace = true }
+img-classifier-training = { workspace = true }
+img-classifier-utils = { workspace = true }
+
+# Pytest Configuration
 [tool.pytest.ini_options]
-addopts = "--cov=alz_mri_cnn"
-testpaths = ["tests"]
+minversion = "7.0"
+asyncio_mode = "auto"
+addopts = [
+    "-n=auto",  # Run tests in parallel using all available CPU cores
+    "--dist=loadgroup",  # Distribute tests by group (respects marks)
+    "--strict-markers",  # Enforce marker registration
+    "--tb=short",  # Shorter traceback format
+    "-v",  # Verbose output
+    "--maxfail=3",  # Stop after 3 failures
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--timeout=300",  # Global timeout of 5 minutes per test
+    "-ra",  # Show extra test summary info
+]
+testpaths = ["apps", "tests", "packages"]
+pythonpath = ["."]
+python_files = ["test_*.py", "*_test.py", "tests.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 
-[tool.mypy]
-mypy_path = "src"
-check_untyped_defs = true
-disallow_any_generics = true
-ignore_missing_imports = true
-no_implicit_optional = true
-show_error_codes = true
-strict_equality = true
-warn_redundant_casts = true
-warn_return_any = true
-warn_unreachable = true
-warn_unused_configs = true
-no_implicit_reexport = true
+# Marker definitions (also registered in conftest.py)
+norecursedirs = [
+    "e2e",
+    ".git", ".venv", "__pycache__", "*.egg-info",
+]
+
+markers = [
+    "unit: Fast unit tests using mocks and no I/O (default)",
+    "integration: Slower integration tests using real dependencies and I/O",
+    "smoke: Critical path validation tests (run in pre-commit hooks)",
+    "slow: Slow tests that take significant time to run",
+    "serial: Tests that must run serially, not in parallel",
+    "requires_gpu: Tests that require GPU access",
+    "requires_data: Tests that require dataset download",
+    "e2e: Browser-based end-to-end tests using Playwright (run with make test-e2e)",
+]
+
+filterwarnings = [
+    # System/infrastructure warnings we cannot control
+    "ignore::ResourceWarning",
+    "ignore::pytest.PytestUnhandledThreadExceptionWarning",
+
+    # External library compatibility warnings (NOT our code to fix):
+
+    # 1. Keras optimizer loading warning - EXPECTED and BENIGN behavior
+    #    When loading saved models, Keras warns that optimizer state differs.
+    #    This is intentional - we save models for inference/transfer learning only.
+    #    Root cause: Not saving/loading optimizer state (correct for checkpointing).
+    #    Action: Suppress - this is proper model serialization practice.
+    "ignore:Skipping variable loading for optimizer:UserWarning:keras.src.saving.saving_lib",
+
+    # 2. NumPy 2.0 compatibility in TensorFlow/Keras backend
+    #    Warning originates from inside keras/tensorflow, not our code.
+    #    Root cause: TensorFlow/Keras not yet fully compatible with NumPy 2.0.
+    #    Action: Suppress - waiting for upstream fix.
+    #    Tracking: https://github.com/tensorflow/tensorflow/issues/62003
+    #    Alternative: Pin numpy<2.0 in dependencies if this becomes critical.
+    "ignore:__array__ implementation doesn't accept a copy keyword:DeprecationWarning:keras.src.backend",
+
+    # All other deprecation warnings should be surfaced and fixed in our code
+]
+
+log_cli = true
+log_cli_level = "INFO"
+log_file = "logs/test.log"
+log_file_date_format = "%Y-%m-%d %H:%M:%S"
+log_file_format = "%(asctime)s - %(name)s %(levelname)s %(message)s"
+log_file_level = "INFO"
+log_format = "%(asctime)s %(levelname)s %(message)s"
+log_level = "DEBUG"
+
+# xdist specific settings
+[tool.pytest_xdist]
+# Workers will be restarted after each test group
+worker_restart_on_failure = true
+
+# Coverage Configuration
+[tool.coverage.run]
+source = [
+    "packages/config/img_classifier_config",
+    "packages/utils/img_classifier_utils",
+    "packages/data/img_classifier_data",
+    "packages/models/img_classifier_models",
+    "packages/training/img_classifier_training",
+    "apps/api/img_classifier_api",
+    "packages/cli/img_classifier_cli",
+]
+branch = true
+parallel = true
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/deprecated_*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+precision = 2
+show_missing = true
+skip_covered = false
+sort = "Cover"
+fail_under = 80
+
+# Ruff Configuration (replaces flake8, isort, autopep8)
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "DTZ",    # flake8-datetimez
+    "SIM",    # flake8-simplify
+    "ARG",    # flake8-unused-arguments
+    "PTH",    # flake8-use-pathlib
+    "RUF",    # Ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # do not perform function calls in argument defaults
+    "ARG001", # unused function argument (common in ML callbacks)
+    "ARG002", # unused method argument
+]
+
+[tool.ruff.lint.per-file-ignores]
+"conftest.py" = [
+    "N806",    # Uppercase variable names OK in ML test fixtures (X_train, etc.)
+]
+"tests/**/*.py" = [
+    "ARG",     # Unused arguments OK in tests
+    "S101",    # Assert use is OK in tests
+    "N806",    # Uppercase variable names OK in ML tests (X, X_train, etc.)
+]
+"apps/api/tests/e2e/**/*.py" = [
+    "ARG",     # Unused arguments OK in tests (route handler lambdas)
+    "S101",    # Assert use is OK in tests
+]
+"tests/test_models.py" = [
+    "F401",    # Unused imports OK for conditional TensorFlow availability check
+]
+"__init__.py" = [
+    "F401",    # Unused imports OK in __init__.py
+]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "img_classifier_config",
+    "img_classifier_utils",
+    "img_classifier_data",
+    "img_classifier_models",
+    "img_classifier_training",
+    "img_classifier_api",
+]
+force-single-line = false
+lines-after-imports = 2
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# Pyright Configuration (modern, faster alternative to mypy)
+[tool.pyright]
+include = [
+    "packages/config/img_classifier_config",
+    "packages/utils/img_classifier_utils",
+    "packages/data/img_classifier_data",
+    "packages/models/img_classifier_models",
+    "packages/training/img_classifier_training",
+    "apps/api/img_classifier_api",
+    "packages/cli/img_classifier_cli",
+]
+exclude = [
+    "**/__pycache__",
+    "**/deprecated_*",
+    "**/.venv",
+    "**/node_modules",
+]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.11"
+pythonPlatform = "All"
+typeCheckingMode = "basic"
+
+# Type checking settings
+reportMissingImports = true
+reportAttributeAccessIssue = false  # Disable for TensorFlow keras attributes
+reportPrivateImportUsage = false  # Pydantic v2 and pytest use private-looking exports

@@ -1,0 +1,634 @@
+{% extends "base.html" %}
+
+{% block title %}Train Model - Image Classification System{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8" x-data="trainingPage()">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-4xl font-bold text-base-content mb-2">Train New Model</h1>
+        <p class="text-base-content/60">Create and train a new neural network model with your dataset</p>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Training Form (2 columns) -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Dataset Selection Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">1. Dataset Configuration</h2>
+                    <p class="text-base-content/60 text-sm">Select and analyze your dataset</p>
+                </div>
+                <div class="card-body space-y-4">
+                    <!-- Dataset Path Input -->
+                    <div>
+                        <label class="block text-sm font-medium text-base-content mb-2">
+                            Dataset Path
+                        </label>
+                        <div class="flex gap-2">
+                            <input
+                                type="text"
+                                x-model="form.dataset_path"
+                                placeholder="/path/to/dataset"
+                                class="flex-1 px-4 py-2 border border-base-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                @input="clearDatasetInfo()"
+                            >
+                            <button
+                                type="button"
+                                class="btn btn-secondary"
+                                @click="analyzeDataset()"
+                                :disabled="isAnalyzing || !form.dataset_path"
+                            >
+                                <span x-show="!isAnalyzing">Analyze</span>
+                                <span x-show="isAnalyzing" class="flex items-center gap-2">
+                                    <span class="spinner-sm"></span>
+                                    Analyzing...
+                                </span>
+                            </button>
+                        </div>
+                        <p class="text-xs text-base-content/50 mt-1">
+                            Enter the path to your dataset directory containing images organized by class
+                        </p>
+                    </div>
+
+                    <!-- Dataset Info Display -->
+                    <div x-show="datasetInfo" x-cloak class="alert alert-info">
+                        <div class="w-full">
+                            <h3 class="font-semibold text-base-content mb-3">Dataset Information</h3>
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <p class="text-base-content/60">Number of Classes</p>
+                                    <p class="font-semibold" x-text="datasetInfo?.num_classes"></p>
+                                </div>
+                                <div>
+                                    <p class="text-base-content/60">Total Images</p>
+                                    <p class="font-semibold" x-text="datasetInfo?.total_images"></p>
+                                </div>
+                                <div>
+                                    <p class="text-base-content/60">Train/Test Split</p>
+                                    <p class="font-semibold" x-text="datasetInfo?.has_train_test_split ? 'Yes' : 'No'"></p>
+                                </div>
+                                <div>
+                                    <p class="text-base-content/60">Recommended Architecture</p>
+                                    <p class="font-semibold capitalize" x-text="datasetInfo?.recommended_complexity"></p>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <p class="text-base-content/60 text-sm mb-1">Classes:</p>
+                                <div class="flex flex-wrap gap-1">
+                                    <template x-for="className in (datasetInfo?.class_names || [])" :key="className">
+                                        <span class="badge badge-info" x-text="className"></span>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Error Display -->
+                    <div x-show="error" x-cloak role="alert" class="alert alert-error">
+                        <p class="font-semibold mb-1">Error</p>
+                        <p class="text-sm" x-text="error"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Training Parameters Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">2. Training Parameters</h2>
+                    <button
+                        type="button"
+                        class="text-sm text-primary hover:text-primary/80"
+                        @click="showAdvanced = !showAdvanced"
+                        x-text="showAdvanced ? 'Hide Advanced' : 'Show Advanced'"
+                    ></button>
+                </div>
+                <div class="card-body space-y-4">
+                    <!-- Project Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-base-content mb-2">
+                            Project Name *
+                        </label>
+                        <input
+                            type="text"
+                            x-model="form.project_name"
+                            placeholder="my_classifier"
+                            class="w-full px-4 py-2 border border-base-300 rounded-lg focus:ring-2 focus:ring-primary"
+                            required
+                        >
+                    </div>
+
+                    <!-- Basic Parameters Grid -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-base-content mb-2">
+                                Epochs
+                            </label>
+                            <input
+                                type="number"
+                                x-model.number="form.num_epochs"
+                                min="1" max="200"
+                                class="w-full px-4 py-2 border border-base-300 rounded-lg focus:ring-2 focus:ring-primary"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-base-content mb-2">
+                                Batch Size
+                            </label>
+                            <select
+                                x-model.number="form.batch_size"
+                                class="w-full px-4 py-2 border border-base-300 rounded-lg focus:ring-2 focus:ring-primary"
+                            >
+                                <option :value="16">16</option>
+                                <option :value="32">32</option>
+                                <option :value="64">64</option>
+                                <option :value="128">128</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-base-content mb-2">
+                                Learning Rate
+                            </label>
+                            <select
+                                x-model.number="form.learning_rate"
+                                class="w-full px-4 py-2 border border-base-300 rounded-lg focus:ring-2 focus:ring-primary"
+                            >
+                                <option :value="0.0001">0.0001</option>
+                                <option :value="0.0005">0.0005</option>
+                                <option :value="0.001">0.001</option>
+                                <option :value="0.005">0.005</option>
+                                <option :value="0.01">0.01</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-base-content mb-2">
+                                Architecture
+                            </label>
+                            <select
+                                x-model="form.architecture_complexity"
+                                class="w-full px-4 py-2 border border-base-300 rounded-lg focus:ring-2 focus:ring-primary"
+                            >
+                                <option value="auto">Auto (Recommended)</option>
+                                <option value="simple">Simple</option>
+                                <option value="medium">Medium</option>
+                                <option value="deep">Deep</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Parameters (Collapsible) -->
+                    <div x-show="showAdvanced" x-cloak x-collapse class="space-y-4 pt-4 border-t border-base-300">
+                        <h3 class="text-sm font-semibold text-base-content">Advanced Settings</h3>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-base-content mb-2">
+                                    Dropout Rate
+                                </label>
+                                <input
+                                    type="number"
+                                    x-model.number="form.dropout_rate"
+                                    min="0" max="0.9" step="0.1"
+                                    class="w-full px-4 py-2 border border-base-300 rounded-lg focus:ring-2 focus:ring-primary"
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-base-content mb-2">
+                                    Data Percentage
+                                </label>
+                                <input
+                                    type="number"
+                                    x-model.number="form.data_percent"
+                                    min="0.1" max="1" step="0.1"
+                                    class="w-full px-4 py-2 border border-base-300 rounded-lg focus:ring-2 focus:ring-primary"
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-base-content mb-2">
+                                    Validation Split
+                                </label>
+                                <input
+                                    type="number"
+                                    x-model.number="form.validation_split"
+                                    min="0.1" max="0.5" step="0.05"
+                                    class="w-full px-4 py-2 border border-base-300 rounded-lg focus:ring-2 focus:ring-primary"
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-base-content mb-2">
+                                    Early Stopping Patience
+                                </label>
+                                <input
+                                    type="number"
+                                    x-model.number="form.early_stopping_patience"
+                                    min="5" max="100"
+                                    class="w-full px-4 py-2 border border-base-300 rounded-lg focus:ring-2 focus:ring-primary"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Checkboxes -->
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2">
+                                <input type="checkbox" x-model="form.use_early_stopping" class="rounded">
+                                <span class="text-sm text-base-content">Enable Early Stopping</span>
+                            </label>
+                            <label class="flex items-center gap-2">
+                                <input type="checkbox" x-model="form.use_model_checkpoint" class="rounded">
+                                <span class="text-sm text-base-content">Save Best Model Checkpoints</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hyperparameter Optimization Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">3. Hyperparameter Optimization (Optional)</h2>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" x-model="form.optimize_hyperparameters" class="rounded">
+                        <span class="text-sm text-base-content">Enable</span>
+                    </label>
+                </div>
+                <div x-show="form.optimize_hyperparameters" x-cloak class="card-body space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-base-content mb-2">
+                                Optimizer Type
+                            </label>
+                            <select
+                                x-model="form.optimizer_type"
+                                class="w-full px-4 py-2 border border-base-300 rounded-lg focus:ring-2 focus:ring-primary"
+                            >
+                                <option value="random">Random Search</option>
+                                <option value="grid">Grid Search</option>
+                                <option value="bayesian">Bayesian Optimization</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-base-content mb-2">
+                                Max Trials
+                            </label>
+                            <input
+                                type="number"
+                                x-model.number="form.max_trials"
+                                min="1" max="100"
+                                class="w-full px-4 py-2 border border-base-300 rounded-lg focus:ring-2 focus:ring-primary"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-base-content mb-2">
+                                Search Space
+                            </label>
+                            <select
+                                x-model="form.search_space_type"
+                                class="w-full px-4 py-2 border border-base-300 rounded-lg focus:ring-2 focus:ring-primary"
+                            >
+                                <option value="quick">Quick (Faster)</option>
+                                <option value="default">Default</option>
+                                <option value="full">Full (Thorough)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p class="text-xs text-base-content/50">
+                        Hyperparameter optimization will test multiple configurations to find the best settings. This will take longer but may improve model performance.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Start Training Button -->
+            <button
+                type="button"
+                class="btn btn-primary w-full py-3 text-lg"
+                @click="startTraining()"
+                :disabled="isTraining || !canStartTraining()"
+            >
+                <span x-show="!isTraining">Start Training</span>
+                <span x-show="isTraining" class="flex items-center justify-center gap-2">
+                    <span class="spinner-sm"></span>
+                    Training in Progress...
+                </span>
+            </button>
+        </div>
+
+        <!-- Sidebar (1 column) -->
+        <div class="space-y-6">
+            <!-- Current Job Status -->
+            <div class="card" x-show="currentJob" x-cloak>
+                <div class="card-header">
+                    <h2 class="card-title">Training Status</h2>
+                </div>
+                <div class="card-body space-y-4">
+                    <!-- Status Badge -->
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-base-content/70">Status:</span>
+                        <span
+                            class="badge"
+                            :class="{
+                                'badge-warning': currentJob?.status === 'queued',
+                                'badge-info': currentJob?.status === 'running',
+                                'badge-success': currentJob?.status === 'completed',
+                                'badge-error': currentJob?.status === 'failed'
+                            }"
+                            x-text="currentJob?.status || 'Unknown'"
+                        ></span>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div x-show="currentJob?.status === 'running'">
+                        <div class="flex justify-between text-sm text-base-content/70 mb-1">
+                            <span>Progress</span>
+                            <span x-text="`${currentJob?.progress || 0}%`"></span>
+                        </div>
+                        <div class="w-full bg-base-300 rounded-full h-2">
+                            <div
+                                class="bg-primary h-2 rounded-full transition-all duration-300"
+                                :style="`width: ${currentJob?.progress || 0}%`"
+                            ></div>
+                        </div>
+                        <p class="text-xs text-base-content/50 mt-1" x-show="currentJob?.current_epoch">
+                            Epoch <span x-text="currentJob?.current_epoch"></span> of <span x-text="currentJob?.total_epochs"></span>
+                        </p>
+                    </div>
+
+                    <!-- Current Metrics -->
+                    <div x-show="currentJob?.current_metrics" class="text-sm">
+                        <p class="text-base-content/70 font-medium mb-2">Current Metrics:</p>
+                        <div class="space-y-1">
+                            <template x-for="(value, key) in (currentJob?.current_metrics || {})" :key="key">
+                                <div class="flex justify-between">
+                                    <span class="text-base-content/70 capitalize" x-text="key.replace('_', ' ')"></span>
+                                    <span class="font-semibold" x-text="typeof value === 'number' ? value.toFixed(4) : value"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Final Results -->
+                    <div x-show="currentJob?.status === 'completed' && currentJob?.final_results" role="alert" class="alert alert-success">
+                        <div class="w-full">
+                            <p class="font-semibold mb-2">Training Complete!</p>
+                            <div class="space-y-1 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-base-content/70">Test Accuracy:</span>
+                                    <span class="font-semibold text-success" x-text="formatPercentage(currentJob?.final_results?.test_accuracy)"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-base-content/70">Test Loss:</span>
+                                    <span class="font-semibold" x-text="currentJob?.final_results?.loss?.toFixed(4)"></span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-base-content/60 mt-2">
+                                Model saved to: <span class="font-mono text-xs break-all" x-text="currentJob?.final_results?.model_path"></span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Error Display -->
+                    <div x-show="currentJob?.status === 'failed' && currentJob?.error" role="alert" class="alert alert-error">
+                        <div>
+                            <p class="font-semibold mb-1">Training Failed</p>
+                            <p class="text-sm" x-text="currentJob?.error"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Jobs -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Recent Training Jobs</h2>
+                    <button
+                        type="button"
+                        class="text-sm text-primary hover:text-primary/80"
+                        @click="loadJobs()"
+                    >
+                        Refresh
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div x-show="jobs.length === 0" class="text-center text-base-content/60 py-4">
+                        <p>No training jobs yet</p>
+                    </div>
+                    <div x-show="jobs.length > 0" class="space-y-2">
+                        <template x-for="job in jobs.slice(0, 5)" :key="job.job_id">
+                            <div
+                                class="p-3 border border-base-300 rounded-lg hover:bg-base-200 cursor-pointer transition"
+                                @click="selectJob(job.job_id)"
+                            >
+                                <div class="flex items-center justify-between mb-1">
+                                    <p class="text-sm font-semibold text-base-content" x-text="getProjectName(job)"></p>
+                                    <span
+                                        class="badge badge-sm"
+                                        :class="{
+                                            'badge-warning': job.status === 'queued',
+                                            'badge-info': job.status === 'running',
+                                            'badge-success': job.status === 'completed',
+                                            'badge-error': job.status === 'failed'
+                                        }"
+                                        x-text="job.status"
+                                    ></span>
+                                </div>
+                                <p class="text-xs text-base-content/50" x-text="formatDate(job.created_at)"></p>
+                                <div x-show="job.status === 'completed' && job.final_results" class="mt-1">
+                                    <p class="text-xs text-success">
+                                        Accuracy: <span x-text="formatPercentage(job.final_results?.test_accuracy)"></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Guide -->
+            <div class="card bg-base-200">
+                <div class="card-header">
+                    <h2 class="card-title">Quick Guide</h2>
+                </div>
+                <div class="card-body text-sm space-y-2">
+                    <p><strong>1.</strong> Enter your dataset path and click "Analyze"</p>
+                    <p><strong>2.</strong> Configure training parameters</p>
+                    <p><strong>3.</strong> (Optional) Enable hyperparameter optimization</p>
+                    <p><strong>4.</strong> Click "Start Training" and monitor progress</p>
+                    <p class="text-xs text-base-content/60 mt-3">
+                        Training runs in the background. You can leave this page and check back later.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alpine.js Data -->
+<script>
+function trainingPage() {
+    return {
+        // Form data
+        form: {
+            dataset_path: '',
+            project_name: 'my_classifier',
+            num_epochs: 25,
+            batch_size: 32,
+            learning_rate: 0.001,
+            architecture_complexity: 'auto',
+            dropout_rate: 0.3,
+            validation_split: 0.2,
+            test_split: 0.5,
+            data_percent: 1.0,
+            use_early_stopping: true,
+            early_stopping_patience: 20,
+            use_model_checkpoint: true,
+            min_accuracy_to_save: 0.98,
+            optimize_hyperparameters: false,
+            optimizer_type: 'random',
+            max_trials: 20,
+            search_space_type: 'default'
+        },
+
+        // State
+        datasetInfo: null,
+        isAnalyzing: false,
+        isTraining: false,
+        showAdvanced: false,
+        error: null,
+        currentJob: null,
+        jobs: [],
+        pollingInterval: null,
+
+        init() {
+            this.loadJobs();
+            // Start polling for job updates
+            this.startPolling();
+        },
+
+        clearDatasetInfo() {
+            this.datasetInfo = null;
+            this.error = null;
+        },
+
+        async analyzeDataset() {
+            if (!this.form.dataset_path) return;
+
+            this.isAnalyzing = true;
+            this.error = null;
+
+            try {
+                const res = await fetch('/api/training/dataset-info', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ dataset_path: this.form.dataset_path })
+                });
+
+                if (res.ok) {
+                    this.datasetInfo = await res.json();
+                    // Auto-fill architecture if recommended
+                    if (this.datasetInfo.recommended_complexity) {
+                        this.form.architecture_complexity = this.datasetInfo.recommended_complexity;
+                    }
+                } else {
+                    const errorData = await res.json();
+                    this.error = errorData.detail || 'Failed to analyze dataset';
+                }
+            } catch (err) {
+                this.error = 'Failed to connect to server';
+                console.error('Dataset analysis error:', err);
+            } finally {
+                this.isAnalyzing = false;
+            }
+        },
+
+        canStartTraining() {
+            return this.form.dataset_path && this.form.project_name && !this.isTraining;
+        },
+
+        async startTraining() {
+            if (!this.canStartTraining()) return;
+
+            this.isTraining = true;
+            this.error = null;
+
+            try {
+                const res = await fetch('/api/training/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.form)
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    window.showToast('Training job started!', 'success');
+                    this.selectJob(data.job_id);
+                    this.loadJobs();
+                } else {
+                    const errorData = await res.json();
+                    this.error = errorData.detail || 'Failed to start training';
+                    window.showToast('Failed to start training', 'error');
+                }
+            } catch (err) {
+                this.error = 'Failed to connect to server';
+                console.error('Training start error:', err);
+                window.showToast('Failed to start training', 'error');
+            } finally {
+                this.isTraining = false;
+            }
+        },
+
+        async selectJob(jobId) {
+            try {
+                const res = await fetch(`/api/training/status/${jobId}`);
+                if (res.ok) {
+                    this.currentJob = await res.json();
+                    this.isTraining = this.currentJob.status === 'running' || this.currentJob.status === 'queued';
+                }
+            } catch (err) {
+                console.error('Failed to load job status:', err);
+            }
+        },
+
+        async loadJobs() {
+            try {
+                const res = await fetch('/api/training/jobs?limit=10');
+                if (res.ok) {
+                    const data = await res.json();
+                    this.jobs = data.jobs;
+                }
+            } catch (err) {
+                console.error('Failed to load jobs:', err);
+            }
+        },
+
+        startPolling() {
+            // Poll every 2 seconds if there's an active job
+            this.pollingInterval = setInterval(() => {
+                if (this.currentJob && (this.currentJob.status === 'running' || this.currentJob.status === 'queued')) {
+                    this.selectJob(this.currentJob.job_id);
+                }
+            }, 2000);
+        },
+
+        getProjectName(job) {
+            // Extract project name from job request if available
+            return 'Training Job';
+        },
+
+        formatDate(dateStr) {
+            return formatDate(dateStr);
+        },
+
+        formatPercentage(value) {
+            if (!value) return 'N/A';
+            return `${(value * 100).toFixed(2)}%`;
+        },
+
+        destroy() {
+            if (this.pollingInterval) {
+                clearInterval(this.pollingInterval);
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

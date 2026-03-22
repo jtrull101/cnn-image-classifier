@@ -1,0 +1,40 @@
+{
+  "version": "1.0.0",
+  "datasets": [
+    {
+      "name": "alzheimers-mri-dataset",
+      "filename": "alzheimers-mri-dataset.zip",
+      "size_mb": 72,
+      "description": "Alzheimer's MRI classification dataset with 4 severity levels",
+      "url": "https://github.com/jtrull101/alz-mri-neural-network/releases/download/v1.0.0-datasets/alzheimers-mri-dataset.zip",
+      "categories": [
+        "No Impairment",
+        "Very Mild Impairment",
+        "Mild Impairment",
+        "Moderate Impairment"
+      ]
+    },
+    {
+      "name": "brain-tumor-mri-dataset",
+      "filename": "brain-tumor-mri-dataset.zip",
+      "size_mb": 149,
+      "description": "Brain tumor MRI dataset for classification tasks",
+      "url": "https://github.com/jtrull101/alz-mri-neural-network/releases/download/v1.0.0-datasets/brain-tumor-mri-dataset.zip",
+      "categories": []
+    },
+    {
+      "name": "covid-chest-xray",
+      "filename": "covid-chest-xray.zip",
+      "size_mb": 241,
+      "description": "COVID-19 chest X-ray images for classification",
+      "url": "https://github.com/jtrull101/alz-mri-neural-network/releases/download/v1.0.0-datasets/covid-chest-xray.zip",
+      "categories": []
+    }
+  ],
+  "notes": [
+    "All datasets are hosted on GitHub Releases to keep the repository lightweight.",
+    "Run 'make download-datasets' to download all datasets.",
+    "Run 'python scripts/download_datasets.py <dataset-name>' to download a specific dataset.",
+    "Total size: ~462 MB when all datasets are downloaded."
+  ]
+}
