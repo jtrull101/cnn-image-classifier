@@ -1,6 +1,7 @@
 """Unit tests for the analytics router."""
 
 import pytest
+from datetime import datetime
 from collections.abc import Generator
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -199,7 +200,7 @@ class TestAnalyticsPerformance:
             predicted_class="cat",
             confidence=0.9,
             probabilities=_json.dumps({"cat": 0.9}),
-            timestamp="2020-01-01T00:00:00",
+            timestamp=datetime(2020, 1, 1),
         )
         db.add(old)
         db.commit()
@@ -218,7 +219,7 @@ class TestAnalyticsPerformance:
             predicted_class="dog",
             confidence=0.8,
             probabilities=_json.dumps({"dog": 0.8}),
-            timestamp="2030-06-01T00:00:00",
+            timestamp=datetime(2030, 6, 1),
         )
         db.add(future)
         db.commit()
