@@ -1,13 +1,19 @@
 name: Publish Docker image
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
     branches: [main]
+    types: [completed]
   release:
     types: [published]
 
 jobs:
   push:
+    if: >
+      github.event_name == 'release' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     permissions:
       packages: write
