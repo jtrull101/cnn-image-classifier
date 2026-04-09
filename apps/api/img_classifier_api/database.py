@@ -89,7 +89,7 @@ def init_db() -> None:
 
         # Get current database URL
         db_url = os.environ.get("DATABASE_URL", _DEFAULT_DATABASE_URL)
-        
+
         # Get path to alembic.ini
         alembic_ini_path = Path(__file__).parent.parent / "alembic.ini"
 
