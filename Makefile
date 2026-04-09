@@ -1,4 +1,4 @@
-.PHONY: help install sync clean test test-coverage test-parallel test-unit test-integration test-slow test-config test-data test-models test-training test-utils test-cli test-api test-e2e install-playwright lint format typecheck build build-config build-utils build-data build-models build-training build-cli build-api serve-api install-hooks pre-commit pre-commit-fix check ci download-datasets list-datasets
+.PHONY: help install sync clean test test-coverage test-parallel test-unit test-integration test-slow test-config test-data test-models test-training test-utils test-cli test-api test-e2e install-playwright lint format typecheck build build-config build-utils build-data build-models build-training build-cli build-api serve-api install-hooks pre-commit pre-commit-fix check ci download-datasets list-datasets db-upgrade db-migrate db-revision db-history db-current db-downgrade db-reset
 
 # Platform detection
 ifeq ($(OS),Windows_NT)
@@ -73,6 +73,15 @@ help:
 	@echo ""
 	@echo "Application commands:"
 	@echo "  make run      	     - Start API server"
+	@echo ""
+	@echo "Database commands:"
+	@echo "  make db-upgrade     - Run database migrations to latest version"
+	@echo "  make db-migrate     - Alias for db-upgrade"
+	@echo "  make db-revision    - Create new migration (use msg='description')"
+	@echo "  make db-history     - Show migration history"
+	@echo "  make db-current     - Show current migration version"
+	@echo "  make db-downgrade   - Downgrade database by one version"
+	@echo "  make db-reset       - Reset database (delete and recreate)"
 	@echo ""
 	@echo "Dataset commands:"
 	@echo "  make download-datasets - Download all datasets from GitHub Releases"
@@ -282,5 +291,39 @@ download-datasets:
 
 list-datasets:
 	@echo "Listing available datasets..."
-	uv run python scripts/download_datasets.py --list
+	uv run python scripts/download_datasets.py
 
+# Database management (Alembic migrations)
+db-upgrade:
+	@echo "Upgrading database to latest version..."
+	cd apps/api && uv run alembic upgrade head
+
+db-migrate: db-upgrade
+
+db-revision:
+	@echo "Creating new database migration..."
+	@if [ -z "$(msg)" ]; then \
+		echo "Error: Please provide a message with msg='description'"; \
+		echo "Example: make db-revision msg='add user table'"; \
+		exit 1; \
+	fi
+	cd apps/api && uv run alembic revision --autogenerate -m "$(msg)"
+
+db-history:
+	@echo "Migration history:"
+	cd apps/api && uv run alembic history --verbose
+
+db-current:
+	@echo "Current database version:"
+	cd apps/api && uv run alembic current
+
+db-downgrade:
+	@echo "Downgrading database by one version..."
+	cd apps/api && uv run alembic downgrade -1
+
+db-reset:
+	@echo "Resetting database..."
+	rm -f apps/api/data/predictions.db
+	@echo "Database deleted. Running migrations..."
+	cd apps/api && uv run alembic upgrade head
+	@echo "Database reset complete!"

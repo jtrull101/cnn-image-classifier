@@ -58,7 +58,7 @@ COPY --from=builder /app/apps/api /app/apps/api
 
 # Put the venv on PATH so uvicorn is directly callable
 ENV PATH="/app/.venv/bin:$PATH"
-# Point to static/ so optimal_weights_98%.keras is auto-discovered
+# Point to static/ so expected default models are auto-discovered
 ENV IMG_CLASSIFIER_MODEL_DIR=/app/apps/api/img_classifier_api/static
 ENV PYTHONUNBUFFERED=1
 
