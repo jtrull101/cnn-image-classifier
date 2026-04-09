@@ -69,7 +69,7 @@ img-classifier-utils = { workspace = true }
 minversion = "7.0"
 asyncio_mode = "auto"
 addopts = [
-    "-n=auto",  # Run tests in parallel using all available CPU cores
+    "-n=4", # Use 4 parallel workers (adjust based on your CPU cores)
     "--dist=loadgroup",  # Distribute tests by group (respects marks)
     "--strict-markers",  # Enforce marker registration
     "--tb=short",  # Shorter traceback format

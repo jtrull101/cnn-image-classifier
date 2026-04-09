@@ -28,37 +28,69 @@ fi
 
 ERROR_COUNT=0
 
-# Format code
-echo "[1/4] Formatting code with ruff..."
-"$UV_CMD" run ruff format .
-if [ $? -ne 0 ]; then
-    echo "[ERROR] Formatting failed"
-    ERROR_COUNT=$((ERROR_COUNT + 1))
-else
-    echo "[OK] Formatting complete"
-fi
+# Run format, lint, and typecheck in parallel for better efficiency
+echo "Running formatting, linting, and type checks in parallel..."
 echo ""
 
-# Lint code
-echo "[2/4] Linting code with ruff..."
-"$UV_CMD" run ruff check apps packages scripts tests
-if [ $? -ne 0 ]; then
-    echo "[ERROR] Linting failed"
-    ERROR_COUNT=$((ERROR_COUNT + 1))
-else
-    echo "[OK] Linting passed"
-fi
-echo ""
+# Create temporary files to capture exit codes
+TEMP_DIR=$(mktemp -d)
+FORMAT_STATUS="$TEMP_DIR/format_status"
+LINT_STATUS="$TEMP_DIR/lint_status"
+TYPECHECK_STATUS="$TEMP_DIR/typecheck_status"
 
-# Type check
-echo "[3/4] Running type checks with pyright..."
-"$UV_CMD" run pyright
-if [ $? -ne 0 ]; then
-    echo "[ERROR] Type checking failed"
+# Run tasks in parallel
+(
+    echo "[1/3] Formatting code with ruff..."
+    "$UV_CMD" run ruff format .
+    echo $? > "$FORMAT_STATUS"
+    if [ $? -ne 0 ]; then
+        echo "[ERROR] Formatting failed"
+    else
+        echo "[OK] Formatting complete"
+    fi
+) &
+
+(
+    echo "[2/3] Linting code with ruff..."
+    "$UV_CMD" run ruff check apps packages scripts tests
+    echo $? > "$LINT_STATUS"
+    if [ $? -ne 0 ]; then
+        echo "[ERROR] Linting failed"
+    else
+        echo "[OK] Linting passed"
+    fi
+) &
+
+(
+    echo "[3/3] Running type checks with pyright..."
+    "$UV_CMD" run pyright
+    echo $? > "$TYPECHECK_STATUS"
+    if [ $? -ne 0 ]; then
+        echo "[ERROR] Type checking failed"
+    else
+        echo "[OK] Type checking passed"
+    fi
+) &
+
+# Wait for all parallel tasks to complete
+wait
+
+# Check results
+echo ""
+if [ $(cat "$FORMAT_STATUS") -ne 0 ]; then
     ERROR_COUNT=$((ERROR_COUNT + 1))
-else
-    echo "[OK] Type checking passed"
 fi
+
+if [ $(cat "$LINT_STATUS") -ne 0 ]; then
+    ERROR_COUNT=$((ERROR_COUNT + 1))
+fi
+
+if [ $(cat "$TYPECHECK_STATUS") -ne 0 ]; then
+    ERROR_COUNT=$((ERROR_COUNT + 1))
+fi
+
+# Cleanup
+rm -rf "$TEMP_DIR"
 echo ""
 
 # Run tests

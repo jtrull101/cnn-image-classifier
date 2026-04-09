@@ -13,7 +13,7 @@ rm -f coverage.xml 2>/dev/null || true
 # Run pytest with coverage
 echo "Running pytest with coverage..."
 test_result=0
-uv run python -m pytest . -n auto --cov=packages --cov=apps --cov-report=term-missing:skip-covered --cov-report=html --cov-report=xml -v || test_result=$?
+uv run python -m pytest . --cov=packages --cov=apps --cov-report=term-missing:skip-covered --cov-report=html --cov-report=xml -v || test_result=$?
 
 # Check for multiple coverage files (from parallel execution)
 coverage_files=$(find . -maxdepth 1 -type f -name '.coverage.*' 2>/dev/null | wc -l)
