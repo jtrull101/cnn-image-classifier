@@ -1,5 +1,6 @@
 """Unit tests for database session management and table initialisation."""
 
+import os
 from unittest.mock import patch
 
 import pytest
@@ -30,44 +31,48 @@ class TestInitDb:
     def test_creates_prediction_history_table(self) -> None:
         """After init_db() the prediction_history table must exist."""
         from img_classifier_api.models import prediction  # noqa: F401 — registers models
+        from img_classifier_api.database import init_db, reset_db_state
 
-        engine = _make_in_memory_engine()
-        with patch("img_classifier_api.database.engine", engine):
-            from img_classifier_api.database import init_db
+        # Set DATABASE_URL to in-memory for this test
+        with patch.dict(os.environ, {"DATABASE_URL": "sqlite:///:memory:"}):
+            reset_db_state()  # Reset to allow re-initialization
+            engine = _make_in_memory_engine()
+            with patch("img_classifier_api.database.engine", engine):
+                init_db()
 
-            init_db()
-
-        table_names = inspect(engine).get_table_names()
-        assert "prediction_history" in table_names
+            table_names = inspect(engine).get_table_names()
+            assert "prediction_history" in table_names
 
     def test_init_db_is_idempotent(self) -> None:
         """Calling init_db() twice must not raise."""
         from img_classifier_api.models import prediction  # noqa: F401
+        from img_classifier_api.database import init_db, reset_db_state
 
-        engine = _make_in_memory_engine()
-        with patch("img_classifier_api.database.engine", engine):
-            from img_classifier_api.database import init_db
+        with patch.dict(os.environ, {"DATABASE_URL": "sqlite:///:memory:"}):
+            reset_db_state()
+            engine = _make_in_memory_engine()
+            with patch("img_classifier_api.database.engine", engine):
+                init_db()
+                init_db()  # second call — should not raise
 
-            init_db()
-            init_db()  # second call — should not raise
-
-        assert "prediction_history" in inspect(engine).get_table_names()
+            assert "prediction_history" in inspect(engine).get_table_names()
 
     def test_tables_have_expected_columns(self) -> None:
         """prediction_history table must have the id and model_name columns."""
         from img_classifier_api.models import prediction  # noqa: F401
+        from img_classifier_api.database import init_db, reset_db_state
 
-        engine = _make_in_memory_engine()
-        with patch("img_classifier_api.database.engine", engine):
-            from img_classifier_api.database import init_db
+        with patch.dict(os.environ, {"DATABASE_URL": "sqlite:///:memory:"}):
+            reset_db_state()
+            engine = _make_in_memory_engine()
+            with patch("img_classifier_api.database.engine", engine):
+                init_db()
 
-            init_db()
-
-        cols = {c["name"] for c in inspect(engine).get_columns("prediction_history")}
-        assert "id" in cols
-        assert "model_name" in cols
-        assert "predicted_class" in cols
-        assert "confidence" in cols
+            cols = {c["name"] for c in inspect(engine).get_columns("prediction_history")}
+            assert "id" in cols
+            assert "model_name" in cols
+            assert "predicted_class" in cols
+            assert "confidence" in cols
 
 
 # ---------------------------------------------------------------------------
