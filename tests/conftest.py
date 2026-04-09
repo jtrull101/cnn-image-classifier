@@ -46,7 +46,7 @@ def pytest_collection_modifyitems(config, items):
     """Add specific markers for test modules."""
     for item in items:
         # Mark integration tests
-        if "test_integration" in item.nodeid:
+        if "tests/integration" in item.nodeid:
             item.add_marker(pytest.mark.integration)
             item.add_marker(pytest.mark.serial)  # Integration tests run serially
 

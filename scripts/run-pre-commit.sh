@@ -42,7 +42,7 @@ echo ""
 
 # Run tests
 echo "[4/4] Running tests..."
-if uv run python -m pytest -c pyproject.toml --rootdir . -v -n auto --maxfail=3 --cov=packages --cov=apps --cov-report=term-missing; then
+if uv run python -m pytest -c pyproject.toml --rootdir . -v --maxfail=3 --cov=packages --cov=apps --cov-report=term-missing; then
     echo "[OK] Tests passed"
 else
     echo "[ERROR] Tests failed"

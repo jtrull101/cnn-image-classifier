@@ -1,4 +1,4 @@
-.PHONY: help install sync clean test test-coverage test-parallel test-unit test-integration test-slow test-config test-data test-models test-training test-utils test-cli test-api test-e2e install-playwright lint format typecheck build build-config build-utils build-data build-models build-training build-cli build-api serve-api install-hooks pre-commit pre-commit-fix check ci download-datasets list-datasets
+.PHONY: help install sync clean test test-coverage test-parallel test-unit test-integration test-slow test-config test-data test-models test-training test-utils test-cli test-api test-e2e install-playwright lint format typecheck build build-config build-utils build-data build-models build-training build-cli build-api serve-api install-hooks pre-commit check ci download-datasets list-datasets db-upgrade db-migrate db-revision db-history db-current db-downgrade db-reset
 
 # Platform detection
 ifeq ($(OS),Windows_NT)
@@ -15,14 +15,12 @@ ifeq ($(DETECTED_OS),Windows)
     INSTALL_HOOKS_CMD := powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install_hooks.ps1
     COVERAGE_CMD := powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_coverage.ps1
     PRE_COMMIT_CMD := powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run-pre-commit.ps1
-    PRE_COMMIT_FIX_CMD := powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run-pre-commit-fix.ps1
     CLEAN_CMD := powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/clean.ps1
 else
     INSTALL_UV_CMD := bash scripts/install_uv.sh
     INSTALL_HOOKS_CMD := bash scripts/install_hooks.sh
     COVERAGE_CMD := bash scripts/run_coverage.sh
     PRE_COMMIT_CMD := bash scripts/run-pre-commit.sh
-    PRE_COMMIT_FIX_CMD := bash scripts/run-pre-commit-fix.sh
     CLEAN_CMD := bash scripts/clean.sh
 endif
 
@@ -74,6 +72,15 @@ help:
 	@echo "Application commands:"
 	@echo "  make run      	     - Start API server"
 	@echo ""
+	@echo "Database commands:"
+	@echo "  make db-upgrade     - Run database migrations to latest version"
+	@echo "  make db-migrate     - Alias for db-upgrade"
+	@echo "  make db-revision    - Create new migration (use msg='description')"
+	@echo "  make db-history     - Show migration history"
+	@echo "  make db-current     - Show current migration version"
+	@echo "  make db-downgrade   - Downgrade database by one version"
+	@echo "  make db-reset       - Reset database (delete and recreate)"
+	@echo ""
 	@echo "Dataset commands:"
 	@echo "  make download-datasets - Download all datasets from GitHub Releases"
 	@echo "  make list-datasets     - List available datasets and their status"
@@ -103,7 +110,7 @@ build: build-config build-utils build-data build-models build-training build-cli
 # Test all packages
 test:
 	@echo "Running tests"
-	uv run python -m pytest -c pyproject.toml --rootdir . -v -n auto --maxfail=3
+	uv run python -m pytest -c pyproject.toml --rootdir . -v --maxfail=3
 
 # Test with coverage reports/combination helper
 test-coverage:
@@ -112,22 +119,22 @@ test-coverage:
 # Test with specific number of workers
 test-parallel:
 	@echo "Running tests in parallel with custom workers..."
-	@uv run python -m pytest -c pyproject.toml --rootdir . -v -n 4 --maxfail=3 --cov=packages --cov=apps --cov-report=term-missing
+	@uv run python -m pytest -c pyproject.toml --rootdir . -v --maxfail=3 --cov=packages --cov=apps --cov-report=term-missing
 
 # Test unit tests only (fast)
 test-unit:
 	@echo "Running unit tests only..."
-	@uv run python -m pytest -c pyproject.toml --rootdir . tests/unit -v -n auto --maxfail=3
+	@uv run python -m pytest -c pyproject.toml --rootdir . tests/unit -v --maxfail=3
 
 # Test integration tests only (slower)
 test-integration:
 	@echo "Running integration tests only..."
-	@uv run python -m pytest -c pyproject.toml --rootdir . tests/integration -v -n auto --maxfail=3
+	@uv run python -m pytest -c pyproject.toml --rootdir . tests/integration -v --maxfail=3
 
 # Show slowest tests
 test-slow:
 	@echo "Running tests and showing slowest..."
-	@uv run python -m pytest -c pyproject.toml --rootdir . -v -n auto --maxfail=3 --durations=10
+	@uv run python -m pytest -c pyproject.toml --rootdir . -v --maxfail=3 --durations=10
 
 # Lint all packages
 lint:
@@ -191,31 +198,9 @@ install-hooks:
 	@echo "Installing Git hooks..."
 	@$(INSTALL_HOOKS_CMD)
 
-# Pre-commit checks (same as git hooks)
-pre-commit:
-	@$(PRE_COMMIT_CMD)
-
-# Pre-commit auto-fix
-pre-commit-fix:
-	@$(PRE_COMMIT_FIX_CMD)
-
 # Run all pre-commit checks (format check, lint, typecheck, tests)
 check:
-	@echo "Running all pre-commit checks..."
-	@echo ""
-	@echo "1/4 Checking code formatting..."
-	@uv run ruff format --check apps packages scripts tests
-	@echo ""
-	@echo "2/4 Linting code..."
-	@uv run ruff check apps packages scripts tests
-	@echo ""
-	@echo "3/4 Type checking..."
-	@uv run pyright
-	@echo ""
-	@echo "4/4 Running tests..."
-	@uv run python -m pytest -c pyproject.toml --rootdir . -v -n auto --maxfail=3
-	@echo ""
-	@echo "✓ All pre-commit checks passed!"
+	@$(PRE_COMMIT_CMD)
 
 # Package-specific tests
 test-config:
@@ -282,5 +267,39 @@ download-datasets:
 
 list-datasets:
 	@echo "Listing available datasets..."
-	uv run python scripts/download_datasets.py --list
+	uv run python scripts/download_datasets.py
 
+# Database management (Alembic migrations)
+db-upgrade:
+	@echo "Upgrading database to latest version..."
+	cd apps/api && uv run alembic upgrade head
+
+db-migrate: db-upgrade
+
+db-revision:
+	@echo "Creating new database migration..."
+	@if [ -z "$(msg)" ]; then \
+		echo "Error: Please provide a message with msg='description'"; \
+		echo "Example: make db-revision msg='add user table'"; \
+		exit 1; \
+	fi
+	cd apps/api && uv run alembic revision --autogenerate -m "$(msg)"
+
+db-history:
+	@echo "Migration history:"
+	cd apps/api && uv run alembic history --verbose
+
+db-current:
+	@echo "Current database version:"
+	cd apps/api && uv run alembic current
+
+db-downgrade:
+	@echo "Downgrading database by one version..."
+	cd apps/api && uv run alembic downgrade -1
+
+db-reset:
+	@echo "Resetting database..."
+	rm -f apps/api/data/predictions.db
+	@echo "Database deleted. Running migrations..."
+	cd apps/api && uv run alembic upgrade head
+	@echo "Database reset complete!"

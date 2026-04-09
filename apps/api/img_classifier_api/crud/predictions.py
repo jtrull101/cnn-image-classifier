@@ -27,10 +27,12 @@ def create_prediction(db: Session, prediction_data: dict[str, Any]) -> Predictio
             - probabilities: dict[str, float]
             - image_thumbnail: str (optional, base64 encoded)
             - user_session: str (optional)
+            - timestamp: datetime (optional; uses server default if not provided)
 
     Returns:
         PredictionHistory: Created prediction record
     """
+    timestamp = prediction_data.get("timestamp")
     db_prediction = PredictionHistory(
         image_name=prediction_data["image_name"],
         image_hash=prediction_data.get("image_hash"),
@@ -40,6 +42,7 @@ def create_prediction(db: Session, prediction_data: dict[str, Any]) -> Predictio
         probabilities=json.dumps(prediction_data["probabilities"]),
         image_thumbnail=prediction_data.get("image_thumbnail"),
         user_session=prediction_data.get("user_session"),
+        timestamp=timestamp,  # Optional; SQLAlchemy will use server default if None
     )
     db.add(db_prediction)
     db.commit()

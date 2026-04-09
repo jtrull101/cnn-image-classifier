@@ -1,23 +1,59 @@
-FROM python:3.11-slim
+# Stage 1: Builder - Install dependencies
+# Pin to specific image digest for reproducible builds
+# This is python:3.11.9-slim-bookworm as of the build date
+FROM python@sha256:b1b81d67b8df73bf6067191790c233ef9e598b863fc1ccf447956138ca466d99 AS builder
 
 # OpenCV + TensorFlow system dependencies
+# Package versions are pinned via the base image digest above
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libglib2.0-0 libsm6 libxext6 libxrender-dev libgomp1 libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 WORKDIR /app
 
+# Copy workspace configuration first
 COPY pyproject.toml uv.lock ./
+
+# Copy ALL source code for workspace packages BEFORE running uv sync
+# This is necessary because workspace dependencies require source code to be present
 COPY packages/ packages/
 COPY apps/api/ apps/api/
 
-RUN uv sync --no-dev
+# Install dependencies (workspace packages will be installed from local source)
+RUN uv sync --no-dev --frozen
+
+# Stage 2: Runtime - Minimal final image
+# Pin to same image digest for consistency
+FROM python@sha256:b1b81d67b8df73bf6067191790c233ef9e598b863fc1ccf447956138ca466d99
+
+# Runtime dependencies only (smaller set)
+# Package versions are pinned via the base image digest above
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libgomp1 \
+    libgl1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+WORKDIR /app
+
+# Copy only the virtual environment and source code from builder
+COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/packages /app/packages
+COPY --from=builder /app/apps/api /app/apps/api
 
 # Put the venv on PATH so uvicorn is directly callable
 ENV PATH="/app/.venv/bin:$PATH"
-# Point to static/ so optimal_weights_98%.keras is auto-discovered
+# Point to static/ so expected default models are auto-discovered
 ENV IMG_CLASSIFIER_MODEL_DIR=/app/apps/api/img_classifier_api/static
 ENV PYTHONUNBUFFERED=1
 

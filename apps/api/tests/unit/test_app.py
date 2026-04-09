@@ -519,12 +519,24 @@ class TestApiEndpoints:
 
     def test_list_models_empty(self, client):
         """Test /api/models endpoint with no models."""
-        response = client.get("/api/models")
+        from img_classifier_api.app import model_manager
 
-        assert response.status_code == 200
-        data = response.json()
-        assert data["models"] == []
-        assert data["current_model"] is None
+        saved_models = model_manager.models.copy()
+        saved_info = model_manager.model_info.copy()
+        saved_current = model_manager.current_model_name
+        model_manager.models.clear()
+        model_manager.model_info.clear()
+        model_manager.current_model_name = None
+        try:
+            response = client.get("/api/models")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["models"] == []
+            assert data["current_model"] is None
+        finally:
+            model_manager.models.update(saved_models)
+            model_manager.model_info.update(saved_info)
+            model_manager.current_model_name = saved_current
 
     def test_list_models_with_models(self, client):
         """Test /api/models endpoint with loaded models."""
