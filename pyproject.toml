@@ -200,12 +200,6 @@ select = [
     "PTH",    # flake8-use-pathlib
     "RUF",    # Ruff-specific rules
 ]
-ignore = [
-    "E501",   # line too long (handled by formatter)
-    "B008",   # do not perform function calls in argument defaults
-    "ARG001", # unused function argument (common in ML callbacks)
-    "ARG002", # unused method argument
-]
 
 [tool.ruff.lint.per-file-ignores]
 "conftest.py" = [
