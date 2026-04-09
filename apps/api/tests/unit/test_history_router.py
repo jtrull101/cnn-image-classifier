@@ -197,6 +197,7 @@ class TestExportHistory:
     def test_start_date_excludes_old_records(self, client: TestClient, db: Session) -> None:
         """Records before start_date must be excluded from the export."""
         import json as _json
+        from datetime import datetime, timezone
         from img_classifier_api.models.prediction import PredictionHistory as PH
 
         old = PH(
@@ -205,7 +206,7 @@ class TestExportHistory:
             predicted_class="cat",
             confidence=0.9,
             probabilities=_json.dumps({"cat": 0.9}),
-            timestamp="2020-01-01T00:00:00",
+            timestamp=datetime(2020, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
         )
         db.add(old)
         db.commit()
@@ -218,6 +219,7 @@ class TestExportHistory:
     def test_end_date_excludes_future_records(self, client: TestClient, db: Session) -> None:
         """Records after end_date must be excluded from the export."""
         import json as _json
+        from datetime import datetime, timezone
         from img_classifier_api.models.prediction import PredictionHistory as PH
 
         recent = PH(
@@ -226,7 +228,7 @@ class TestExportHistory:
             predicted_class="dog",
             confidence=0.8,
             probabilities=_json.dumps({"dog": 0.8}),
-            timestamp="2030-06-01T00:00:00",
+            timestamp=datetime(2030, 6, 1, 0, 0, 0, tzinfo=timezone.utc),
         )
         db.add(recent)
         db.commit()
