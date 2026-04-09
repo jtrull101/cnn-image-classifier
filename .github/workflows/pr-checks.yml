@@ -1,0 +1,95 @@
+# PR quality gates - Enforce code quality standards
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for better diff analysis
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Set up Python
+      run: uv python install 3.13
+
+    - name: Cache UV dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          .venv
+          ~/.cache/uv
+        key: uv-${{ runner.os }}-py3.13-${{ hashFiles('uv.lock') }}
+        restore-keys: |
+          uv-${{ runner.os }}-py3.13-
+
+    - name: Install dependencies
+      run: uv sync --all-groups
+
+    - name: Check for linting errors
+      run: |
+        uv run ruff check apps packages scripts tests --output-format=github
+        if [ $? -ne 0 ]; then
+          echo "::error::Linting errors found. Run 'make format' and 'make lint' locally."
+          exit 1
+        fi
+
+    - name: Run tests with coverage
+      run: |
+        uv run pytest -v -n auto \
+          --cov=packages --cov=apps \
+          --cov-report=xml \
+          --cov-report=term-missing \
+          --cov-report=html
+
+    - name: Check coverage threshold
+      run: |
+        uv run python -c "
+        import xml.etree.ElementTree as ET
+        tree = ET.parse('coverage.xml')
+        root = tree.getroot()
+        coverage = float(root.attrib['line-rate']) * 100
+        threshold = 80.0
+        print(f'Current coverage: {coverage:.2f}%')
+        print(f'Required threshold: {threshold:.2f}%')
+        if coverage < threshold:
+            print(f'::error::Coverage {coverage:.2f}% is below threshold {threshold:.2f}%')
+            exit(1)
+        else:
+            print(f'::notice::Coverage check passed: {coverage:.2f}% >= {threshold:.2f}%')
+        "
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: |
+          coverage.xml
+          htmlcov/
+        retention-days: 14
+
+    - name: Comment PR with coverage
+      uses: py-cov-action/python-coverage-comment-action@v3
+      if: always()
+      with:
+        GITHUB_TOKEN: ${{ github.token }}
+        MINIMUM_GREEN: 80
+        MINIMUM_ORANGE: 70
+
+    - name: Check for added TODOs or FIXMEs
+      run: |
+        git diff origin/${{ github.base_ref }}...HEAD -- '*.py' | grep -E '^\+.*\b(TODO|FIXME|XXX|HACK)\b' && \
+        echo "::warning::New TODO/FIXME comments detected. Please resolve before merging." || \
+        echo "No new TODO/FIXME comments found."
+
