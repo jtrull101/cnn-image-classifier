@@ -8,6 +8,7 @@ calls ``pytest.skip()`` (not ``raise``) when Docker is absent so that
 """
 
 import io
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -17,6 +18,39 @@ import httpx
 import numpy as np
 import pytest
 from PIL import Image
+
+
+# ---------------------------------------------------------------------------
+# Database Isolation for Integration Tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _isolate_integration_database(tmp_path_factory, worker_id):
+    """
+    Ensure each pytest-xdist worker uses a separate database file.
+
+    This prevents race conditions when parallel workers try to initialize
+    the same database file simultaneously. For non-parallel runs (worker_id == 'master'),
+    uses the default database location.
+    """
+    if worker_id == "master":
+        # Not running with xdist, use default database
+        return
+
+    # Create a unique database file for this worker
+    tmp_dir = tmp_path_factory.mktemp("db")
+    db_file = tmp_dir / f"predictions_worker_{worker_id}.db"
+    db_url = f"sqlite:///{db_file}"
+
+    # Set DATABASE_URL environment variable for this worker
+    os.environ["DATABASE_URL"] = db_url
+
+    yield
+
+    # Cleanup: remove worker-specific database
+    if db_file.exists():
+        db_file.unlink()
 
 
 # ---------------------------------------------------------------------------

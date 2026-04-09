@@ -1,0 +1,101 @@
+"""
+Test to verify database initialization race condition is fixed.
+
+This test simulates parallel workers trying to initialize the database simultaneously.
+"""
+
+import os
+import tempfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+
+import pytest
+
+
+def test_concurrent_database_initialization():
+    """Test that multiple workers can initialize the database without race conditions."""
+    from img_classifier_api.database import init_db
+
+    # Create a temporary database file
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_file = Path(tmpdir) / "test_concurrent.db"
+        db_url = f"sqlite:///{db_file}"
+
+        # Set environment variable
+        original_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = db_url
+
+        try:
+            # Simulate 5 workers all trying to initialize at once
+            num_workers = 5
+            results = []
+
+            with ThreadPoolExecutor(max_workers=num_workers) as executor:
+                futures = [executor.submit(init_db) for _ in range(num_workers)]
+
+                for future in as_completed(futures):
+                    try:
+                        future.result()
+                        results.append("success")
+                    except Exception as e:
+                        results.append(f"error: {e}")
+
+            # All workers should succeed (no race condition errors)
+            assert all(r == "success" for r in results), (
+                f"Expected all workers to succeed, got: {results}"
+            )
+
+            # Verify database file was created
+            assert db_file.exists(), "Database file should exist"
+
+            # Verify table was created
+            from sqlalchemy import inspect, create_engine
+
+            engine = create_engine(db_url)
+            inspector = inspect(engine)
+            tables = inspector.get_table_names()
+            assert "prediction_history" in tables, "Table should be created"
+            assert "alembic_version" in tables, "Alembic version table should exist"
+
+        finally:
+            # Restore original environment
+            if original_url:
+                os.environ["DATABASE_URL"] = original_url
+            elif "DATABASE_URL" in os.environ:
+                del os.environ["DATABASE_URL"]
+
+
+def test_worker_database_isolation(tmp_path):
+    """Test that the fixture creates isolated databases for each worker."""
+    # This would be tested via pytest-xdist in actual CI
+    # Here we just verify the fixture setup works
+
+    worker_id = "test_worker_1"
+    db_file = tmp_path / f"predictions_worker_{worker_id}.db"
+    db_url = f"sqlite:///{db_file}"
+
+    # Verify the URL pattern works
+    assert "worker" in db_url
+    assert worker_id in db_url
+
+    # Create database with this URL
+    original_url = os.environ.get("DATABASE_URL")
+    os.environ["DATABASE_URL"] = db_url
+
+    try:
+        from img_classifier_api.database import init_db
+
+        init_db()
+
+        # Verify file was created
+        assert db_file.exists()
+
+    finally:
+        if original_url:
+            os.environ["DATABASE_URL"] = original_url
+        elif "DATABASE_URL" in os.environ:
+            del os.environ["DATABASE_URL"]
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

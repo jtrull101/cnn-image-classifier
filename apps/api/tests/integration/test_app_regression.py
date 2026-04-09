@@ -3,6 +3,8 @@
 These tests verify behaviour against the real application stack with no mocking.
 All tests use the real request/response cycle; heavy-mocked workflow tests live
 in apps/api/tests/unit/test_app.py instead.
+
+Note: Each pytest-xdist worker uses an isolated database to prevent race conditions.
 """
 
 import pytest
