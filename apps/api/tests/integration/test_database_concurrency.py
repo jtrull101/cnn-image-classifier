@@ -83,8 +83,9 @@ def test_concurrent_database_initialization():
 @pytest.mark.timeout(10)
 def test_worker_database_isolation(tmp_path):
     """Test that the fixture creates isolated databases for each worker."""
-    # This would be tested via pytest-xdist in actual CI
-    # Here we just verify the fixture setup works
+    from img_classifier_api.database import init_db, reset_db_state
+    from sqlalchemy import create_engine, inspect
+    from unittest.mock import patch
 
     worker_id = "test_worker_1"
     db_file = tmp_path / f"predictions_worker_{worker_id}.db"
@@ -96,21 +97,34 @@ def test_worker_database_isolation(tmp_path):
 
     # Create database with this URL
     original_url = os.environ.get("DATABASE_URL")
-    os.environ["DATABASE_URL"] = db_url
 
     try:
-        from img_classifier_api.database import init_db
+        # Create engine for this specific database
+        test_engine = create_engine(db_url, connect_args={"check_same_thread": False})
 
-        init_db()
+        # Reset state and patch engine to use our test database
+        reset_db_state()
+        os.environ["DATABASE_URL"] = db_url
+
+        with patch("img_classifier_api.database.engine", test_engine):
+            init_db()
 
         # Verify file was created
-        assert db_file.exists()
+        assert db_file.exists(), f"Database file {db_file} should exist"
+
+        # Verify table was created
+        inspector = inspect(test_engine)
+        tables = inspector.get_table_names()
+        assert "prediction_history" in tables, "Table should be created in isolated database"
+
+        test_engine.dispose()
 
     finally:
         if original_url:
             os.environ["DATABASE_URL"] = original_url
         elif "DATABASE_URL" in os.environ:
             del os.environ["DATABASE_URL"]
+        reset_db_state()
 
 
 if __name__ == "__main__":

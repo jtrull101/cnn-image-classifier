@@ -45,9 +45,10 @@ def _isolate_integration_database(tmp_path_factory, worker_id):
 
     # Set DATABASE_URL environment variable for this worker
     os.environ["DATABASE_URL"] = db_url
-    
+
     # Reset database initialization state to allow re-initialization with new URL
     from img_classifier_api.database import reset_db_state
+
     reset_db_state()
 
     yield

@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 # Thread lock for database initialization
 _init_lock = threading.Lock()
-_initialized_databases = set()  # Track which database URLs have been initialized
+_initialized = False
 
 
 # Database file location (can be overridden by DATABASE_URL env var)
@@ -74,73 +74,63 @@ def init_db() -> None:
     since Alembic requires a file-based database.
 
     Thread-safe: Uses a lock to prevent concurrent initialization attempts.
-    Tracks initialization per database URL for test isolation.
     """
-    # Get current database URL (may be different per test)
-    db_url = os.environ.get("DATABASE_URL", _DEFAULT_DATABASE_URL)
+    global _initialized
 
-    # Fast path: if this database URL already initialized, return immediately
-    if db_url in _initialized_databases:
+    # Fast path: if already initialized, return immediately
+    if _initialized:
         return
 
     # Acquire lock for initialization
     with _init_lock:
         # Double-check after acquiring lock (another thread may have initialized)
-        if db_url in _initialized_databases:
+        if _initialized:
             return
 
-        # Create engine for the current database URL (may be different from global engine)
-        # This is important for test isolation where each test may use a different database
-        current_engine = create_engine(
-            db_url,
-            connect_args={"check_same_thread": False},
-            echo=False,
-        )
-
+        # Get current database URL
+        db_url = os.environ.get("DATABASE_URL", _DEFAULT_DATABASE_URL)
+        
         # Get path to alembic.ini
         alembic_ini_path = Path(__file__).parent.parent / "alembic.ini"
 
         # Check if using in-memory database (for testing)
         if db_url and ":memory:" in db_url:
             # In-memory databases can't use Alembic, use create_all instead
-            Base.metadata.create_all(bind=current_engine, checkfirst=True)
-            _initialized_databases.add(db_url)
-            current_engine.dispose()
+            Base.metadata.create_all(bind=engine, checkfirst=True)
+            _initialized = True
             return
 
         # Check if database already has tables (migration already ran)
-        inspector = inspect(current_engine)
+        inspector = inspect(engine)
         existing_tables = inspector.get_table_names()
 
         if not alembic_ini_path.exists():
             # Fallback to create_all for environments without alembic.ini
             if "prediction_history" not in existing_tables:
-                Base.metadata.create_all(bind=current_engine, checkfirst=True)
-            _initialized_databases.add(db_url)
-            current_engine.dispose()
+                Base.metadata.create_all(bind=engine, checkfirst=True)
+            _initialized = True
             return
 
         # Use Alembic for migrations
         alembic_cfg = Config(str(alembic_ini_path))
 
-        # Override the database URL
-        alembic_cfg.set_main_option("sqlalchemy.url", db_url)
+        # Override the database URL if DATABASE_URL env var is set
+        if db_url != _DEFAULT_DATABASE_URL:
+            alembic_cfg.set_main_option("sqlalchemy.url", db_url)
 
         # Run migrations to head (safe to call multiple times)
         try:
             command.upgrade(alembic_cfg, "head")
-            _initialized_databases.add(db_url)
+            _initialized = True
         except Exception:
             # If Alembic fails (e.g., concurrent access), check if tables exist
             # and fall back to create_all if needed
-            inspector = inspect(current_engine)
+            inspector = inspect(engine)
             if "prediction_history" not in inspector.get_table_names():
                 # Only create if table doesn't exist (race condition protection)
-                Base.metadata.create_all(bind=current_engine, checkfirst=True)
+                Base.metadata.create_all(bind=engine, checkfirst=True)
             # If tables exist, the migration already ran successfully elsewhere
-            _initialized_databases.add(db_url)
-        finally:
-            current_engine.dispose()
+            _initialized = True
 
 
 def reset_db_state() -> None:
@@ -150,5 +140,6 @@ def reset_db_state() -> None:
     This is primarily for testing purposes to allow tests to re-initialize
     the database multiple times in the same process.
     """
+    global _initialized
     with _init_lock:
-        _initialized_databases.clear()
+        _initialized = False
