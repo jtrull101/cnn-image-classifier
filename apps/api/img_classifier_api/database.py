@@ -15,10 +15,13 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 
-# Database file location
+# Database file location (can be overridden by DATABASE_URL env var)
 DATABASE_DIR = Path(__file__).parent.parent / "data"
 DATABASE_DIR.mkdir(exist_ok=True)
-DATABASE_URL = f"sqlite:///{DATABASE_DIR}/predictions.db"
+_DEFAULT_DATABASE_URL = f"sqlite:///{DATABASE_DIR}/predictions.db"
+
+# Get database URL from environment or use default
+DATABASE_URL = os.environ.get("DATABASE_URL", _DEFAULT_DATABASE_URL)
 
 # Create engine
 engine = create_engine(
