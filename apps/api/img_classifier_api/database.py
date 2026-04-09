@@ -78,7 +78,7 @@ def init_db() -> None:
     """
     # Get current database URL (may be different per test)
     db_url = os.environ.get("DATABASE_URL", _DEFAULT_DATABASE_URL)
-    
+
     # Fast path: if this database URL already initialized, return immediately
     if db_url in _initialized_databases:
         return
