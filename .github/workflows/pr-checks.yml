@@ -67,15 +67,6 @@ jobs:
         echo "::endgroup::"
       timeout-minutes: 15
 
-    - name: Combine coverage data
-      if: always()
-      run: |
-        echo "::group::Coverage Combination"
-        uv run coverage combine
-        uv run coverage xml
-        uv run coverage html
-        echo "::endgroup::"
-
     - name: Check coverage threshold
       run: |
         uv run python -c "
