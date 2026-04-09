@@ -11,10 +11,15 @@ from pathlib import Path
 
 import pytest
 
+# Mark all tests in this module as integration and serial
+# Serial prevents pytest-xdist from running these in parallel with other tests
+pytestmark = [pytest.mark.integration, pytest.mark.serial]
 
+
+@pytest.mark.timeout(30)  # Fail fast if test hangs
 def test_concurrent_database_initialization():
     """Test that multiple workers can initialize the database without race conditions."""
-    from img_classifier_api.database import init_db
+    from img_classifier_api.database import init_db, reset_db_state
 
     # Create a temporary database file
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -26,6 +31,9 @@ def test_concurrent_database_initialization():
         os.environ["DATABASE_URL"] = db_url
 
         try:
+            # Reset initialization state to test concurrent initialization
+            reset_db_state()
+
             # Simulate 5 workers all trying to initialize at once
             num_workers = 5
             results = []
@@ -33,9 +41,10 @@ def test_concurrent_database_initialization():
             with ThreadPoolExecutor(max_workers=num_workers) as executor:
                 futures = [executor.submit(init_db) for _ in range(num_workers)]
 
-                for future in as_completed(futures):
+                # Add timeout to as_completed to prevent hanging
+                for future in as_completed(futures, timeout=20):
                     try:
-                        future.result()
+                        future.result(timeout=5)  # Individual future timeout
                         results.append("success")
                     except Exception as e:
                         results.append(f"error: {e}")
@@ -52,10 +61,13 @@ def test_concurrent_database_initialization():
             from sqlalchemy import inspect, create_engine
 
             engine = create_engine(db_url)
-            inspector = inspect(engine)
-            tables = inspector.get_table_names()
-            assert "prediction_history" in tables, "Table should be created"
-            assert "alembic_version" in tables, "Alembic version table should exist"
+            try:
+                inspector = inspect(engine)
+                tables = inspector.get_table_names()
+                assert "prediction_history" in tables, "Table should be created"
+                assert "alembic_version" in tables, "Alembic version table should exist"
+            finally:
+                engine.dispose()  # Properly close connections
 
         finally:
             # Restore original environment
@@ -64,7 +76,11 @@ def test_concurrent_database_initialization():
             elif "DATABASE_URL" in os.environ:
                 del os.environ["DATABASE_URL"]
 
+            # Reset state for other tests
+            reset_db_state()
 
+
+@pytest.mark.timeout(10)
 def test_worker_database_isolation(tmp_path):
     """Test that the fixture creates isolated databases for each worker."""
     # This would be tested via pytest-xdist in actual CI
