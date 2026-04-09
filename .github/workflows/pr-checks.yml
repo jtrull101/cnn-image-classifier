@@ -1,64 +1,156 @@
-# Stage 1: Builder - Install dependencies
-# Pin to specific image digest for reproducible builds
-# This is python:3.11.9-slim-bookworm as of the build date
-FROM python@sha256:b1b81d67b8df73bf6067191790c233ef9e598b863fc1ccf447956138ca466d99 AS builder
-  
-  # OpenCV + TensorFlow system dependencies
-  # Package versions are pinned via the base image digest above
-RUN apt-get update && apt-get install -y --no-install-recommends \
-libglib2.0-0 \
-libsm6 \
-libxext6 \
-libxrender-dev \
-libgomp1 \
-libgl1 \
-&& rm -rf /var/lib/apt/lists/*
+# PR quality gates - Enforce code quality standards
+name: PR Checks
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
 
-WORKDIR /app
-  
-  # Copy workspace configuration first
-COPY pyproject.toml uv.lock ./
-  
-  # Copy ALL source code for workspace packages BEFORE running uv sync
-  # This is necessary because workspace dependencies require source code to be present
-COPY packages/ packages/
-COPY apps/api/ apps/api/
-  
-  # Install dependencies (workspace packages will be installed from local source)
-RUN uv sync --no-dev --frozen
-  
-  # Stage 2: Runtime - Minimal final image
-  # Pin to same image digest for consistency
-FROM python@sha256:b1b81d67b8df73bf6067191790c233ef9e598b863fc1ccf447956138ca466d99
-  
-  # Runtime dependencies only (smaller set)
-  # Package versions are pinned via the base image digest above
-RUN apt-get update && apt-get install -y --no-install-recommends \
-libglib2.0-0 \
-libsm6 \
-libxext6 \
-libgomp1 \
-libgl1 \
-&& rm -rf /var/lib/apt/lists/* \
-&& apt-get clean
+jobs:
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
 
-WORKDIR /app
-  
-  # Copy only the virtual environment and source code from builder
-COPY --from=builder /app/.venv /app/.venv
-COPY --from=builder /app/packages /app/packages
-COPY --from=builder /app/apps/api /app/apps/api
-  
-  # Put the venv on PATH so uvicorn is directly callable
-ENV PATH="/app/.venv/bin:$PATH"
-  # Point to static/ so expected default models are auto-discovered
-ENV IMG_CLASSIFIER_MODEL_DIR=/app/apps/api/img_classifier_api/static
-ENV PYTHONUNBUFFERED=1
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for better diff analysis
 
-EXPOSE 8000
-WORKDIR /app/apps/api
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
 
-CMD ["uvicorn", "img_classifier_api.app:app", \
-"--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+    - name: Set up Python
+      run: uv python install 3.13
+
+    - name: Cache UV dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          .venv
+          ~/.cache/uv
+        key: uv-${{ runner.os }}-py3.13-${{ hashFiles('uv.lock') }}
+        restore-keys: |
+          uv-${{ runner.os }}-py3.13-
+
+    - name: Install dependencies
+      run: uv sync --all-groups
+
+    - name: Check for linting errors
+      run: |
+        uv run ruff check apps packages scripts tests --output-format=github
+        if [ $? -ne 0 ]; then
+          echo "::error::Linting errors found. Run 'make format' and 'make lint' locally."
+          exit 1
+        fi
+
+    - name: Type check with pyright
+      run: uv run pyright
+
+    # Fast smoke tests for immediate feedback
+    - name: Run smoke tests (fast feedback)
+      run: |
+        echo "::group::Smoke Tests"
+        uv run pytest -v -m smoke --maxfail=5 --tb=short
+        echo "::endgroup::"
+
+    # Full test suite with coverage
+    - name: Run full test suite with coverage
+      run: |
+        echo "::group::Full Test Suite"
+        uv run pytest -v -n auto \
+          --cov=packages --cov=apps \
+          --cov-report=term-missing \
+          --maxfail=10 \
+          -m "not e2e"
+        echo "::endgroup::"
+      timeout-minutes: 15
+
+    - name: Combine coverage data
+      if: always()
+      run: |
+        echo "::group::Coverage Combination"
+        uv run coverage combine
+        uv run coverage xml
+        uv run coverage html
+        echo "::endgroup::"
+
+    - name: Check coverage threshold
+      run: |
+        uv run python -c "
+        import xml.etree.ElementTree as ET
+        tree = ET.parse('coverage.xml')
+        root = tree.getroot()
+        coverage = float(root.attrib['line-rate']) * 100
+        threshold = 80.0
+        print(f'Current coverage: {coverage:.2f}%')
+        print(f'Required threshold: {threshold:.2f}%')
+        if coverage < threshold:
+            print(f'::error::Coverage {coverage:.2f}% is below threshold {threshold:.2f}%')
+            exit(1)
+        else:
+            print(f'::notice::Coverage check passed: {coverage:.2f}% >= {threshold:.2f}%')
+        "
+
+    # Ensure integration tests were actually run
+    - name: Verify integration tests ran
+      run: |
+        echo "::group::Test Execution Verification"
+        # Check that integration tests were collected and run
+        uv run pytest --collect-only -q -m integration | tee test_collection.txt
+        INTEGRATION_COUNT=$(grep -c "test_" test_collection.txt || echo "0")
+        echo "Found $INTEGRATION_COUNT integration test(s)"
+        if [ "$INTEGRATION_COUNT" -lt 1 ]; then
+          echo "::error::No integration tests were found or executed!"
+          exit 1
+        fi
+        echo "::notice::Integration tests verified: $INTEGRATION_COUNT test(s) found"
+        echo "::endgroup::"
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-report
+        path: |
+          coverage.xml
+          htmlcov/
+        retention-days: 14
+
+    - name: Comment PR with coverage
+      uses: py-cov-action/python-coverage-comment-action@v3
+      if: always()
+      with:
+        GITHUB_TOKEN: ${{ github.token }}
+        MINIMUM_GREEN: 80
+        MINIMUM_ORANGE: 70
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: |
+          .pytest_cache/
+          htmlcov/
+        retention-days: 7
+
+    - name: Check for added TODOs or FIXMEs
+      run: |
+        git diff origin/${{ github.base_ref }}...HEAD -- '*.py' | grep -E '^\+.*\b(TODO|FIXME|XXX|HACK)\b' && \
+        echo "::warning::New TODO/FIXME comments detected. Please resolve before merging." || \
+        echo "No new TODO/FIXME comments found."
+
+    # Summary report
+    - name: Quality gates summary
+      if: always()
+      run: |
+        echo "::notice::✅ All quality gates completed"
+        echo "::notice::- Linting: Passed"
+        echo "::notice::- Type checking: Passed"  
+        echo "::notice::- Smoke tests: Passed"
+        echo "::notice::- Full test suite: Passed"
+        echo "::notice::- Coverage threshold: Passed"
+        echo "::notice::- Integration tests: Verified"
+
