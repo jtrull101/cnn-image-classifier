@@ -156,10 +156,12 @@ source = [
 ]
 branch = true
 parallel = true
+relative_files = true
 omit = [
     "*/tests/*",
     "*/__pycache__/*",
     "*/deprecated_*",
+    "*/alembic/*",
 ]
 
 [tool.coverage.report]
