@@ -205,6 +205,88 @@ model_manager.default_model_dirs = [
 ]
 ```
 
+## Database Management
+
+The API uses SQLite with Alembic for database schema migrations. The database stores prediction history for analytics and tracking.
+
+### Database Location
+
+- **Development**: `apps/api/data/predictions.db`
+- **Docker**: `/app/apps/api/data/predictions.db`
+
+### Running Migrations
+
+The database is automatically initialized when the API starts. To manually manage migrations:
+
+```bash
+# From repository root:
+make db-upgrade              # Run all pending migrations
+make db-migrate              # Alias for db-upgrade
+make db-history              # View migration history
+make db-current              # Show current version
+make db-reset                # Delete and recreate database
+
+# From apps/api directory:
+cd apps/api
+uv run alembic upgrade head  # Upgrade to latest
+uv run alembic history       # View history
+uv run alembic current       # Current version
+```
+
+### Creating New Migrations
+
+When you modify database models (e.g., `models/prediction.py`), create a migration:
+
+```bash
+# From repository root:
+make db-revision msg="add new column"
+
+# From apps/api directory:
+cd apps/api
+uv run alembic revision --autogenerate -m "add new column"
+```
+
+**Important:** Review generated migrations before applying them. Alembic's autogenerate is smart but may need manual adjustments.
+
+### Migration Workflow
+
+1. **Modify ORM models** in `img_classifier_api/models/`
+2. **Create migration**: `make db-revision msg="description"`
+3. **Review migration** in `alembic/versions/`
+4. **Apply migration**: `make db-upgrade`
+5. **Commit migration** to version control
+
+### Resetting Database
+
+```bash
+# Delete database and recreate with migrations
+make db-reset
+
+# Or manually:
+rm apps/api/data/predictions.db
+cd apps/api && uv run alembic upgrade head
+```
+
+### Database Schema
+
+Current schema (managed by Alembic):
+
+**`prediction_history` table:**
+- `id` - Primary key
+- `timestamp` - When prediction was made (indexed)
+- `image_name` - Uploaded image filename
+- `image_hash` - SHA256 hash for deduplication (indexed)
+- `model_name` - Model used for prediction (indexed)
+- `predicted_class` - Predicted class label (indexed)
+- `confidence` - Confidence score (0-1)
+- `probabilities` - JSON of all class probabilities
+- `image_thumbnail` - Optional base64 thumbnail
+- `user_session` - Optional session identifier (indexed)
+
+**Indexes:**
+- Composite: `(timestamp, model_name)` for time-series queries
+- Single: `predicted_class`, `image_hash`, `model_name`, `user_session`
+
 ## Deployment
 
 ### Production with Gunicorn
