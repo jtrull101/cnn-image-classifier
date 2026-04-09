@@ -12,12 +12,12 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0  # Full history for better diff analysis
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v3
+      uses: astral-sh/setup-uv@v7
       with:
         version: "latest"
 
@@ -25,7 +25,7 @@ jobs:
       run: uv python install 3.13
 
     - name: Cache UV dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           .venv
@@ -100,7 +100,7 @@ jobs:
         echo "::endgroup::"
 
     - name: Upload coverage report
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: coverage-report
@@ -118,7 +118,7 @@ jobs:
         MINIMUM_ORANGE: 70
 
     - name: Upload test results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: test-results
