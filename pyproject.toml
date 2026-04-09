@@ -69,7 +69,7 @@ img-classifier-utils = { workspace = true }
 minversion = "7.0"
 asyncio_mode = "auto"
 addopts = [
-    "-n=auto",  # Run tests in parallel using all available CPU cores
+    "-n=4", # Use 4 parallel workers (adjust based on your CPU cores)
     "--dist=loadgroup",  # Distribute tests by group (respects marks)
     "--strict-markers",  # Enforce marker registration
     "--tb=short",  # Shorter traceback format
@@ -156,10 +156,12 @@ source = [
 ]
 branch = true
 parallel = true
+relative_files = true
 omit = [
     "*/tests/*",
     "*/__pycache__/*",
     "*/deprecated_*",
+    "*/alembic/*",
 ]
 
 [tool.coverage.report]
@@ -200,15 +202,10 @@ select = [
     "PTH",    # flake8-use-pathlib
     "RUF",    # Ruff-specific rules
 ]
-ignore = [
-    "E501",   # line too long (handled by formatter)
-    "B008",   # do not perform function calls in argument defaults
-    "ARG001", # unused function argument (common in ML callbacks)
-    "ARG002", # unused method argument
-]
 
 [tool.ruff.lint.per-file-ignores]
 "conftest.py" = [
+    "ARG001",  # Unused arguments OK in pytest hooks (required signatures)
     "N806",    # Uppercase variable names OK in ML test fixtures (X_train, etc.)
 ]
 "tests/**/*.py" = [
