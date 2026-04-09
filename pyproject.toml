@@ -203,6 +203,7 @@ select = [
 
 [tool.ruff.lint.per-file-ignores]
 "conftest.py" = [
+    "ARG001",  # Unused arguments OK in pytest hooks (required signatures)
     "N806",    # Uppercase variable names OK in ML test fixtures (X_train, etc.)
 ]
 "tests/**/*.py" = [
