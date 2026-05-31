@@ -48,7 +48,7 @@ test = [
     "pytest-xdist>=3.5.0",
     "pytest-timeout>=2.2.0",
     "pytest-asyncio>=0.23.0",
-    "testcontainers>=4.0",
+    "testcontainers>=4.14.2",
 ]
 
 types = [
