@@ -13,6 +13,7 @@ dependencies = [
     "img-classifier-training",
     "img-classifier-utils",
     "img-classifier-cli",
+    "tensorflow[and-cuda]==2.20.0",
 ]
 
 [tool.uv.workspace]
