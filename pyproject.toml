@@ -31,7 +31,7 @@ dev = [
     "ruff>=0.15.10",
     "pyright>=1.1.408",
     "pydantic>=2.13.0",
-    "pydantic-settings>=2.13.1",
+    "pydantic-settings>=2.14.1",
 ]
 
 e2e = [
