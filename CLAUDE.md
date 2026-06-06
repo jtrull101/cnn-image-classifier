@@ -1,13 +1,24 @@
 # CLAUDE.md — Image Classifier
 
-Agentic instructions for Claude Code. See `AGENTS.md` for full contributor guidelines.
+Single source of contributor and agent guidelines for this repo. (`AGENTS.md` points here.)
 
 ## Project at a Glance
 
 UV-managed Python monorepo. Generalized CNN image classifier (originally Alzheimer's MRI staging). Python 3.11+.
 
-**Package dependency order:** `config` → `utils` → `data` → `models` → `training` → `api`
-`cli` pulls from all packages. `api` (FastAPI) is an application, not a library.
+- Libraries live under `packages/*`; the FastAPI REST API is in `apps/api` (an application, not a library). Shared scripts in `scripts/`, docs in `docs/`, sample assets in `images/`. Project-wide config in the root `pyproject.toml` and `Makefile`.
+- **Package dependency order:** `config` → `utils` → `data` → `models` → `training` → `api`. `cli` pulls from all packages.
+- Each package mirrors the architecture docs: abstract bases plus concrete implementations.
+
+## Build & Dev Commands
+
+- `make help` — list all tasks; start here.
+- `make sync` (or `uv sync --all-groups`) — install workspace deps. Prefer `uv add` for dependency changes; everything is pinned via `uv.lock`.
+- `make build` — build all packages/apps (`uv build` in each).
+- `make lint` / `make format` / `make typecheck` — Ruff lint/format and ty.
+- `make spell` / `make audit` / `make deadcode` / `make security` — codespell, pip-audit (dependency CVEs), vulture, and all three together.
+- `make check` (alias `make pre-commit`) — format, lint, typecheck, spell, suppression guard, and tests.
+- `make serve-api` — launch FastAPI locally (`python apps/api/run_api.py` also works).
 
 Scoped tests:
 ```bash
@@ -20,15 +31,17 @@ uv run pytest path/to/test_file.py -v   # Single file
 
 **Markers:** `unit` (default), `integration`, `smoke`, `slow`, `serial`, `requires_gpu`, `requires_data`
 
+- Test files: `test_*.py` or `*_test.py`, under the root `tests/` or a per-package `tests/`.
 - Unit tests: mocks allowed, no real I/O, fast. Mark with `pytestmark = pytest.mark.unit` at top of file.
-- Integration tests: real dependencies, testcontainers for external services. Separate directory.
+- Integration tests: real dependencies, testcontainers for external services. Separate directory; no mocking.
 - Tests auto-marked `unit` if no marker present (see `conftest.py:pytest_collection_modifyitems`).
-- Tests run parallel by default (`-n auto`). Use `@pytest.mark.serial` for tests that cannot parallelize.
-- Coverage sources: all `img_classifier_*` packages. Only mock in unit tests; no mocking in integration tests.
+- Tests run in parallel by default. Use `@pytest.mark.serial` for tests that cannot parallelize.
+- Use temp dirs/fixtures for I/O; validate split logic, shapes, and error cases. Coverage sources: all `img_classifier_*` packages.
 
 ## Code Style
 
-- Line length: **100** characters. Type hints required on public functions/methods.
+- Line length: **100** characters; 4-space indent. Type hints required on public functions/methods.
+- Naming: modules/functions `snake_case`, classes `PascalCase`, constants `ALL_CAPS`. Branches `feat/<summary>` or `fix/<issue>`.
 - Imports: **absolute only** (ruff `TID` bans relative imports). Quote style: double (ruff enforced).
 - Docstrings: **Google convention** (`Args:`/`Returns:`/`Raises:`), enforced by ruff `D` rules.
 - Run `make format` before committing; `make lint` to check.
@@ -55,13 +68,15 @@ uv run pytest path/to/test_file.py -v   # Single file
 - WebSocket at `/ws` for real-time training progress.
 - Model files discovered from `IMG_CLASSIFIER_MODEL_DIR` or `~/.local/share/img_classifier/models/`.
 
-## Environment
+## Environment & Configuration
 
-Copy `.env.example` → `.env`. Key vars: `IMG_CLASSIFIER_API_KEY`, `IMG_CLASSIFIER_MODEL_DIR`, `IMG_CLASSIFIER_WORKING_DIR`, `IMG_CLASSIFIER_MAX_UPLOAD_BYTES`. Never commit `.env`.
+- Copy `.env.example` → `.env`. Key vars: `IMG_CLASSIFIER_API_KEY`, `IMG_CLASSIFIER_MODEL_DIR`, `IMG_CLASSIFIER_WORKING_DIR`, `IMG_CLASSIFIER_MAX_UPLOAD_BYTES`. Never commit `.env`.
+- Keep secrets out of the repo. Don't commit model weights unless intended; place them under `apps/api/static` if needed.
 
 ## Before Committing / Opening a PR
 
-1. `make check` must pass completely
-2. Update `docs/ARCHITECTURE.md` or `docs/TESTING.md` if structure changed
-3. New code needs tests; don't delete tests to meet coverage
-4. Commit messages: imperative, ~50 chars (e.g., `Add path traversal guard to model loader`)
+1. `make check` must pass completely.
+2. Update `docs/ARCHITECTURE.md` or `docs/TESTING.md` if structure changed.
+3. New code needs tests; don't delete tests to meet coverage.
+4. Commit messages: imperative, ~50 chars (e.g., `Add path traversal guard to model loader`). Group related changes per commit. The `commit-msg` hook enforces subject length, capitalization, no trailing period, and a blank line before the body.
+5. PRs: include a concise description, rationale, verification steps (commands run), and linked issues. Add screenshots or sample outputs when changing API responses or visual assets.
