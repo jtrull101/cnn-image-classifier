@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+
 # Add the e2e package directory to sys.path so tests can import
 #   from fixtures.api_responses import ...
 # without needing __init__.py files in all ancestor directories.
@@ -52,7 +53,7 @@ def _wait_for_server(base_url: str, timeout: float = 30.0) -> None:
 
 
 @pytest.fixture(scope="session")
-def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> Generator[str, None, None]:
+def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> Generator[str]:
     """Start a real uvicorn server once for the entire e2e test session.
 
     * Points IMG_CLASSIFIER_MODEL_DIR at a fresh temp dir → "no model loaded" state.
@@ -71,9 +72,9 @@ def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> Generator[str, 
     os.environ["IMG_CLASSIFIER_WORKING_DIR"] = str(tmp_root)
     os.environ.pop("IMG_CLASSIFIER_API_KEY", None)
 
-    import uvicorn  # noqa: PLC0415 (deferred to respect env var ordering)
+    import uvicorn
 
-    from img_classifier_api.app import app  # noqa: PLC0415
+    from img_classifier_api.app import app
 
     port = _find_free_port()
     base_url = f"http://127.0.0.1:{port}"
@@ -101,8 +102,8 @@ def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> Generator[str, 
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture()
-def page(page, live_server_url: str):  # noqa: F811  (intentional shadow of playwright fixture)
+@pytest.fixture
+def page(page, live_server_url: str):
     """Override pytest-playwright's page fixture to set defaults."""
     page.set_default_timeout(15_000)
     return page

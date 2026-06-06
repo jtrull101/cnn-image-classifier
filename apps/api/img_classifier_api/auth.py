@@ -5,6 +5,7 @@ import os
 from fastapi import HTTPException, Security, status
 from fastapi.security import APIKeyHeader
 
+
 _API_KEY_HEADER_NAME = "X-API-Key"
 _API_KEY_ENV_VAR = "IMG_CLASSIFIER_API_KEY"
 

@@ -1,0 +1,70 @@
+#!/bin/sh
+# Git commit-msg hook — enforce the project's commit convention.
+# Convention (see AGENTS.md / CLAUDE.md): imperative subject, ~50 chars, capitalized,
+# no trailing period, blank line before any body.
+#
+# Hard errors block the commit; style warnings are advisory.
+
+MSG_FILE="$1"
+[ -z "$MSG_FILE" ] && exit 0
+
+# First non-comment, non-empty line is the subject.
+SUBJECT=$(grep -v '^#' "$MSG_FILE" | sed '/^[[:space:]]*$/d' | head -n 1)
+
+# Skip auto-generated messages (merge/revert/fixup/squash).
+case "$SUBJECT" in
+    "Merge "*|"Revert "*|"fixup! "*|"squash! "*|"Merge branch "*|"Merge pull request "*)
+        exit 0
+        ;;
+esac
+
+ERRORS=0
+SUBJECT_LEN=${#SUBJECT}
+
+if [ -z "$SUBJECT" ]; then
+    echo "[ERROR] Commit message subject is empty."
+    ERRORS=$((ERRORS + 1))
+fi
+
+# Hard limit 72; soft target 50.
+if [ "$SUBJECT_LEN" -gt 72 ]; then
+    echo "[ERROR] Subject is $SUBJECT_LEN chars (max 72): $SUBJECT"
+    ERRORS=$((ERRORS + 1))
+elif [ "$SUBJECT_LEN" -gt 50 ]; then
+    echo "[WARN]  Subject is $SUBJECT_LEN chars; aim for <=50."
+fi
+
+# No trailing period.
+case "$SUBJECT" in
+    *.) echo "[ERROR] Subject should not end with a period: $SUBJECT"; ERRORS=$((ERRORS + 1)) ;;
+esac
+
+# Capitalized first letter.
+FIRST_CHAR=$(printf '%s' "$SUBJECT" | cut -c1)
+case "$FIRST_CHAR" in
+    [A-Z]) : ;;
+    [a-z]) echo "[WARN]  Subject should start with a capital letter: $SUBJECT" ;;
+esac
+
+# Imperative-mood heuristic (advisory only): flag common past-tense/gerund openers.
+FIRST_WORD=$(printf '%s' "$SUBJECT" | cut -d' ' -f1)
+case "$FIRST_WORD" in
+    Added|Fixed|Updated|Removed|Changed|Refactored|Adding|Fixing|Updating|Removing)
+        echo "[WARN]  Use imperative mood (e.g. 'Add' not '$FIRST_WORD'): $SUBJECT"
+        ;;
+esac
+
+# If a body exists, the second line must be blank.
+SECOND_LINE=$(grep -v '^#' "$MSG_FILE" | sed -n '2p')
+if [ -n "$SECOND_LINE" ]; then
+    echo "[ERROR] Leave a blank line between the subject and body."
+    ERRORS=$((ERRORS + 1))
+fi
+
+if [ "$ERRORS" -ne 0 ]; then
+    echo ""
+    echo "Commit blocked: $ERRORS message issue(s). Edit your message and retry."
+    exit 1
+fi
+
+exit 0

@@ -7,9 +7,10 @@ from img_classifier_config.dataset_config import (
     DatasetDetector,
 )
 
+
 __all__ = [
-    "BaseConfig",
     "ArchitectureComplexity",
+    "BaseConfig",
     "DatasetConfig",
     "DatasetDetector",
 ]

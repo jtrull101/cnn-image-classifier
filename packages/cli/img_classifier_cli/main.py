@@ -4,7 +4,8 @@ import sys
 from pathlib import Path
 
 import click
-from img_classifier_config import DatasetConfig, DatasetDetector
+
+from img_classifier_config import ArchitectureComplexity, DatasetConfig, DatasetDetector
 from img_classifier_training import HyperparameterSpace, OptimizerType, TrainingOrchestrator
 
 
@@ -96,7 +97,7 @@ def train(
     if learning_rate:
         cfg.learning_rate = learning_rate
     if architecture:
-        cfg.architecture_complexity = architecture
+        cfg.architecture_complexity = ArchitectureComplexity(architecture)
 
     # Create orchestrator and run
     orchestrator = TrainingOrchestrator(cfg, optimize_hyperparameters=False)
@@ -244,7 +245,7 @@ def predict(model_path: Path, image_path: Path, class_names: tuple) -> None:
     model = tf.keras.models.load_model(model_path)
 
     # Get input shape
-    input_shape = model.input_shape[1:3]  # type: ignore
+    input_shape = model.input_shape[1:3]
 
     # Load and preprocess image
     click.echo(f"Loading image from {image_path}...")

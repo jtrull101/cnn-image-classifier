@@ -1,0 +1,21 @@
+# Gitleaks configuration — secrets scanning.
+# Extends the upstream default ruleset; the allowlist below suppresses known
+# non-secrets (documented placeholders and test fixtures).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Project allowlist for documented placeholders and fixtures"
+
+paths = [
+    '''\.env\.example$''',
+    '''.*\.lock$''',
+    '''docs/.*''',
+    '''.*/tests/.*''',
+]
+
+regexes = [
+    # Documented env-var placeholders, e.g. IMG_CLASSIFIER_API_KEY=your-api-key-here
+    '''(?i)(your|example|changeme|placeholder|dummy|test|fake|sample)[-_]?(api[-_]?key|secret|token|password)''',
+    '''IMG_CLASSIFIER_API_KEY=.*''',
+]

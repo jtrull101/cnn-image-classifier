@@ -1,10 +1,10 @@
 """CNN classifier model for image classification."""
 
 import tensorflow as tf
-from img_classifier_config import ArchitectureComplexity, BaseConfig
 from keras.layers import Conv2D, Dense, Dropout, Flatten, Input, MaxPooling2D
 from keras.models import Sequential
 
+from img_classifier_config import ArchitectureComplexity, BaseConfig
 from img_classifier_models.base_model import BaseModel
 
 

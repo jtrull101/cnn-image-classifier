@@ -5,7 +5,7 @@ module's behavior without actually running TensorFlow training loops or
 loading real data. These tests should execute quickly (<1s each).
 """
 
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import numpy as np
 import pytest
@@ -27,7 +27,7 @@ class TestAccuracyThresholdCallback:
 
             self.callback_class = AccuracyThresholdCallback
 
-        yield
+        return
 
     def test_initialization(self):
         """Test callback initialization with custom threshold."""
@@ -125,6 +125,25 @@ class TestTrainer:
         self.mock_config.test_split = 0.5
         self.mock_config.logs_dir = self.temp_dir / "logs"
         self.mock_config.models_dir = self.temp_dir / "models"
+        self.mock_config.early_stopping_patience = 5
+        self.mock_config.accuracy_threshold = 0.995
+        # New generalization gates — default OFF so callback construction stays deterministic.
+        self.mock_config.early_stopping_monitor = "val_loss"
+        self.mock_config.early_stopping_mode = "min"
+        self.mock_config.restore_best_weights = False
+        self.mock_config.use_reduce_lr = False
+        self.mock_config.reduce_lr_factor = 0.5
+        self.mock_config.reduce_lr_patience = 4
+        self.mock_config.min_lr = 1e-6
+        self.mock_config.target_val_accuracy = None
+        self.mock_config.use_data_augmentation = False
+        self.mock_config.use_class_weights = False
+        self.mock_config.label_smoothing = 0.0
+        self.mock_config.backbone = None
+        self.mock_config.finetune_epochs = 0
+        self.mock_config.finetune_lr_divisor = 100.0
+        self.mock_config.eval_split_seed = None
+        self.mock_config.stratify_eval_split = False
 
         # Mock the model
         self.mock_model = Mock()
@@ -144,7 +163,7 @@ class TestTrainer:
 
                     self.trainer = Trainer(self.mock_config, self.mock_model, self.mock_loader)
 
-        yield
+        return
 
     def test_initialization(self):
         """Test Trainer initialization with mocked dependencies."""

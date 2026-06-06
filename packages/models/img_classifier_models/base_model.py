@@ -6,7 +6,9 @@ from enum import StrEnum
 from pathlib import Path
 
 import tensorflow as tf
+
 from img_classifier_config import BaseConfig
+
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +82,11 @@ class BaseModel(ABC):
             optimizer_obj = optimizer
 
         if loss is None:
-            loss = "categorical_crossentropy"
+            label_smoothing = getattr(self.config, "label_smoothing", 0.0) or 0.0
+            if label_smoothing > 0:
+                loss = tf.keras.losses.CategoricalCrossentropy(label_smoothing=label_smoothing)
+            else:
+                loss = "categorical_crossentropy"
 
         if metrics is None:
             metrics = ["accuracy"]

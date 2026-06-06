@@ -17,6 +17,7 @@ from img_classifier_api.routers.datasets import (
     _safe_dataset_path,
 )
 
+
 pytestmark = pytest.mark.unit
 
 

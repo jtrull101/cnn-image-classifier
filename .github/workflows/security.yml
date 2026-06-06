@@ -1,0 +1,61 @@
+# Security scanning — secrets detection and dependency vulnerability audit.
+name: Security
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 7 * * 1"  # Weekly, Monday 07:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Secrets scanning — blocking on PRs and pushes.
+  gitleaks:
+    name: Secrets scan (gitleaks)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # Full history so gitleaks can scan all commits
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  # Dependency CVE audit — informational; runs on a schedule and on demand.
+  # Findings are written to the job summary rather than failing the run, since
+  # most CVEs are upstream/transitive and remediated via Dependabot.
+  pip-audit:
+    name: Dependency audit (pip-audit)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Run pip-audit
+        run: |
+          echo "## Dependency audit (pip-audit)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          uv run pip-audit --desc 2>&1 | tee -a "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

@@ -1,5 +1,4 @@
-"""
-FastAPI application for generic image classification.
+"""FastAPI application for generic image classification.
 
 This API provides endpoints for:
 - Image classification predictions
@@ -13,10 +12,11 @@ import logging
 import os
 import shutil
 import tempfile
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, AsyncGenerator
+from typing import Any
 
 import tensorflow as tf
 from fastapi import (
@@ -36,6 +36,7 @@ from img_classifier_api.database import init_db
 from img_classifier_api.routers import analytics, datasets, history, models, predictions, training
 from img_classifier_api.schemas import HealthCheckResponse, ModelInfo
 from img_classifier_api.websocket_manager import manager as ws_manager
+
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,7 @@ class ModelManager:
     """Manages multiple loaded models."""
 
     def __init__(self) -> None:
+        """Initialize an empty model registry."""
         self.models: dict[str, tf.keras.Model] = {}
         self.model_info: dict[str, ModelInfo] = {}
         self.current_model_name: str | None = None
@@ -266,6 +268,7 @@ class CSPMiddleware(BaseHTTPMiddleware):
     )
 
     async def dispatch(self, request: Request, call_next: Any) -> Response:
+        """Add security headers to HTML responses."""
         response = await call_next(request)
         content_type = response.headers.get("content-type", "")
         if "text/html" in content_type:
@@ -281,7 +284,7 @@ model_manager = ModelManager()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Lifespan context manager for startup and shutdown events."""
     logging.basicConfig(
         level=logging.INFO,

@@ -8,8 +8,8 @@ Run these tests with Docker available:
     uv run pytest apps/api/tests/integration/test_live_api.py -v --timeout=300
 """
 
-import pytest
 import httpx
+import pytest
 
 
 pytestmark = [pytest.mark.integration, pytest.mark.slow, pytest.mark.serial]

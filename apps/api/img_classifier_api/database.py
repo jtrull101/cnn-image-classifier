@@ -1,5 +1,4 @@
-"""
-Database configuration and session management.
+"""Database configuration and session management.
 
 Sets up SQLAlchemy with SQLite for storing prediction history.
 Uses Alembic for database schema migrations.
@@ -7,13 +6,14 @@ Uses Alembic for database schema migrations.
 
 import os
 import threading
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import Engine, create_engine, inspect
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
+
 
 # Thread lock for database initialization
 _init_lock = threading.Lock()
@@ -39,9 +39,8 @@ def _build_engine_and_session(db_url: str) -> tuple[Engine, sessionmaker]:
 engine, SessionLocal = _build_engine_and_session(DATABASE_URL)
 
 
-def get_db() -> Generator[Session, None, None]:
-    """
-    Dependency function to get database session.
+def get_db() -> Generator[Session]:
+    """Dependency function to get database session.
 
     Usage in FastAPI:
         @app.get("/endpoint")
@@ -59,8 +58,7 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    """
-    Initialize database using Alembic migrations.
+    """Initialize database using Alembic migrations.
 
     Runs all pending migrations to bring the database schema up to date.
     This is safe to call multiple times - Alembic tracks which migrations
@@ -111,8 +109,7 @@ def init_db() -> None:
 
 
 def reset_db_state() -> None:
-    """
-    Reset database initialization state and rebuild the engine for the current DATABASE_URL.
+    """Reset database initialization state and rebuild the engine for the current DATABASE_URL.
 
     Called by test fixtures (e.g. xdist isolation) after DATABASE_URL is updated so that
     the next init_db() call uses the correct database file.

@@ -1,5 +1,4 @@
-"""
-Prediction history database model.
+"""Prediction history database model.
 
 Stores prediction results for tracking and analytics.
 """
@@ -14,8 +13,7 @@ from img_classifier_api.database import Base
 
 
 class PredictionHistory(Base):
-    """
-    Model for storing prediction history.
+    """Model for storing prediction history.
 
     Attributes:
         id: Primary key
@@ -78,6 +76,7 @@ class PredictionHistory(Base):
         }
 
     def __repr__(self) -> str:
+        """Return a debug representation of the prediction row."""
         return (
             f"<PredictionHistory(id={self.id}, "
             f"image={self.image_name}, "

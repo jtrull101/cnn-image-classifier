@@ -16,7 +16,7 @@ def test_config_data(test_data_dir):
     }
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def temp_dataset_structure(isolated_tmp_dir):
     """Create a temporary dataset structure for testing."""
     dataset_dir = isolated_tmp_dir / "dataset"

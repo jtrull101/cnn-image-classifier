@@ -11,6 +11,7 @@ from img_classifier_api.app import app
 from img_classifier_api.routers import training as training_module
 from img_classifier_api.routers.training import JobStatus, TrainingJobRequest
 
+
 pytestmark = pytest.mark.unit
 
 # ---------------------------------------------------------------------------
@@ -24,7 +25,7 @@ def client() -> TestClient:
 
 
 @pytest.fixture(autouse=True)
-def clear_jobs() -> Generator[None, None, None]:
+def clear_jobs() -> Generator[None]:
     """Ensure a clean training_jobs store for every test."""
     training_module.training_jobs.clear()
     yield

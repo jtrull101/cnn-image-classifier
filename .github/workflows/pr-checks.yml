@@ -45,8 +45,14 @@ jobs:
           exit 1
         fi
 
-    - name: Type check with pyright
-      run: uv run pyright
+    - name: Type check with ty
+      run: uv run ty check
+
+    - name: Spell check with codespell
+      run: uv run codespell
+
+    - name: Check for banned inline suppressions
+      run: bash scripts/check-no-suppressions.sh
 
     # Fast smoke tests for immediate feedback
     - name: Run smoke tests (fast feedback)

@@ -7,10 +7,12 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import StrEnum
+from itertools import product
 from pathlib import Path
 from typing import Any
 
 from img_classifier_config import ArchitectureComplexity, BaseConfig
+
 
 logger = logging.getLogger(__name__)
 
@@ -160,10 +162,7 @@ class HyperparameterOptimizer(ABC):
             return True
 
         # Stop if no improvement for a while
-        if self.trials_without_improvement >= self.early_stop_patience:
-            return True
-
-        return False
+        return self.trials_without_improvement >= self.early_stop_patience
 
     def record_result(self, result: TrialResult) -> None:
         """Record a trial result.
@@ -198,7 +197,7 @@ class HyperparameterOptimizer(ABC):
             "best_result": self.best_result.to_dict() if self.best_result else None,
         }
 
-        with open(results_file, "w") as f:
+        with results_file.open("w") as f:
             json.dump(data, f, indent=2)
 
     def get_summary(self) -> str:
@@ -215,10 +214,10 @@ class HyperparameterOptimizer(ABC):
         summary.append("Hyperparameter Optimization Summary")
         summary.append(f"{'=' * 60}")
         summary.append(f"Total trials: {len(self.results)}")
-        summary.append(f"Best validation accuracy: {self.best_result.val_accuracy:.4f}")  # type: ignore
-        summary.append(f"Best test accuracy: {self.best_result.test_accuracy:.4f}")  # type: ignore
+        summary.append(f"Best validation accuracy: {self.best_result.val_accuracy:.4f}")
+        summary.append(f"Best test accuracy: {self.best_result.test_accuracy:.4f}")
         summary.append("\nBest hyperparameters:")
-        for key, value in self.best_result.hyperparameters.items():  # type: ignore
+        for key, value in self.best_result.hyperparameters.items():
             summary.append(f"  {key}: {value}")
         summary.append(f"{'=' * 60}\n")
 
@@ -240,21 +239,22 @@ class GridSearchOptimizer(HyperparameterOptimizer):
         Returns:
             List of hyperparameter dictionaries
         """
-        grid = []
-        for lr in self.search_space.learning_rates:
-            for bs in self.search_space.batch_sizes:
-                for dr in self.search_space.dropout_rates:
-                    for arch in self.search_space.architectures:
-                        for epochs in self.search_space.num_epochs:
-                            grid.append(
-                                {
-                                    "learning_rate": lr,
-                                    "batch_size": bs,
-                                    "dropout_rate": dr,
-                                    "architecture": arch,
-                                    "num_epochs": epochs,
-                                }
-                            )
+        grid = [
+            {
+                "learning_rate": lr,
+                "batch_size": bs,
+                "dropout_rate": dr,
+                "architecture": arch,
+                "num_epochs": epochs,
+            }
+            for lr, bs, dr, arch, epochs in product(
+                self.search_space.learning_rates,
+                self.search_space.batch_sizes,
+                self.search_space.dropout_rates,
+                self.search_space.architectures,
+                self.search_space.num_epochs,
+            )
+        ]
 
         # Shuffle grid for randomization
         random.shuffle(grid)
@@ -315,7 +315,7 @@ class BayesianOptimizer(HyperparameterOptimizer):
 
         if use_optuna:
             try:
-                import optuna  # type: ignore[import-not-found]
+                import optuna
 
                 self.study = optuna.create_study(
                     direction="maximize",
@@ -340,7 +340,7 @@ class BayesianOptimizer(HyperparameterOptimizer):
 
         # Get suggestion from study (optuna already imported in __init__)
         trial = self.study.ask()
-        params = {
+        return {
             "learning_rate": trial.suggest_categorical(
                 "learning_rate", self.search_space.learning_rates
             ),
@@ -353,8 +353,6 @@ class BayesianOptimizer(HyperparameterOptimizer):
             ),
             "num_epochs": trial.suggest_categorical("num_epochs", self.search_space.num_epochs),
         }
-
-        return params
 
 
 def create_optimizer(
@@ -380,9 +378,8 @@ def create_optimizer(
     optimizer_type = OptimizerType(str(optimizer_type).lower())
     if optimizer_type == OptimizerType.GRID:
         return GridSearchOptimizer(config, search_space, **kwargs)
-    elif optimizer_type == OptimizerType.RANDOM:
+    if optimizer_type == OptimizerType.RANDOM:
         return RandomSearchOptimizer(config, search_space, **kwargs)
-    elif optimizer_type == OptimizerType.BAYESIAN:
+    if optimizer_type == OptimizerType.BAYESIAN:
         return BayesianOptimizer(config, search_space, **kwargs)
-    else:
-        raise ValueError(f"Unknown optimizer type: {optimizer_type}")
+    raise ValueError(f"Unknown optimizer type: {optimizer_type}")

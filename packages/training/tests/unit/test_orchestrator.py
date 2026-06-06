@@ -10,8 +10,9 @@ import numpy as np
 import pytest
 
 # TODO remove this dependency - should be just /training/ items
-from img_classifier_config import DatasetConfig, BaseConfig
+from img_classifier_config import BaseConfig, DatasetConfig
 from img_classifier_training import TrainingOrchestrator
+
 
 pytestmark = pytest.mark.unit
 
@@ -38,7 +39,7 @@ class TestTrainingOrchestrator:
         self.mock_loader = Mock()
         self.mock_loader.config = self.config
 
-        yield
+        return
 
     @pytest.mark.smoke
     def test_initialization_default(self):
@@ -469,7 +470,7 @@ class TestTrainingOrchestratorEdgeCases:
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
         self.config = BaseConfig(working_dir=self.temp_dir)
-        yield
+        return
 
     def test_invalid_optimizer_type(self):
         """Test with invalid optimizer type."""

@@ -34,10 +34,5 @@ packages = ["img_classifier_training"]
 pythonpath = ["."]
 testpaths = ["tests"]
 
-[tool.ruff]
-line-length = 100
-target-version = "py313"
-
-[tool.pyright]
-typeCheckingMode = "basic"
-pythonVersion = "3.13"
+[tool.ty.environment]
+python-version = "3.13"

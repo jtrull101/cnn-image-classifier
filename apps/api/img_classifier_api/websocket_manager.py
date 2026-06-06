@@ -1,5 +1,4 @@
-"""
-WebSocket Manager for handling real-time connections and broadcasting.
+"""WebSocket Manager for handling real-time connections and broadcasting.
 
 Manages WebSocket connections with support for:
 - Connection pooling
@@ -33,6 +32,7 @@ class WebSocketManager:
     """Manages WebSocket connections and message broadcasting."""
 
     def __init__(self) -> None:
+        """Initialize the manager with no active connections."""
         # Active connections: Set of WebSocket objects
         self.active_connections: set[WebSocket] = set()
 
@@ -43,8 +43,7 @@ class WebSocketManager:
         self.rooms: dict[str, set[WebSocket]] = {}
 
     async def connect(self, websocket: WebSocket, client_id: str | None = None) -> None:
-        """
-        Accept and register a new WebSocket connection.
+        """Accept and register a new WebSocket connection.
 
         Args:
             websocket: The WebSocket connection to register
@@ -72,8 +71,7 @@ class WebSocketManager:
         )
 
     def disconnect(self, websocket: WebSocket) -> None:
-        """
-        Unregister a WebSocket connection.
+        """Unregister a WebSocket connection.
 
         Args:
             websocket: The WebSocket connection to remove
@@ -91,8 +89,7 @@ class WebSocketManager:
         logger.info("WebSocket disconnected. Total connections: %d", len(self.active_connections))
 
     async def send_personal_message(self, message: dict[str, Any], websocket: WebSocket) -> None:
-        """
-        Send a message to a specific WebSocket connection.
+        """Send a message to a specific WebSocket connection.
 
         Args:
             message: Dictionary to send as JSON
@@ -110,8 +107,7 @@ class WebSocketManager:
     async def broadcast(
         self, message: dict[str, Any], exclude: set[WebSocket] | None = None
     ) -> None:
-        """
-        Broadcast a message to all active connections.
+        """Broadcast a message to all active connections.
 
         Args:
             message: Dictionary to send as JSON
@@ -137,8 +133,7 @@ class WebSocketManager:
             self.disconnect(connection)
 
     async def broadcast_to_room(self, room: str, message: dict[str, Any]) -> None:
-        """
-        Broadcast a message to all connections in a specific room.
+        """Broadcast a message to all connections in a specific room.
 
         Args:
             room: Room name
@@ -165,8 +160,7 @@ class WebSocketManager:
             self.disconnect(connection)
 
     def join_room(self, websocket: WebSocket, room: str) -> None:
-        """
-        Add a WebSocket connection to a room.
+        """Add a WebSocket connection to a room.
 
         Args:
             websocket: WebSocket connection
@@ -179,8 +173,7 @@ class WebSocketManager:
         logger.info("WebSocket joined room %r", room)
 
     def leave_room(self, websocket: WebSocket, room: str) -> None:
-        """
-        Remove a WebSocket connection from a room.
+        """Remove a WebSocket connection from a room.
 
         Args:
             websocket: WebSocket connection
@@ -199,8 +192,7 @@ class WebSocketManager:
         progress: float | None = None,
         error: str | None = None,
     ) -> None:
-        """
-        Broadcast model loading status to all connections.
+        """Broadcast model loading status to all connections.
 
         Args:
             model_name: Name of the model being loaded
@@ -225,8 +217,7 @@ class WebSocketManager:
     async def send_prediction_progress(
         self, image_name: str, progress: float, status: str = "processing"
     ) -> None:
-        """
-        Broadcast prediction progress to all connections.
+        """Broadcast prediction progress to all connections.
 
         Args:
             image_name: Name of the image being processed
@@ -245,8 +236,7 @@ class WebSocketManager:
     async def send_batch_progress(
         self, batch_id: str, completed: int, total: int, current_image: str | None = None
     ) -> None:
-        """
-        Broadcast batch processing progress to all connections.
+        """Broadcast batch processing progress to all connections.
 
         Args:
             batch_id: Unique identifier for the batch
@@ -268,8 +258,7 @@ class WebSocketManager:
         await self.broadcast(message)
 
     async def send_error(self, error_message: str, details: dict[str, Any] | None = None) -> None:
-        """
-        Broadcast an error message to all connections.
+        """Broadcast an error message to all connections.
 
         Args:
             error_message: Error message to broadcast

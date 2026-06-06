@@ -1,8 +1,9 @@
 """Unit tests for the analytics router."""
 
-import pytest
-from datetime import datetime
 from collections.abc import Generator
+from datetime import datetime
+
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -11,8 +12,9 @@ from sqlalchemy.pool import StaticPool
 from img_classifier_api.app import app
 from img_classifier_api.crud.predictions import create_prediction
 from img_classifier_api.database import Base, get_db
-from img_classifier_api.models.prediction import PredictionHistory  # noqa: F401 — registers table
+from img_classifier_api.models.prediction import PredictionHistory
 from img_classifier_api.routers._constants import _HTMX_REQUEST_HEADER, _HTMX_REQUEST_VALUE
+
 
 pytestmark = pytest.mark.unit
 
@@ -32,7 +34,7 @@ def _pred(**kwargs) -> dict:
 
 
 @pytest.fixture
-def db() -> Generator[Session, None, None]:
+def db() -> Generator[Session]:
     engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -50,8 +52,8 @@ def db() -> Generator[Session, None, None]:
 
 
 @pytest.fixture
-def client(db: Session) -> Generator[TestClient, None, None]:
-    def override() -> Generator[Session, None, None]:
+def client(db: Session) -> Generator[TestClient]:
+    def override() -> Generator[Session]:
         yield db
 
     app.dependency_overrides[get_db] = override
@@ -192,6 +194,7 @@ class TestAnalyticsPerformance:
     def test_start_date_excludes_old_records(self, client: TestClient, db: Session) -> None:
         """Records before start_date must be absent from performance results."""
         import json as _json
+
         from img_classifier_api.models.prediction import PredictionHistory as PH
 
         old = PH(
@@ -211,6 +214,7 @@ class TestAnalyticsPerformance:
     def test_end_date_excludes_future_records(self, client: TestClient, db: Session) -> None:
         """Records after end_date must be absent from performance results."""
         import json as _json
+
         from img_classifier_api.models.prediction import PredictionHistory as PH
 
         future = PH(

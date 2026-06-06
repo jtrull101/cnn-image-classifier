@@ -2,7 +2,7 @@
 
 import json
 from collections.abc import Generator
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 import pytest
 from sqlalchemy import create_engine
@@ -17,16 +17,16 @@ from img_classifier_api.crud.predictions import (
     get_prediction_by_id,
     get_predictions,
 )
-from img_classifier_api.schemas import ExportFormat
 from img_classifier_api.database import Base
-from img_classifier_api.models.prediction import PredictionHistory  # noqa: F401 — registers table with Base
+from img_classifier_api.models.prediction import PredictionHistory
+from img_classifier_api.schemas import ExportFormat
 
 
 pytestmark = pytest.mark.unit
 
 
 @pytest.fixture
-def db() -> Generator[Session, None, None]:
+def db() -> Generator[Session]:
     """In-memory SQLite session — no file I/O, safe for parallel tests."""
     engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
@@ -276,8 +276,8 @@ class TestExportPredictions:
 
     def test_json_export_date_range_excludes_out_of_range(self, db):
         create_prediction(db, _pred())  # created now
-        start = datetime(2000, 1, 1, tzinfo=timezone.utc)
-        end = datetime(2000, 12, 31, tzinfo=timezone.utc)
+        start = datetime(2000, 1, 1, tzinfo=UTC)
+        end = datetime(2000, 12, 31, tzinfo=UTC)
         parsed = json.loads(
             export_predictions(db, export_format=ExportFormat.JSON, start_date=start, end_date=end)
         )
@@ -346,8 +346,9 @@ class TestGetAnalyticsSummary:
 
     def _create_with_timestamp(self, db: Session, ts: datetime) -> None:
         """Insert a PredictionHistory row with an explicit timestamp."""
-        from img_classifier_api.models.prediction import PredictionHistory as PH
         import json as _json
+
+        from img_classifier_api.models.prediction import PredictionHistory as PH
 
         record = PH(
             image_name="test.jpg",
@@ -361,32 +362,32 @@ class TestGetAnalyticsSummary:
         db.commit()
 
     def test_start_date_excludes_older_records(self, db):
-        past = datetime(2020, 1, 1, tzinfo=timezone.utc)
-        recent = datetime(2025, 6, 1, tzinfo=timezone.utc)
+        past = datetime(2020, 1, 1, tzinfo=UTC)
+        recent = datetime(2025, 6, 1, tzinfo=UTC)
         self._create_with_timestamp(db, past)
         self._create_with_timestamp(db, recent)
-        cutoff = datetime(2023, 1, 1, tzinfo=timezone.utc)
+        cutoff = datetime(2023, 1, 1, tzinfo=UTC)
         result = get_analytics_summary(db, start_date=cutoff)
         assert result["total_predictions"] == 1
 
     def test_end_date_excludes_newer_records(self, db):
-        past = datetime(2020, 1, 1, tzinfo=timezone.utc)
-        recent = datetime(2025, 6, 1, tzinfo=timezone.utc)
+        past = datetime(2020, 1, 1, tzinfo=UTC)
+        recent = datetime(2025, 6, 1, tzinfo=UTC)
         self._create_with_timestamp(db, past)
         self._create_with_timestamp(db, recent)
-        cutoff = datetime(2023, 1, 1, tzinfo=timezone.utc)
+        cutoff = datetime(2023, 1, 1, tzinfo=UTC)
         result = get_analytics_summary(db, end_date=cutoff)
         assert result["total_predictions"] == 1
 
     def test_date_range_inclusive_boundaries(self, db):
-        ts = datetime(2022, 6, 15, tzinfo=timezone.utc)
+        ts = datetime(2022, 6, 15, tzinfo=UTC)
         self._create_with_timestamp(db, ts)
         result = get_analytics_summary(db, start_date=ts, end_date=ts)
         assert result["total_predictions"] == 1
 
     def test_date_range_excludes_all_records(self, db):
-        self._create_with_timestamp(db, datetime(2020, 1, 1, tzinfo=timezone.utc))
-        start = datetime(2025, 1, 1, tzinfo=timezone.utc)
-        end = datetime(2025, 12, 31, tzinfo=timezone.utc)
+        self._create_with_timestamp(db, datetime(2020, 1, 1, tzinfo=UTC))
+        start = datetime(2025, 1, 1, tzinfo=UTC)
+        end = datetime(2025, 12, 31, tzinfo=UTC)
         result = get_analytics_summary(db, start_date=start, end_date=end)
         assert result["total_predictions"] == 0

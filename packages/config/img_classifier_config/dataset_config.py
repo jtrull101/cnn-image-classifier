@@ -4,12 +4,13 @@ import logging
 import os
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import yaml
 from pydantic import Field, field_validator
 
 from img_classifier_config.base_config import BaseConfig
+
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +101,7 @@ class DatasetConfig(BaseConfig):
         Returns:
             DatasetConfig instance
         """
-        with open(yaml_path, "r") as f:
+        with yaml_path.open() as f:
             config_dict = yaml.safe_load(f)
 
         # Convert string paths back to Path objects
@@ -118,7 +119,7 @@ class DatasetConfig(BaseConfig):
             yaml_path: Path where YAML file should be saved
         """
         yaml_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(yaml_path, "w") as f:
+        with yaml_path.open("w") as f:
             # Convert to dict and keep None values so explicit nulls roundtrip
             config_dict = self.model_dump(exclude_none=False, mode="json")
 
@@ -126,12 +127,11 @@ class DatasetConfig(BaseConfig):
             def convert_paths(obj: Any) -> Any:
                 if isinstance(obj, dict):
                     return {k: convert_paths(v) for k, v in obj.items()}
-                elif isinstance(obj, list):
+                if isinstance(obj, list):
                     return [convert_paths(item) for item in obj]
-                elif isinstance(obj, Path):
+                if isinstance(obj, Path):
                     return str(obj)
-                else:
-                    return obj
+                return obj
 
             config_dict = convert_paths(config_dict)
             yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
@@ -144,7 +144,14 @@ class DatasetDetector:
     information about classes, image counts, and recommended settings.
     """
 
-    SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff"}
+    SUPPORTED_IMAGE_EXTENSIONS: ClassVar[set[str]] = {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".bmp",
+        ".gif",
+        ".tiff",
+    }
 
     def __init__(self, dataset_path: Path):
         """Initialize the dataset detector.
@@ -267,7 +274,7 @@ class DatasetDetector:
                         img_path = Path(root) / file
                         img = cv2.imread(str(img_path))
                         if img is not None:
-                            return tuple(img.shape)  # type: ignore
+                            return tuple(img.shape)
             return None
         except Exception as e:
             logger.warning("Could not detect image properties: %s", e)
@@ -285,10 +292,9 @@ class DatasetDetector:
         """
         if total_images < 1000 or num_classes <= 3:
             return ArchitectureComplexity.SIMPLE
-        elif total_images < 10000 or num_classes <= 10:
+        if total_images < 10000 or num_classes <= 10:
             return ArchitectureComplexity.MEDIUM
-        else:
-            return ArchitectureComplexity.DEEP
+        return ArchitectureComplexity.DEEP
 
     def _check_balance(self, class_distribution: dict[str, int]) -> bool:
         """Check if dataset is balanced.
@@ -324,7 +330,7 @@ class DatasetDetector:
         """
         info = self.detect()
 
-        config_dict = {
+        config_dict: dict[str, Any] = {
             "project_name": project_name or self.dataset_path.name,
             "working_dir": working_dir
             or Path.home() / ".local" / "share" / "img_classifier" / self.dataset_path.name,

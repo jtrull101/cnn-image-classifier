@@ -1,9 +1,9 @@
 """Dynamic CNN architecture generator based on dataset characteristics."""
 
 import math
+from typing import ClassVar
 
 import tensorflow as tf
-from img_classifier_config import ArchitectureComplexity, BaseConfig
 from keras.layers import (
     BatchNormalization,
     Conv2D,
@@ -15,6 +15,8 @@ from keras.layers import (
     MaxPooling2D,
 )
 from keras.models import Sequential
+
+from img_classifier_config import ArchitectureComplexity, BaseConfig
 
 
 # Thresholds for automatic complexity selection (used by _auto_select_complexity)
@@ -89,6 +91,11 @@ class ArchitectureFactory:
         if custom_spec is not None:
             return ArchitectureFactory._build_from_spec(config, custom_spec)
 
+        # Transfer learning: a pretrained backbone takes precedence over the from-scratch CNN.
+        if getattr(config, "backbone", None):
+            model, _base = ArchitectureFactory.create_backbone(config)
+            return model
+
         # Determine complexity
         if complexity is None:
             complexity = ArchitectureComplexity(
@@ -103,7 +110,54 @@ class ArchitectureFactory:
             complexity, config.input_shape, config.num_classes
         )
 
+        # Opt-in: force a GAP head so the from-scratch dense head doesn't explode with image size
+        # (lets from-scratch train at 224px without the Flatten->Dense OOM).
+        if getattr(config, "use_global_pooling_head", False):
+            spec.use_global_pooling = True
+
         return ArchitectureFactory._build_from_spec(config, spec)
+
+    # Backbones whose ImageNet weights expect raw [0, 255] inputs (preprocessing is internal);
+    # everything else here is fed via an explicit Rescaling layer below.
+    _BACKBONES: ClassVar[dict[str, tuple[str, tuple[float, float]]]] = {
+        "mobilenetv2": ("MobileNetV2", (2.0, -1.0)),  # scale [0,1] -> [-1,1]
+        "efficientnetb0": ("EfficientNetB0", (255.0, 0.0)),  # scale [0,1] -> [0,255]
+    }
+
+    @staticmethod
+    def create_backbone(config: BaseConfig) -> tuple[tf.keras.Model, tf.keras.layers.Layer]:
+        """Build a transfer-learning model around a pretrained ImageNet backbone.
+
+        The app feeds models pixels in [0, 1] (DJL Resize -> ToTensor), so a ``Rescaling``
+        layer inside the graph maps that into each backbone's expected input domain. The base
+        is returned alongside the model so the caller can unfreeze it for fine-tuning.
+
+        Args:
+            config: Configuration with ``backbone``, ``input_shape``, ``num_classes``.
+
+        Returns:
+            Tuple of (model, base_layer).
+        """
+        from keras import applications
+        from keras.layers import Dense, Dropout, Input, Rescaling
+
+        key = str(config.backbone).lower()
+        if key not in ArchitectureFactory._BACKBONES:
+            raise ValueError(
+                f"Unknown backbone '{config.backbone}'. "
+                f"Supported: {sorted(ArchitectureFactory._BACKBONES)}"
+            )
+        app_name, (scale, offset) = ArchitectureFactory._BACKBONES[key]
+        app_cls = getattr(applications, app_name)
+
+        inputs = Input(shape=config.input_shape)
+        x = Rescaling(scale, offset=offset)(inputs)
+        base = app_cls(include_top=False, weights="imagenet", pooling="avg", input_tensor=x)
+        base.trainable = False
+        y = Dropout(config.dropout_rate)(base.output)
+        outputs = Dense(config.num_classes, activation="softmax")(y)
+        model = tf.keras.Model(inputs, outputs, name=f"{app_name}_transfer")
+        return model, base
 
     @staticmethod
     def _auto_select_complexity(config: BaseConfig) -> ArchitectureComplexity:
@@ -120,10 +174,9 @@ class ArchitectureFactory:
 
         if config.num_classes <= _SIMPLE_MAX_CLASSES and image_area <= _SIMPLE_MAX_IMAGE_AREA:
             return ArchitectureComplexity.SIMPLE
-        elif config.num_classes <= _MEDIUM_MAX_CLASSES and image_area <= _MEDIUM_MAX_IMAGE_AREA:
+        if config.num_classes <= _MEDIUM_MAX_CLASSES and image_area <= _MEDIUM_MAX_IMAGE_AREA:
             return ArchitectureComplexity.MEDIUM
-        else:
-            return ArchitectureComplexity.DEEP
+        return ArchitectureComplexity.DEEP
 
     @staticmethod
     def _get_spec_for_complexity(
@@ -155,7 +208,7 @@ class ArchitectureFactory:
                 dropout_rate=0.3,
             )
 
-        elif complexity == ArchitectureComplexity.MEDIUM:
+        if complexity == ArchitectureComplexity.MEDIUM:
             return ArchitectureSpec(
                 name="MediumCNN",
                 conv_blocks=[
@@ -170,7 +223,7 @@ class ArchitectureFactory:
                 dropout_rate=0.3,
             )
 
-        elif complexity == ArchitectureComplexity.DEEP:
+        if complexity == ArchitectureComplexity.DEEP:
             return ArchitectureSpec(
                 name="DeepCNN",
                 conv_blocks=[
@@ -186,8 +239,7 @@ class ArchitectureFactory:
                 dropout_rate=0.4,
             )
 
-        else:
-            raise ValueError(f"Unknown complexity: {complexity}")
+        raise ValueError(f"Unknown complexity: {complexity}")
 
     @staticmethod
     def _build_from_spec(config: BaseConfig, spec: ArchitectureSpec) -> tf.keras.Model:
@@ -240,8 +292,7 @@ class ArchitectureFactory:
         # Add output layer
         layers.append(Dense(config.num_classes, activation="softmax"))
 
-        model = Sequential(layers, name=spec.name)
-        return model
+        return Sequential(layers, name=spec.name)
 
 
 class ModelScaler:

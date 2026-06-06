@@ -3,6 +3,7 @@
 import asyncio
 import os
 from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
@@ -119,9 +120,9 @@ async def load_model_endpoint(
     except HTTPException:
         raise
     except FileNotFoundError as e:
-        raise HTTPException(404, str(e))
+        raise HTTPException(404, str(e)) from e
     except Exception as e:
-        raise HTTPException(500, f"Error loading model: {str(e)}")
+        raise HTTPException(500, f"Error loading model: {e!s}") from e
 
 
 @router.get("/models/{model_name}", response_model=ModelInfo)
@@ -142,7 +143,7 @@ async def get_model_info(model_name: str, request: Request) -> ModelInfo:
     try:
         return model_manager.get_info(model_name)
     except ValueError as e:
-        raise HTTPException(404, str(e))
+        raise HTTPException(404, str(e)) from e
 
 
 @router.post(
@@ -168,7 +169,7 @@ async def activate_model(model_name: str, request: Request) -> MessageResponse:
         model_manager.set_current_model(model_name)
         return MessageResponse(message=f"Model '{model_name}' is now active")
     except ValueError as e:
-        raise HTTPException(404, str(e))
+        raise HTTPException(404, str(e)) from e
 
 
 @router.delete(
@@ -198,4 +199,4 @@ async def unload_model(model_name: str, request: Request) -> MessageResponse:
         model_manager.unload_model(model_name)
         return MessageResponse(message=f"Model '{model_name}' unloaded successfully")
     except ValueError as e:
-        raise HTTPException(404, str(e))
+        raise HTTPException(404, str(e)) from e

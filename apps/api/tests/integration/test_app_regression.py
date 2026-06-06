@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from img_classifier_api.app import app
 
+
 pytestmark = pytest.mark.integration
 
 

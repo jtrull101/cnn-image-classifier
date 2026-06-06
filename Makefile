@@ -1,4 +1,4 @@
-.PHONY: help install sync clean test test-coverage test-parallel test-unit test-integration test-slow test-config test-data test-models test-training test-utils test-cli test-api test-e2e install-playwright lint format typecheck build build-config build-utils build-data build-models build-training build-cli build-api serve-api install-hooks pre-commit check ci download-datasets list-datasets db-upgrade db-migrate db-revision db-history db-current db-downgrade db-reset
+.PHONY: help install sync clean test test-coverage test-parallel test-unit test-integration test-slow test-config test-data test-models test-training test-utils test-cli test-api test-e2e install-playwright lint format typecheck spell audit deadcode security check-suppressions build build-config build-utils build-data build-models build-training build-cli build-api serve-api install-hooks pre-commit check ci download-datasets list-datasets db-upgrade db-migrate db-revision db-history db-current db-downgrade db-reset
 
 # Platform detection
 ifeq ($(OS),Windows_NT)
@@ -39,7 +39,12 @@ help:
 	@echo "  make test           - Run tests with coverage (parallel)"
 	@echo "  make lint           - Lint all code with ruff"
 	@echo "  make format         - Format all code with ruff"
-	@echo "  make typecheck      - Run pyright across the workspace"
+	@echo "  make typecheck      - Run ty across the workspace"
+	@echo "  make spell          - Spell check code and docs (codespell)"
+	@echo "  make audit          - Audit dependencies for CVEs (pip-audit)"
+	@echo "  make deadcode       - Detect unused code (vulture, informational)"
+	@echo "  make security       - Run audit + spell + deadcode together"
+	@echo "  make check-suppressions - Fail if inline noqa/type-ignore comments exist"
 	@echo "  make check          - Run all pre-commit checks (format, lint, typecheck, tests)"
 	@echo "  make clean          - Clean build/test artifacts"
 	@echo ""
@@ -148,8 +153,32 @@ format:
 
 # Type checking
 typecheck:
-	@echo "Running pyright..."
-	uv run pyright
+	@echo "Running ty..."
+	uv run ty check
+
+# Spell checking
+spell:
+	@echo "Spell checking with codespell..."
+	uv run codespell
+
+# Fail if inline linter/type-checker suppressions were added
+check-suppressions:
+	@echo "Checking for banned inline suppressions..."
+	bash scripts/check-no-suppressions.sh
+
+# Dependency vulnerability audit (exits non-zero when CVEs are found)
+audit:
+	@echo "Auditing dependencies for known vulnerabilities..."
+	uv run pip-audit --desc
+
+# Dead-code detection (informational; uses vulture_allowlist.py)
+deadcode:
+	@echo "Detecting unused code with vulture..."
+	uv run vulture
+
+# Aggregate security/quality scans
+security: audit spell deadcode
+	@echo "Security and quality scans complete!"
 
 # Clean build artifacts
 clean:
@@ -257,7 +286,7 @@ install-playwright:
 PLAYWRIGHT_LIBS ?= /tmp/nspr-libs/usr/lib/x86_64-linux-gnu
 
 # CI workflow
-ci: lint typecheck test build
+ci: lint typecheck spell check-suppressions test build
 	@echo "CI checks passed!"
 
 # Dataset management

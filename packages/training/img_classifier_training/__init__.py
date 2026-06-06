@@ -1,6 +1,6 @@
 """Training pipeline package for image classification."""
 
-from img_classifier_training.callbacks import AccuracyThresholdCallback
+from img_classifier_training.callbacks import AccuracyThresholdCallback, ValTargetStop
 from img_classifier_training.optimizer import (
     BayesianOptimizer,
     GridSearchOptimizer,
@@ -14,17 +14,19 @@ from img_classifier_training.optimizer import (
 from img_classifier_training.orchestrator import TrainingOrchestrator
 from img_classifier_training.trainer import Trainer
 
+
 __all__ = [
     "AccuracyThresholdCallback",
-    "Trainer",
+    "BayesianOptimizer",
+    "GridSearchOptimizer",
     "HyperparameterOptimizer",
     "HyperparameterSpace",
     "OptimizerType",
-    "TrialResult",
-    "GridSearchOptimizer",
     "RandomSearchOptimizer",
-    "BayesianOptimizer",
-    "create_optimizer",
+    "Trainer",
     "TrainingOrchestrator",
+    "TrialResult",
+    "ValTargetStop",
+    "create_optimizer",
 ]
 __version__ = "0.1.0"

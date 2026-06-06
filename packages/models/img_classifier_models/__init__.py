@@ -10,14 +10,15 @@ from img_classifier_models.architecture_generator import (
 from img_classifier_models.base_model import BaseModel
 from img_classifier_models.cnn_classifier import CnnClassifier, SimpleCnn
 
+
 __all__ = [
-    "BaseModel",
-    "CnnClassifier",
-    "SimpleCnn",
+    "ArchitectureComplexity",
     "ArchitectureFactory",
     "ArchitectureSpec",
-    "ArchitectureComplexity",
+    "BaseModel",
+    "CnnClassifier",
     "ModelScaler",
+    "SimpleCnn",
     "create_architecture_from_config",
 ]
 __version__ = "0.1.0"

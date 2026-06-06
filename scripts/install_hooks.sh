@@ -38,6 +38,16 @@ if [ -f "$PRE_COMMIT_PS_SRC" ]; then
     echo "[OK] Installed pre-commit.ps1 hook (PowerShell)"
 fi
 
+# Copy commit-msg hook (enforces the commit-message convention)
+COMMIT_MSG_SRC="$SCRIPT_DIR/commit-msg"
+COMMIT_MSG_DST="$HOOKS_DIR/commit-msg"
+
+if [ -f "$COMMIT_MSG_SRC" ]; then
+    cp "$COMMIT_MSG_SRC" "$COMMIT_MSG_DST"
+    chmod +x "$COMMIT_MSG_DST"
+    echo "[OK] Installed commit-msg hook"
+fi
+
 echo ""
 echo "========================================"
 echo "Git hooks installed successfully!"
@@ -48,6 +58,12 @@ echo ""
 echo "It will check:"
 echo "  1. Code formatting (ruff)"
 echo "  2. Linting (ruff)"
-echo "  3. Type checking (pyright)"
+echo "  3. Type checking (ty)"
+echo "  4. Spell checking (codespell)"
+echo "  5. No inline suppressions (noqa / type: ignore)"
+echo "  6. Secrets scan (gitleaks, if installed)"
+echo "  7. Smoke tests (pytest)"
+echo ""
+echo "A commit-msg hook also enforces the commit-message convention."
 echo ""
 

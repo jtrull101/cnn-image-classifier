@@ -29,11 +29,24 @@ uv run pytest path/to/test_file.py -v   # Single file
 ## Code Style
 
 - Line length: **100** characters. Type hints required on public functions/methods.
-- Imports: absolute only. Quote style: double (ruff enforced).
+- Imports: **absolute only** (ruff `TID` bans relative imports). Quote style: double (ruff enforced).
+- Docstrings: **Google convention** (`Args:`/`Returns:`/`Raises:`), enforced by ruff `D` rules.
 - Run `make format` before committing; `make lint` to check.
-- Ruff ignores (do not "fix"): `ARG001`/`ARG002` (ML callbacks), `E501` (line length).
-- Pyright: `reportAttributeAccessIssue = false` for TensorFlow/Keras dynamic attrs.
-- Tests additionally suppress `ARG`, `S101`, `N806` (ML variable names like `X_train`).
+- Ruff selects security (`S`), docstrings (`D`), pytest-style (`PT`), return/perf/logging/async (`RET`/`PERF`/`LOG`/`G`/`ASYNC`), tidy-imports (`TID`), future-annotations (`FA`) on top of the base set.
+- **Single ruff config:** all rules live in the root `pyproject.toml`. Do NOT add `[tool.ruff]` to per-package `pyproject.toml` (it shadows the root and silently disables rules).
+- Ruff ignores (do not "fix"): `ARG001`/`ARG002`/`ARG004` (ML callbacks/uniform signatures), `E501` (line length), `RUF001-003` (em-dash typography), `DTZ001`/`DTZ005` (intentional naive timestamps).
+- ty: `unresolved-attribute = "ignore"` (and related attribute rules) for TensorFlow/Keras dynamic attrs.
+- Tests additionally suppress `ARG`, `S` (assert/pickle/tmp), `D`, `N806`/`N817`, `B017`, `SIM117`, `PTH`, `E402`, `F401`.
+- **No inline suppressions.** `# noqa`, `# type: ignore`, `# ty: ignore`, `# pyright:`, etc. are banned and enforced by `make check-suppressions` (in CI + pre-commit). Put rule exceptions in `[tool.ruff.lint.per-file-ignores]` / `[tool.ty.rules]` with a justifying comment, or fix the underlying issue.
+
+## Quality & Security Tooling
+
+- `make spell` — codespell (config + word allowlist in `[tool.codespell]`).
+- `make audit` — pip-audit for dependency CVEs (informational; Dependabot does the bumps).
+- `make deadcode` — vulture dead-code scan; false positives go in `vulture_allowlist.py`.
+- `make security` — runs audit + spell + deadcode together.
+- Secrets scanning: gitleaks runs in CI (`.github/workflows/security.yml`) and locally in the pre-commit hook **if** the `gitleaks` binary is installed; config/allowlist in `.gitleaks.toml`.
+- A `commit-msg` hook (`scripts/commit-msg`) enforces the commit convention (installed by `make install-hooks`).
 
 ## API Conventions
 

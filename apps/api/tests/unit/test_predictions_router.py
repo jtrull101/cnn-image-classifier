@@ -13,8 +13,9 @@ from sqlalchemy.pool import StaticPool
 from img_classifier_api.app import app
 from img_classifier_api.crud.predictions import get_predictions
 from img_classifier_api.database import Base, get_db
-from img_classifier_api.models.prediction import PredictionHistory  # noqa: F401
+from img_classifier_api.models.prediction import PredictionHistory
 from img_classifier_api.schemas import ModelInfo
+
 
 pytestmark = pytest.mark.unit
 
@@ -25,7 +26,7 @@ pytestmark = pytest.mark.unit
 
 
 @pytest.fixture
-def db() -> Generator[Session, None, None]:
+def db() -> Generator[Session]:
     engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -43,8 +44,8 @@ def db() -> Generator[Session, None, None]:
 
 
 @pytest.fixture
-def client(db: Session) -> Generator[TestClient, None, None]:
-    def override() -> Generator[Session, None, None]:
+def client(db: Session) -> Generator[TestClient]:
+    def override() -> Generator[Session]:
         yield db
 
     app.dependency_overrides[get_db] = override

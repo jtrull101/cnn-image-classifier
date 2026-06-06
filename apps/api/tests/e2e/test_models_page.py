@@ -4,13 +4,12 @@ import json
 import re
 
 import pytest
-from playwright.sync_api import Page, expect
-
 from fixtures.api_responses import (
     DISCOVER_MODELS_RESPONSE,
     MODELS_EMPTY,
     MODELS_ONE_LOADED,
 )
+from playwright.sync_api import Page, expect
 
 
 pytestmark = [pytest.mark.e2e, pytest.mark.serial]
@@ -148,7 +147,7 @@ def test_discover_button_triggers_api_call(page: Page, live_server_url: str) -> 
 
     discover_called: list[bool] = []
 
-    def handle_discover(route) -> None:  # noqa: ANN001
+    def handle_discover(route) -> None:
         discover_called.append(True)
         route.fulfill(
             status=200,

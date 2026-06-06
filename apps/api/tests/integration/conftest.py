@@ -11,8 +11,8 @@ import io
 import os
 import subprocess
 import time
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 import httpx
 import numpy as np
@@ -109,7 +109,7 @@ def _make_test_jpeg(width: int = 64, height: int = 64, seed: int = 42) -> bytes:
 
 
 @pytest.fixture(scope="session")
-def built_image() -> Generator[str, None, None]:
+def built_image() -> Generator[str]:
     """Build the Docker image once for the entire test session.
 
     Skips (not fails) if Docker is not available so that ``--maxfail=3``
@@ -158,7 +158,7 @@ def built_image() -> Generator[str, None, None]:
 @pytest.fixture(scope="session")
 def api_server(
     built_image: str,
-) -> Generator[tuple[str, str], None, None]:
+) -> Generator[tuple[str, str]]:
     """Start the API container and wait until it is healthy.
 
     Yields ``(base_url, api_key)`` so tests can construct their own clients
@@ -190,7 +190,7 @@ def api_server(
 
 
 @pytest.fixture(scope="session")
-def authed(api_server: tuple[str, str]) -> Generator[httpx.Client, None, None]:
+def authed(api_server: tuple[str, str]) -> Generator[httpx.Client]:
     """httpx.Client with correct API key header."""
     base_url, api_key = api_server
     with httpx.Client(
@@ -202,7 +202,7 @@ def authed(api_server: tuple[str, str]) -> Generator[httpx.Client, None, None]:
 
 
 @pytest.fixture(scope="session")
-def anon(api_server: tuple[str, str]) -> Generator[httpx.Client, None, None]:
+def anon(api_server: tuple[str, str]) -> Generator[httpx.Client]:
     """httpx.Client with no authentication headers."""
     base_url, _ = api_server
     with httpx.Client(base_url=base_url, timeout=30) as client:
@@ -210,7 +210,7 @@ def anon(api_server: tuple[str, str]) -> Generator[httpx.Client, None, None]:
 
 
 @pytest.fixture(scope="session")
-def wrong_key(api_server: tuple[str, str]) -> Generator[httpx.Client, None, None]:
+def wrong_key(api_server: tuple[str, str]) -> Generator[httpx.Client]:
     """httpx.Client with a deliberately incorrect API key."""
     base_url, _ = api_server
     with httpx.Client(

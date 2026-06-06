@@ -8,6 +8,7 @@ It's safe to run multiple times - Alembic will only apply migrations that haven'
 import sys
 from pathlib import Path
 
+
 # Add parent directory to path so we can import from img_classifier_api
 sys.path.insert(0, str(Path(__file__).parent.parent))
 

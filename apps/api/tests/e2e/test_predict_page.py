@@ -3,14 +3,13 @@
 import json
 
 import pytest
-from playwright.sync_api import Page, expect
-
 from fixtures.api_responses import (
     MODELS_EMPTY,
     MODELS_ONE_LOADED,
     PREDICTION_RESULT,
 )
 from fixtures.test_image import create_png_1x1
+from playwright.sync_api import Page, expect
 
 
 pytestmark = [pytest.mark.e2e, pytest.mark.serial]

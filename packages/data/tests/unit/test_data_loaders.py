@@ -9,6 +9,7 @@ import pytest
 
 from img_classifier_data import BaseDataLoader, ImageDataLoader
 
+
 pytestmark = pytest.mark.unit
 
 
@@ -21,7 +22,7 @@ class TestBaseDataLoader:
         self.temp_dir = isolated_tmp_dir
         self.config = mock_config
 
-        yield
+        return
 
     def test_initialization(self):
         """Test that BaseDataLoader cannot be instantiated directly."""
@@ -202,7 +203,7 @@ class TestImageDataLoader:
         self.config = mock_config
         self.loader = ImageDataLoader(self.config)
 
-        yield
+        return
 
     @pytest.mark.smoke
     def test_initialization(self):
@@ -242,9 +243,18 @@ class TestImageDataLoader:
         """Test _get_cache_path method."""
         x_path, y_path = self.loader._get_cache_path(train=True)
 
-        assert x_path.name == "X_data_train.pkl"
-        assert y_path.name == "y_data_train.pkl"
+        w, h = self.config.image_size
+        ch = self.config.color_channels
+        assert x_path.name == f"X_data_train_{w}x{h}_c{ch}.pkl"
+        assert y_path.name == f"y_data_train_{w}x{h}_c{ch}.pkl"
         assert x_path.parent == self.config.cache_dir
+
+    def test_cache_path_keyed_on_image_size(self):
+        """Cache filenames must change with the resize resolution (no cross-size reuse)."""
+        small = self.loader._get_cache_path(train=True)[0].name
+        self.config.image_size = (self.config.image_size[0] + 96, self.config.image_size[1] + 96)
+        large = self.loader._get_cache_path(train=True)[0].name
+        assert small != large
 
     def test_load_from_cache_no_cache(self):
         """Test _load_from_cache when cache doesn't exist."""
@@ -282,7 +292,7 @@ class TestBaseDataLoaderEdgeCases:
                 return True
 
         self.loader = ConcreteLoader(self.config)
-        yield
+        return
 
     def test_split_data_with_zero_split(self):
         """Test split_data with 0% split (all data in first set)."""
@@ -375,14 +385,16 @@ class TestImageDataLoaderEdgeCases:
         self.temp_dir = isolated_tmp_dir
         self.config = mock_config
         self.loader = ImageDataLoader(self.config)
-        yield
+        return
 
     def test_cache_path_for_test_data(self):
         """Test cache path generation for test data."""
         x_path, y_path = self.loader._get_cache_path(train=False)
 
-        assert x_path.name == "X_data_test.pkl"
-        assert y_path.name == "y_data_test.pkl"
+        w, h = self.config.image_size
+        ch = self.config.color_channels
+        assert x_path.name == f"X_data_test_{w}x{h}_c{ch}.pkl"
+        assert y_path.name == f"y_data_test_{w}x{h}_c{ch}.pkl"
 
     def test_multiple_loader_instances(self):
         """Test creating multiple loader instances."""
@@ -570,7 +582,7 @@ class TestImageDataLoaderCacheOperations:
         self.temp_dir = isolated_tmp_dir
         self.config = mock_config
         self.loader = ImageDataLoader(self.config)
-        yield
+        return
 
     def test_save_and_load_cache_train(self):
         """Test saving and loading training data cache."""
@@ -632,26 +644,26 @@ class TestImageDataLoaderCacheOperations:
 
     def test_load_cache_with_only_x_file(self):
         """Test loading cache when only X file exists."""
-        x_path, y_path = self.loader._get_cache_path(train=True)
+        x_path, _y_path = self.loader._get_cache_path(train=True)
         x_path.parent.mkdir(parents=True, exist_ok=True)
 
         import pickle
 
-        with open(x_path, "wb") as f:  # type: ignore[arg-type]
-            pickle.dump(np.array([1, 2, 3]), f)  # type: ignore[arg-type]
+        with open(x_path, "wb") as f:
+            pickle.dump(np.array([1, 2, 3]), f)
 
         result = self.loader._load_from_cache(train=True)
         assert result is None
 
     def test_load_cache_with_only_y_file(self):
         """Test loading cache when only y file exists."""
-        x_path, y_path = self.loader._get_cache_path(train=True)
+        _x_path, y_path = self.loader._get_cache_path(train=True)
         y_path.parent.mkdir(parents=True, exist_ok=True)
 
         import pickle
 
-        with open(y_path, "wb") as f:  # type: ignore[arg-type]
-            pickle.dump(np.array([0, 1, 2]), f)  # type: ignore[arg-type]
+        with open(y_path, "wb") as f:
+            pickle.dump(np.array([0, 1, 2]), f)
 
         result = self.loader._load_from_cache(train=True)
         assert result is None
@@ -666,7 +678,7 @@ class TestImageDataLoaderDownloadPrepare:
         self.temp_dir = isolated_tmp_dir
         self.config = mock_config
         self.loader = ImageDataLoader(self.config)
-        yield
+        return
 
     def test_download_dataset_already_exists(self):
         """Test download_dataset when zip already exists."""
@@ -743,7 +755,7 @@ class TestImageDataLoaderProcessing:
         self.temp_dir = isolated_tmp_dir
         self.config = mock_config
         self.loader = ImageDataLoader(self.config)
-        yield
+        return
 
     def test_process_images_no_categories(self):
         """Test _process_images raises error when no categories found."""
@@ -783,7 +795,8 @@ class TestImageDataLoaderProcessing:
         assert x.shape[0] == 3  # 3 images
         assert y.shape[0] == 3
         assert x.dtype == np.float32
-        assert np.all(x >= 0) and np.all(x <= 1)  # Normalized
+        assert np.all(x >= 0)
+        assert np.all(x <= 1)
         assert self.loader.num_categories == 2
 
     def test_process_images_with_none_image(self, mocker):
@@ -805,7 +818,7 @@ class TestImageDataLoaderProcessing:
         mocker.patch("cv2.resize", return_value=mock_image)
         mocker.patch("img_classifier_data.image_loader.tqdm", side_effect=lambda z, **kwargs: z)
 
-        x, y = self.loader._process_images(test_path)
+        x, _y = self.loader._process_images(test_path)
 
         assert x.shape[0] == 1  # Only 1 image successfully processed
 
@@ -827,7 +840,7 @@ class TestImageDataLoaderProcessing:
         mocker.patch("cv2.resize", return_value=mock_image)
         mocker.patch("img_classifier_data.image_loader.tqdm", side_effect=lambda z, **kwargs: z)
 
-        x, y = self.loader._process_images(test_path)
+        x, _y = self.loader._process_images(test_path)
 
         assert x.shape[0] == 1  # Only 1 image successfully processed
 
@@ -849,7 +862,7 @@ class TestImageDataLoaderProcessing:
         mocker.patch("cv2.resize", return_value=mock_image)
         mocker.patch("img_classifier_data.image_loader.tqdm", side_effect=lambda z, **kwargs: z)
 
-        x, y = self.loader._process_images(test_path)
+        x, _y = self.loader._process_images(test_path)
 
         assert x.shape[0] == 2  # Only 2 image files
 
@@ -871,7 +884,7 @@ class TestImageDataLoaderProcessing:
         mocker.patch("cv2.resize", return_value=mock_image)
         mocker.patch("img_classifier_data.image_loader.tqdm", side_effect=lambda x, **kwargs: x)
 
-        x, y = self.loader._process_images(test_path)
+        _x, y = self.loader._process_images(test_path)
 
         assert self.loader.num_categories == 3
         assert len(self.loader.categories) == 3
@@ -887,7 +900,7 @@ class TestImageDataLoaderLoadMethods:
         self.temp_dir = isolated_tmp_dir
         self.config = mock_config
         self.loader = ImageDataLoader(self.config)
-        yield
+        return
 
     def test_load_train_data_from_cache(self, mocker):
         """Test load_train_data loads from cache when available."""
@@ -962,7 +975,7 @@ class TestImageDataLoaderCacheErrors:
         self.temp_dir = isolated_tmp_dir
         self.config = mock_config
         self.loader = ImageDataLoader(self.config)
-        yield
+        return
 
     def test_save_to_cache_handles_write_errors(self, mocker):
         """Test _save_to_cache handles write errors gracefully."""
@@ -976,7 +989,7 @@ class TestImageDataLoaderCacheErrors:
         self.loader._save_to_cache(x, y, train=True)
 
         # Verify cache files were not created or are incomplete
-        x_path, y_path = self.loader._get_cache_path(train=True)
+        _x_path, _y_path = self.loader._get_cache_path(train=True)
         # Files might exist but be incomplete/corrupted
 
     def test_save_to_cache_creates_directory(self):
@@ -1003,7 +1016,7 @@ class TestImageDataLoaderDownloadSuccess:
         self.temp_dir = isolated_tmp_dir
         self.config = mock_config
         self.loader = ImageDataLoader(self.config)
-        yield
+        return
 
     def test_download_dataset_success(self, mocker):
         """Test successful download from Google Drive."""
@@ -1041,7 +1054,7 @@ class TestImageDataLoaderPrepareExtraction:
         self.temp_dir = isolated_tmp_dir
         self.config = mock_config
         self.loader = ImageDataLoader(self.config)
-        yield
+        return
 
     def test_prepare_dataset_extracts_archive(self, mocker):
         """Test prepare_dataset extracts archive when needed."""

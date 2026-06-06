@@ -38,7 +38,7 @@ class TestTrainingWorkflow:
             batch_size=16,
         )
 
-        yield
+        return
 
     def _create_mock_data_loader(self):
         """Create a data loader with synthetic data for testing."""
@@ -164,7 +164,7 @@ class TestRealDataWorkflow:
         self.dataset_info = temp_dataset_structure
         self.dataset_dir = self.dataset_info["dataset_dir"]
 
-        yield
+        return
 
     def test_image_loader_with_real_structure(self):
         """Test ImageDataLoader with real directory structure."""
@@ -226,7 +226,7 @@ class TestModelSaveLoad:
             class_names=["class1", "class2"],
         )
 
-        yield
+        return
 
     def test_model_save_and_load(self):
         """Test that models can be saved and loaded correctly."""
