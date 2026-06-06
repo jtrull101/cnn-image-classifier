@@ -3,10 +3,12 @@
 import numpy as np
 import pytest
 
+
 tf = pytest.importorskip("tensorflow", reason="TensorFlow not available")
 
-from img_classifier_config import BaseConfig, DatasetConfig  # noqa: E402
-from img_classifier_models import ArchitectureFactory, BaseModel  # noqa: E402
+from img_classifier_config import BaseConfig, DatasetConfig
+from img_classifier_models import ArchitectureFactory, BaseModel
+
 
 pytestmark = pytest.mark.unit
 
@@ -20,7 +22,7 @@ class TestBaseModel:
         self.temp_dir = isolated_tmp_dir
         self.config = BaseConfig(working_dir=self.temp_dir)
 
-        yield
+        return
 
     @pytest.mark.smoke
     def test_base_model_has_required_methods(self):
@@ -45,7 +47,7 @@ class TestArchitectureFactory:
             class_names=["class1", "class2", "class3", "class4"],
         )
 
-        yield
+        return
 
     @pytest.mark.smoke
     def test_create_simple_architecture(self):
@@ -144,7 +146,7 @@ class TestCnnClassifier:
         self.temp_dir = tmp_path
         self.config = BaseConfig(working_dir=self.temp_dir)
 
-        yield
+        return
 
     @pytest.mark.smoke
     def test_initialization(self):
@@ -175,7 +177,7 @@ class TestCnnClassifier:
         model = classifier.build()
 
         # Check input shape
-        expected_shape = (None,) + self.config.input_shape
+        expected_shape = (None, *self.config.input_shape)
         assert model.input_shape == expected_shape
 
     def test_model_output_shape(self):
@@ -260,7 +262,7 @@ class TestArchitectureFactoryEdgeCasesAdditional:
     def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
-        yield
+        return
 
     @pytest.mark.smoke
     def test_invalid_complexity_raises_error(self):
@@ -370,7 +372,7 @@ class TestCnnClassifierEdgeCases:
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
         self.config = BaseConfig(working_dir=self.temp_dir)
-        yield
+        return
 
     @pytest.mark.smoke
     def test_multiple_builds_replace_model(self):
@@ -502,7 +504,7 @@ class TestArchitectureFactoryEdgeCases:
     def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
-        yield
+        return
 
     @pytest.mark.smoke
     def test_create_with_binary_classification(self):
@@ -780,7 +782,7 @@ class TestArchitectureFactoryCustomSpec:
             num_classes=4,
             class_names=["c1", "c2", "c3", "c4"],
         )
-        yield
+        return
 
     @pytest.mark.smoke
     def test_create_with_custom_spec(self):
@@ -844,6 +846,47 @@ class TestArchitectureFactoryCustomSpec:
         layer_types = [type(layer).__name__ for layer in model.layers]
         assert "GlobalAveragePooling2D" in layer_types
         assert "Flatten" not in layer_types  # Should not have Flatten with GAP
+
+    def test_use_global_pooling_head_gate_flips_from_scratch_to_gap(self):
+        """The use_global_pooling_head gate forces a GAP head on the auto-selected from-scratch CNN.
+
+        At 128px / 4 classes auto-select picks MediumCNN, whose default head is Flatten; turning
+        the gate on collapses it to GlobalAveragePooling2D so the dense head doesn't explode with
+        image size (lets from-scratch scale to larger resolutions without the Flatten OOM).
+        """
+        default_config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(128, 128),
+            num_classes=4,
+            class_names=["c1", "c2", "c3", "c4"],
+        )
+        default_model = ArchitectureFactory.create(default_config)
+        default_layers = [type(layer).__name__ for layer in default_model.layers]
+        assert "Flatten" in default_layers
+        assert "GlobalAveragePooling2D" not in default_layers
+
+        gap_config = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(128, 128),
+            num_classes=4,
+            class_names=["c1", "c2", "c3", "c4"],
+            use_global_pooling_head=True,
+        )
+        gap_model = ArchitectureFactory.create(gap_config)
+        gap_layers = [type(layer).__name__ for layer in gap_model.layers]
+        assert "GlobalAveragePooling2D" in gap_layers
+        assert "Flatten" not in gap_layers
+
+        # The gate also builds cleanly at 224px — the large-image path it exists for.
+        gap_224 = DatasetConfig(
+            working_dir=self.temp_dir,
+            image_size=(224, 224),
+            num_classes=4,
+            class_names=["c1", "c2", "c3", "c4"],
+            use_global_pooling_head=True,
+        )
+        gap_224_model = ArchitectureFactory.create(gap_224)
+        assert gap_224_model.input_shape == (None, 224, 224, 3)
 
     def test_custom_spec_with_no_pooling(self):
         """Test custom spec with conv blocks without pooling."""
@@ -937,7 +980,7 @@ class TestArchitectureFactoryAutoSelection:
     def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
-        yield
+        return
 
     @pytest.mark.smoke
     def test_auto_selects_simple_for_binary(self):
@@ -1056,7 +1099,8 @@ class TestModelScaler:
         for dataset_size in [500, 3000, 10000, 50000]:
             scaled = ModelScaler.scale_filters(base_filters=60, dataset_size=dataset_size)
             # Check if power of 2
-            assert scaled > 0 and (scaled & (scaled - 1)) == 0
+            assert scaled > 0
+            assert (scaled & (scaled - 1)) == 0
 
     def test_recommend_depth_small_dataset(self):
         """Test recommend_depth with small dataset."""
@@ -1164,7 +1208,7 @@ class TestBaseModelEdgeCases:
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
         self.config = BaseConfig(working_dir=self.temp_dir)
-        yield
+        return
 
     @pytest.mark.smoke
     def test_compile_with_unsupported_optimizer_raises_error(self):
@@ -1287,7 +1331,7 @@ class TestSimpleCnn:
             num_classes=4,
             class_names=["c1", "c2", "c3", "c4"],
         )
-        yield
+        return
 
     @pytest.mark.smoke
     def test_simple_cnn_initialization(self):
@@ -1317,7 +1361,7 @@ class TestSimpleCnn:
         simple_cnn = SimpleCnn(self.config)
         model = simple_cnn.build()
 
-        expected_shape = (None,) + self.config.input_shape
+        expected_shape = (None, *self.config.input_shape)
         assert model.input_shape == expected_shape
 
     def test_simple_cnn_output_shape(self):
@@ -1446,7 +1490,7 @@ class TestCnnClassifierAdvanced:
             num_classes=4,
             class_names=["c1", "c2", "c3", "c4"],
         )
-        yield
+        return
 
     @pytest.mark.smoke
     def test_build_with_different_complexities(self):

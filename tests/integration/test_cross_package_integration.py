@@ -84,7 +84,7 @@ class TestCrossPackageIntegration:
     def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
-        yield
+        return
 
     def test_config_and_data_loader_integration(self):
         """Test that config and data loader work together."""
@@ -143,7 +143,7 @@ class TestArchitectureGeneration:
     def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
-        yield
+        return
 
     def test_architecture_factory_with_dataset_config(self):
         """Test creating architectures using DatasetConfig."""

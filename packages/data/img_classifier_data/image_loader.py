@@ -6,16 +6,17 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+from tqdm import tqdm
+
 from img_classifier_config import BaseConfig, DatasetDetector
+from img_classifier_data.base_loader import BaseDataLoader
 from img_classifier_utils import (
     download_from_google_drive,
     ensure_directory_exists,
     extract_archive,
     organize_dataset,
 )
-from tqdm import tqdm
 
-from img_classifier_data.base_loader import BaseDataLoader
 
 logger = logging.getLogger(__name__)
 
@@ -114,8 +115,14 @@ class ImageDataLoader(BaseDataLoader):
             Tuple of (X_cache_path, y_cache_path)
         """
         split = "train" if train else "test"
-        x_path = self.config.cache_dir / f"X_data_{split}.pkl"
-        y_path = self.config.cache_dir / f"y_data_{split}.pkl"
+        # Key the cache on the resize dimensions + channels, not just the split: the pickled
+        # arrays are already resized to config.image_size, so a cache built at one resolution
+        # must not be reused at another (e.g. a from-scratch arm at 128px vs a backbone arm at
+        # 224px over the same dataset).
+        w, h = self.config.image_size
+        tag = f"{split}_{w}x{h}_c{self.config.color_channels}"
+        x_path = self.config.cache_dir / f"X_data_{tag}.pkl"
+        y_path = self.config.cache_dir / f"y_data_{tag}.pkl"
         return x_path, y_path
 
     def _load_from_cache(self, train: bool) -> tuple[np.ndarray, np.ndarray] | None:
@@ -132,9 +139,9 @@ class ImageDataLoader(BaseDataLoader):
         if x_path.exists() and y_path.exists():
             try:
                 logger.info("Loading %s data from cache...", "train" if train else "test")
-                with open(x_path, "rb") as f:
+                with x_path.open("rb") as f:
                     X = pickle.load(f)
-                with open(y_path, "rb") as f:
+                with y_path.open("rb") as f:
                     y = pickle.load(f)
                 return X, y
             except Exception:
@@ -155,9 +162,9 @@ class ImageDataLoader(BaseDataLoader):
         x_path, y_path = self._get_cache_path(train)
 
         try:
-            with open(x_path, "wb") as f:
+            with x_path.open("wb") as f:
                 pickle.dump(X, f)
-            with open(y_path, "wb") as f:
+            with y_path.open("wb") as f:
                 pickle.dump(y, f)
             logger.info("Data cached successfully")
         except Exception:

@@ -1,11 +1,13 @@
 """Unit tests for database session management and table initialisation."""
 
+import contextlib
 import os
 from unittest.mock import patch
 
 import pytest
 from sqlalchemy import Engine, create_engine, inspect, text
 from sqlalchemy.orm import Session
+
 
 pytestmark = pytest.mark.unit
 
@@ -30,8 +32,8 @@ class TestInitDb:
 
     def test_creates_prediction_history_table(self) -> None:
         """After init_db() the prediction_history table must exist."""
-        from img_classifier_api.models import prediction  # noqa: F401 — registers models
         from img_classifier_api.database import init_db, reset_db_state
+        from img_classifier_api.models import prediction
 
         engine = _make_in_memory_engine()
         reset_db_state()
@@ -44,8 +46,8 @@ class TestInitDb:
 
     def test_init_db_is_idempotent(self) -> None:
         """Calling init_db() twice must not raise."""
-        from img_classifier_api.models import prediction  # noqa: F401
         from img_classifier_api.database import init_db, reset_db_state
+        from img_classifier_api.models import prediction
 
         engine = _make_in_memory_engine()
         reset_db_state()
@@ -58,8 +60,8 @@ class TestInitDb:
 
     def test_tables_have_expected_columns(self) -> None:
         """prediction_history table must have the id and model_name columns."""
-        from img_classifier_api.models import prediction  # noqa: F401
         from img_classifier_api.database import init_db, reset_db_state
+        from img_classifier_api.models import prediction
 
         engine = _make_in_memory_engine()
         reset_db_state()
@@ -91,10 +93,8 @@ class TestGetDb:
         try:
             assert isinstance(session, Session)
         finally:
-            try:
+            with contextlib.suppress(StopIteration):
                 next(gen)
-            except StopIteration:
-                pass
 
     def test_session_is_closed_after_generator_exhausted(self) -> None:
         """session.close() must be called once the generator is exhausted."""
@@ -106,10 +106,8 @@ class TestGetDb:
         session = next(gen)
 
         with patch.object(session, "close", wraps=session.close) as mock_close:
-            try:
+            with contextlib.suppress(StopIteration):
                 next(gen)
-            except StopIteration:
-                pass
 
             mock_close.assert_called_once()
 
@@ -124,10 +122,8 @@ class TestGetDb:
 
         with patch.object(session, "close", wraps=session.close) as mock_close:
             # Simulate an error in the route handler by throwing into the generator
-            try:
+            with contextlib.suppress(RuntimeError):
                 gen.throw(RuntimeError("simulated route error"))
-            except RuntimeError:
-                pass
 
             mock_close.assert_called_once()
 
@@ -143,10 +139,8 @@ class TestGetDb:
         assert s1 is not s2
 
         for gen in (gen1, gen2):
-            try:
+            with contextlib.suppress(StopIteration):
                 next(gen)
-            except StopIteration:
-                pass
 
     def test_session_can_execute_query(self) -> None:
         """A session yielded by get_db() must be able to run a trivial query."""
@@ -157,7 +151,5 @@ class TestGetDb:
         result = session.execute(text("SELECT 1")).scalar()
         assert result == 1
 
-        try:
+        with contextlib.suppress(StopIteration):
             next(gen)
-        except StopIteration:
-            pass

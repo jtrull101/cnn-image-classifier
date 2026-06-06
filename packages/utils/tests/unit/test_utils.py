@@ -1,8 +1,9 @@
 """Comprehensive tests for utility functions."""
 
+import contextlib
 import zipfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -13,6 +14,7 @@ from img_classifier_utils import (
     extract_archive,
     organize_dataset,
 )
+
 
 pytestmark = pytest.mark.unit
 
@@ -25,7 +27,7 @@ class TestFileUtils:
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
 
-        yield
+        return
 
     @pytest.mark.smoke
     def test_ensure_directory_exists_creates_directory(self):
@@ -138,7 +140,7 @@ class TestDownloadFromGoogleDrive:
     def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
-        yield
+        return
 
     @patch("img_classifier_utils.file_utils.gdown.download")
     def test_download_success(self, mock_download):
@@ -203,7 +205,7 @@ class TestExtractArchive:
     def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
-        yield
+        return
 
     def test_extract_zip_file(self):
         """Test extracting a zip file."""
@@ -276,7 +278,7 @@ class TestOrganizeDataset:
     def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
-        yield
+        return
 
     def test_organize_nested_structure(self):
         """Test organizing nested dataset structure."""
@@ -396,7 +398,7 @@ class TestUtilsEdgeCases:
     def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
-        yield
+        return
 
     def test_clean_directory_empty_dir(self):
         """Test cleaning empty directory."""
@@ -455,7 +457,7 @@ class TestFileUtilsEdgeCases:
     def setup_method(self, isolated_tmp_dir):
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
-        yield
+        return
 
     def test_ensure_directory_exists_with_pathlib_path(self):
         """Test ensure_directory_exists with pathlib.Path object."""
@@ -633,10 +635,8 @@ class TestFileUtilsEdgeCases:
             assert isinstance(count, int)
         finally:
             # Restore write permissions for cleanup
-            try:
+            with contextlib.suppress(Exception):
                 os.chmod(readonly_file, stat.S_IWRITE | stat.S_IREAD)
-            except Exception:
-                pass
 
     def test_ensure_directory_exists_with_unicode_name(self):
         """Test ensure_directory_exists with unicode characters in path."""
@@ -790,7 +790,5 @@ class TestFileUtilsEdgeCases:
             assert count >= 0
         finally:
             # Restore permissions for cleanup
-            try:
+            with contextlib.suppress(Exception):
                 os.chmod(test_file, stat.S_IWUSR | stat.S_IRUSR)
-            except Exception:
-                pass

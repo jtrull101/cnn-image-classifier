@@ -5,14 +5,16 @@ fast execution and isolation from other packages.
 """
 
 from typing import TYPE_CHECKING
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import numpy as np
 import pytest
 
-pytest.importorskip("tensorflow", reason="TensorFlow not available")
+
+tf = pytest.importorskip("tensorflow", reason="TensorFlow not available")
 
 from img_classifier_training.trainer import Trainer
+
 
 if TYPE_CHECKING:
     from keras.callbacks import EarlyStopping
@@ -20,7 +22,7 @@ else:
     try:
         from keras.callbacks import EarlyStopping
     except ImportError:
-        EarlyStopping = None  # type: ignore[assignment, misc]
+        EarlyStopping = None
 
 pytestmark = pytest.mark.unit
 
@@ -51,6 +53,21 @@ class TestTrainer:
         self.mock_config.test_split = 0.5
         self.mock_config.early_stopping_patience = 5
         self.mock_config.accuracy_threshold = 0.995
+        # New generalization gates — default OFF so callback counts stay deterministic.
+        self.mock_config.early_stopping_monitor = "val_loss"
+        self.mock_config.early_stopping_mode = "min"
+        self.mock_config.restore_best_weights = False
+        self.mock_config.use_reduce_lr = False
+        self.mock_config.reduce_lr_factor = 0.5
+        self.mock_config.reduce_lr_patience = 4
+        self.mock_config.min_lr = 1e-6
+        self.mock_config.target_val_accuracy = None
+        self.mock_config.use_data_augmentation = False
+        self.mock_config.use_class_weights = False
+        self.mock_config.label_smoothing = 0.0
+        self.mock_config.backbone = None
+        self.mock_config.finetune_epochs = 0
+        self.mock_config.finetune_lr_divisor = 100.0
         self.mock_config.models_dir = self.temp_dir / "models"
         self.mock_config.logs_dir = self.temp_dir / "logs"
         self.mock_config.models_dir.mkdir(parents=True, exist_ok=True)
@@ -67,7 +84,7 @@ class TestTrainer:
         # Create a real trainer instance with mocked dependencies
         self.trainer = Trainer(self.mock_config, self.mock_model, self.mock_loader)
 
-        yield
+        return
 
     @pytest.mark.smoke
     def test_initialization(self):
@@ -101,7 +118,7 @@ class TestTrainer:
         result = self.trainer.prepare_data()
 
         assert len(result) == 6
-        X_train_out, y_train_out, x_val_out, y_val_out, X_test_out, y_test_out = result
+        X_train_out, _y_train_out, x_val_out, _y_val_out, X_test_out, _y_test_out = result
 
         # Check shapes
         assert X_train_out.shape == X_train.shape
@@ -621,13 +638,28 @@ class TestTrainerEdgeCases:
         self.config.min_accuracy_to_save = 0.0
         self.config.early_stopping_patience = 5
         self.config.accuracy_threshold = 0.995
+        # New generalization gates — default OFF.
+        self.config.early_stopping_monitor = "val_loss"
+        self.config.early_stopping_mode = "min"
+        self.config.restore_best_weights = False
+        self.config.use_reduce_lr = False
+        self.config.reduce_lr_factor = 0.5
+        self.config.reduce_lr_patience = 4
+        self.config.min_lr = 1e-6
+        self.config.target_val_accuracy = None
+        self.config.use_data_augmentation = False
+        self.config.use_class_weights = False
+        self.config.label_smoothing = 0.0
+        self.config.backbone = None
+        self.config.finetune_epochs = 0
+        self.config.finetune_lr_divisor = 100.0
 
         self.mock_model = Mock()
         self.mock_model.model = MagicMock()
         self.mock_model.save = Mock()
         self.mock_loader = Mock()
         self.trainer = Trainer(self.config, self.mock_model, self.mock_loader)
-        yield
+        return
 
     def test_zero_epochs(self):
         """Test with zero epochs."""
@@ -747,3 +779,138 @@ class TestTrainerEdgeCases:
 
         assert result is not None
         assert "1e-07_lr" in result.name or "0.0000001_lr" in result.name
+
+
+@pytest.mark.unit
+class TestTrainerGeneralization:
+    """Tests for the opt-in generalization features (augmentation, class weights,
+    val-based stopping, LR scheduling, transfer-learning fine-tune)."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, isolated_tmp_dir):
+        """Set up a config with all new gates explicitly off by default."""
+        self.temp_dir = isolated_tmp_dir
+        cfg = Mock()
+        cfg.working_dir = self.temp_dir
+        cfg.num_classes = 2
+        cfg.input_shape = (32, 32, 3)
+        cfg.batch_size = 4
+        cfg.num_epochs = 1
+        cfg.data_percent = 1.0
+        cfg.learning_rate = 0.001
+        cfg.project_name = "gen"
+        cfg.models_dir = self.temp_dir / "models"
+        cfg.logs_dir = self.temp_dir / "logs"
+        cfg.early_stopping_patience = 5
+        cfg.accuracy_threshold = 0.995
+        cfg.use_early_stopping = False
+        cfg.use_model_checkpoint = False
+        cfg.use_accuracy_threshold_stopping = False
+        cfg.early_stopping_monitor = "val_loss"
+        cfg.early_stopping_mode = "min"
+        cfg.restore_best_weights = False
+        cfg.use_reduce_lr = False
+        cfg.reduce_lr_factor = 0.5
+        cfg.reduce_lr_patience = 4
+        cfg.min_lr = 1e-6
+        cfg.target_val_accuracy = None
+        cfg.use_data_augmentation = False
+        cfg.use_class_weights = False
+        cfg.label_smoothing = 0.0
+        cfg.backbone = None
+        cfg.finetune_epochs = 0
+        cfg.finetune_lr_divisor = 100.0
+        cfg.aug_horizontal_flip = True
+        cfg.aug_rotation = 0.06
+        cfg.aug_translation = 0.08
+        cfg.aug_zoom = 0.10
+        self.config = cfg
+
+        self.mock_model = Mock()
+        self.mock_keras_model = MagicMock()
+        self.mock_model.model = self.mock_keras_model
+        self.mock_loader = Mock()
+        self.trainer = Trainer(cfg, self.mock_model, self.mock_loader)
+        return
+
+    def _xy(self):
+        X = np.random.rand(8, 32, 32, 3).astype("float32")
+        y = np.eye(2)[np.random.randint(0, 2, 8)]
+        return X, y
+
+    def test_reduce_lr_gate(self):
+        """ReduceLROnPlateau is added only when use_reduce_lr is set."""
+        from keras.callbacks import ReduceLROnPlateau
+
+        assert not any(isinstance(cb, ReduceLROnPlateau) for cb in self.trainer.get_callbacks())
+        self.config.use_reduce_lr = True
+        assert any(isinstance(cb, ReduceLROnPlateau) for cb in self.trainer.get_callbacks())
+
+    def test_val_target_stop_gate(self):
+        """ValTargetStop is added only when target_val_accuracy is set."""
+        from img_classifier_training.callbacks import ValTargetStop
+
+        assert not any(isinstance(cb, ValTargetStop) for cb in self.trainer.get_callbacks())
+        self.config.target_val_accuracy = 0.95
+        cbs = self.trainer.get_callbacks()
+        target_cbs = [cb for cb in cbs if isinstance(cb, ValTargetStop)]
+        assert len(target_cbs) == 1
+        assert target_cbs[0].target == 0.95
+
+    def test_early_stopping_honours_monitor_and_restore(self):
+        """EarlyStopping reflects the configured monitor/mode/restore_best_weights."""
+        from keras.callbacks import EarlyStopping
+
+        self.config.use_early_stopping = True
+        self.config.early_stopping_monitor = "val_accuracy"
+        self.config.early_stopping_mode = "max"
+        self.config.restore_best_weights = True
+        es = next(cb for cb in self.trainer.get_callbacks() if isinstance(cb, EarlyStopping))
+        assert es.monitor == "val_accuracy"
+        assert es.restore_best_weights is True
+
+    def test_train_extra_callbacks_appended(self):
+        """extra_callbacks are passed through to fit."""
+        X, y = self._xy()
+        marker = Mock()
+        self.mock_keras_model.fit.return_value = MagicMock()
+        self.trainer.train(X, y, X, y, extra_callbacks=[marker])
+        assert marker in self.mock_keras_model.fit.call_args.kwargs["callbacks"]
+
+    def test_train_uses_tfdata_when_augmenting(self):
+        """With augmentation/class-weights, fit receives a tf.data.Dataset, not raw arrays."""
+        self.config.use_data_augmentation = True
+        self.config.use_class_weights = True
+        X, y = self._xy()
+        self.mock_keras_model.fit.return_value = MagicMock()
+        self.trainer.train(X, y, X, y)
+        first_arg = self.mock_keras_model.fit.call_args.args[0]
+        assert isinstance(first_arg, tf.data.Dataset)
+
+    def test_train_plain_path_passes_arrays(self):
+        """Without the new flags, fit still gets the raw arrays + batch_size."""
+        X, y = self._xy()
+        self.mock_keras_model.fit.return_value = MagicMock()
+        self.trainer.train(X, y, X, y)
+        args = self.mock_keras_model.fit.call_args.args
+        assert args[0] is X
+        assert self.mock_keras_model.fit.call_args.kwargs["batch_size"] == self.config.batch_size
+
+    def test_finetune_runs_second_phase(self):
+        """Backbone + finetune_epochs>0 triggers a second fit and a recompile."""
+        self.config.backbone = "mobilenetv2"
+        self.config.finetune_epochs = 2
+        X, y = self._xy()
+
+        class _Hist:
+            def __init__(self, history):
+                self.history = history
+
+        h1 = _Hist({"accuracy": [0.8], "val_accuracy": [0.7]})
+        h2 = _Hist({"accuracy": [0.9], "val_accuracy": [0.85]})
+        self.mock_keras_model.fit.side_effect = [h1, h2]
+        result = self.trainer.train(X, y, X, y)
+        assert self.mock_keras_model.fit.call_count == 2
+        self.mock_model.compile.assert_called_once()
+        # Phase histories are concatenated.
+        assert result.history["val_accuracy"] == [0.7, 0.85]

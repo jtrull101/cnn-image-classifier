@@ -181,8 +181,8 @@ logs/
 # Ruff cache
 .ruff_cache/
 
-# Pyright
-pyrightconfig.json
+# ty
+.ty_cache/
 
 # Modern Python build artifacts
 *.whl

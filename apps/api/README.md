@@ -392,7 +392,7 @@ ruff format apps/api/
 ### Type Check
 
 ```bash
-pyright apps/api/
+ty check apps/api/
 ```
 
 ## Contributing

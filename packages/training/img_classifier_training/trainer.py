@@ -11,13 +11,14 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import tensorflow as tf
+from keras import backend as K
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+
 from img_classifier_config import BaseConfig
 from img_classifier_data import BaseDataLoader
 from img_classifier_models import BaseModel
-from keras import backend as K
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from img_classifier_training.callbacks import AccuracyThresholdCallback, ValTargetStop
 
-from img_classifier_training.callbacks import AccuracyThresholdCallback
 
 logger = logging.getLogger(__name__)
 
@@ -58,9 +59,15 @@ class Trainer:
         logger.info("Loading test data...")
         X_test, y_test = self.data_loader.load_test_data()
 
-        # Split test data into validation and test sets
+        # Split test data into validation and test sets. A fixed eval seed keeps this
+        # partition identical across attempts so cross-attempt model selection is fair;
+        # stratification keeps class balance in both halves.
         X_val, X_test, y_val, y_test = self.data_loader.split_data(
-            X_test, y_test, self.config.test_split
+            X_test,
+            y_test,
+            self.config.test_split,
+            seed=getattr(self.config, "eval_split_seed", None),
+            stratify=getattr(self.config, "stratify_eval_split", False),
         )
 
         # Reduce dataset size if configured
@@ -73,6 +80,13 @@ class Trainer:
             X_test, y_test = self.data_loader.reduce_dataset(
                 X_test, y_test, self.config.data_percent
             )
+
+        # The image loader reads BGR (cv2); pretrained backbones and the app's DJL serving
+        # path both expect RGB, so flip the channel order when a backbone is in use.
+        if getattr(self.config, "backbone", None):
+            X_train = X_train[..., ::-1]
+            X_val = X_val[..., ::-1]
+            X_test = X_test[..., ::-1]
 
         # Convert labels to categorical
         y_train = tf.keras.utils.to_categorical(y_train, self.config.num_classes)
@@ -99,12 +113,30 @@ class Trainer:
         # Early stopping
         if self.config.use_early_stopping:
             early_stopping = EarlyStopping(
-                monitor="val_loss",
-                mode="min",
+                monitor=getattr(self.config, "early_stopping_monitor", "val_loss"),
+                mode=getattr(self.config, "early_stopping_mode", "min"),
                 patience=self.config.early_stopping_patience,
+                restore_best_weights=getattr(self.config, "restore_best_weights", False),
                 verbose=0,
             )
             callbacks.append(early_stopping)
+
+        # Reduce learning rate on plateau
+        if getattr(self.config, "use_reduce_lr", False):
+            callbacks.append(
+                ReduceLROnPlateau(
+                    monitor="val_loss",
+                    factor=self.config.reduce_lr_factor,
+                    patience=self.config.reduce_lr_patience,
+                    min_lr=self.config.min_lr,
+                    verbose=0,
+                )
+            )
+
+        # Stop on a validation-accuracy target
+        target_val_accuracy = getattr(self.config, "target_val_accuracy", None)
+        if target_val_accuracy is not None:
+            callbacks.append(ValTargetStop(target_val_accuracy))
 
         # Model checkpoint
         if self.config.use_model_checkpoint:
@@ -126,42 +158,127 @@ class Trainer:
 
         return callbacks
 
+    def _build_augmenter(self) -> "tf.keras.Sequential":
+        """Build a train-only augmentation pipeline from config knobs."""
+        layers: list = []
+        if getattr(self.config, "aug_horizontal_flip", False):
+            layers.append(tf.keras.layers.RandomFlip("horizontal"))
+        if self.config.aug_rotation:
+            layers.append(tf.keras.layers.RandomRotation(self.config.aug_rotation))
+        if self.config.aug_translation:
+            layers.append(
+                tf.keras.layers.RandomTranslation(
+                    self.config.aug_translation, self.config.aug_translation
+                )
+            )
+        if self.config.aug_zoom:
+            layers.append(tf.keras.layers.RandomZoom(self.config.aug_zoom))
+        return tf.keras.Sequential(layers, name="augmentation")
+
+    @staticmethod
+    def _balanced_sample_weights(y_train: np.ndarray, num_classes: int) -> np.ndarray:
+        """Class-balanced per-sample weights from one-hot labels (balanced data -> ~1.0)."""
+        labels = np.argmax(y_train, axis=1)
+        counts = np.bincount(labels, minlength=num_classes)
+        n_present = int(np.count_nonzero(counts))
+        per_class = np.divide(
+            float(len(labels)),
+            n_present * counts,
+            out=np.ones(len(counts), dtype="float64"),
+            where=counts > 0,
+        )
+        return per_class[labels].astype("float32")
+
     def train(
-        self, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray
+        self,
+        X_train: np.ndarray,
+        y_train: np.ndarray,
+        X_val: np.ndarray,
+        y_val: np.ndarray,
+        extra_callbacks: list | None = None,
     ) -> tf.keras.callbacks.History:
         """Train the model.
+
+        When ``config.use_data_augmentation`` / ``config.use_class_weights`` are set, training
+        runs over a ``tf.data`` pipeline that augments the training stream and/or applies
+        class-balanced sample weights. When ``config.backbone`` is set with
+        ``config.finetune_epochs > 0``, a second fine-tuning phase unfreezes the base at a
+        reduced learning rate and its history is appended.
 
         Args:
             X_train: Training features
             y_train: Training labels
             X_val: Validation features
             y_val: Validation labels
+            extra_callbacks: Optional extra Keras callbacks (e.g. progress logging) appended
+                to the config-driven callbacks.
 
         Returns:
-            Training history object
+            Training history object (covering both phases when fine-tuning).
         """
         # Compile model if not already compiled
         if self.model.model is None:
             self.model.compile()
-
-        # Get callbacks
-        callbacks = self.get_callbacks()
-
-        # Train the model
-        logger.info("Starting training...")
-        start_time = time.time()
-
         if self.model.model is None:
             raise RuntimeError("Model must be built before training")
-        history = self.model.model.fit(
-            X_train,
-            y_train,
-            batch_size=self.config.batch_size,
-            epochs=self.config.num_epochs,
-            verbose=0,
-            validation_data=(X_val, y_val),
-            callbacks=callbacks,
-        )
+
+        callbacks = self.get_callbacks()
+        if extra_callbacks:
+            callbacks = callbacks + list(extra_callbacks)
+
+        use_aug = getattr(self.config, "use_data_augmentation", False)
+        use_weights = getattr(self.config, "use_class_weights", False)
+
+        fit_kwargs: dict = {
+            "epochs": self.config.num_epochs,
+            "verbose": 0,
+            "validation_data": (X_val, y_val),
+            "callbacks": callbacks,
+        }
+
+        if use_aug or use_weights:
+            batch = self.config.batch_size
+            if use_weights:
+                sw = self._balanced_sample_weights(y_train, self.config.num_classes)
+                ds = tf.data.Dataset.from_tensor_slices((X_train, y_train, sw))
+            else:
+                ds = tf.data.Dataset.from_tensor_slices((X_train, y_train))
+            ds = ds.shuffle(min(len(X_train), 4096)).batch(batch)
+            if use_aug:
+                augment = self._build_augmenter()
+                if use_weights:
+                    ds = ds.map(
+                        lambda x, y, w: (augment(x, training=True), y, w),
+                        num_parallel_calls=tf.data.AUTOTUNE,
+                    )
+                else:
+                    ds = ds.map(
+                        lambda x, y: (augment(x, training=True), y),
+                        num_parallel_calls=tf.data.AUTOTUNE,
+                    )
+            train_data: object = ds.prefetch(tf.data.AUTOTUNE)
+            fit_args: tuple = (train_data,)
+        else:
+            fit_args = (X_train, y_train)
+            fit_kwargs["batch_size"] = self.config.batch_size
+
+        logger.info("Starting training...")
+        start_time = time.time()
+        history = self.model.model.fit(*fit_args, **fit_kwargs)
+
+        # Optional fine-tuning phase: unfreeze the backbone at a reduced learning rate.
+        finetune_epochs = getattr(self.config, "finetune_epochs", 0)
+        if getattr(self.config, "backbone", None) and finetune_epochs > 0:
+            self.model.model.trainable = True
+            ft_lr = self.config.learning_rate / self.config.finetune_lr_divisor
+            self.model.compile(learning_rate=ft_lr)
+            logger.info("Fine-tuning: unfroze backbone, lr=%.2e, epochs=%d", ft_lr, finetune_epochs)
+            ft_kwargs = dict(fit_kwargs)
+            ft_kwargs["epochs"] = finetune_epochs
+            ft_history = self.model.model.fit(*fit_args, **ft_kwargs)
+            for key, values in ft_history.history.items():
+                history.history.setdefault(key, [])
+                history.history[key].extend(values)
 
         elapsed_time = time.time() - start_time
         logger.info("Training completed in %.0f seconds", elapsed_time)
@@ -213,7 +330,7 @@ class Trainer:
         for ax, metric in zip(axes_flat, ["loss", "accuracy"], strict=False):
             ax.set_title(f"{metric.title()} Plot")
             df_metric = df[df["variable"].str.contains(metric)]
-            sns.lineplot(data=df_metric, x="epoch", y="value", hue="variable", ax=ax)  # type: ignore[arg-type]
+            sns.lineplot(data=df_metric, x="epoch", y="value", hue="variable", ax=ax)
 
         fig.tight_layout()
 
@@ -275,14 +392,14 @@ class Trainer:
 
         # Create header if file doesn't exist
         if not log_file.exists():
-            with open(log_file, "w") as f:
+            with log_file.open("w") as f:
                 f.write(f"Training Run: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                 f.write(
                     "timestamp,accuracy,loss,data_percent,batch_size,learning_rate,epochs,elapsed_time\n"
                 )
 
         # Append results
-        with open(log_file, "a") as f:
+        with log_file.open("a") as f:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             f.write(
                 f"{timestamp},{acc:.4f},{loss:.4f},"

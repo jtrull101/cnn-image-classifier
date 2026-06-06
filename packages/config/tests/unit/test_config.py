@@ -6,6 +6,7 @@ import pytest
 
 from img_classifier_config import BaseConfig, DatasetConfig
 
+
 pytestmark = pytest.mark.unit
 
 
@@ -18,7 +19,7 @@ class TestBaseConfig:
         self.temp_dir = isolated_tmp_dir
         self.config = BaseConfig(working_dir=self.temp_dir)
 
-        yield
+        return
 
     @pytest.mark.smoke
     def test_default_values(self):
@@ -99,7 +100,7 @@ class TestDatasetConfig:
             class_names=["class1", "class2", "class3", "class4"],
         )
 
-        yield
+        return
 
     def test_explicit_none_data_path_with_train_path(self):
         """Test explicit None data_path sets train_path to None when train not explicitly set."""
@@ -229,7 +230,7 @@ class TestDatasetConfig:
         self.config.to_yaml(yaml_path)
 
         # Read raw YAML to check string conversion
-        with open(yaml_path, "r") as f:
+        with open(yaml_path) as f:
             raw_yaml = f.read()
 
         # Paths should be strings in YAML
@@ -1096,8 +1097,9 @@ class TestDatasetConfigValidation:
 
     def test_create_config_with_large_images(self, tmp_path):
         """Test create_config standardizes large images to 128x128."""
-        from img_classifier_config.dataset_config import DatasetDetector
         import numpy as np
+
+        from img_classifier_config.dataset_config import DatasetDetector
 
         try:
             import cv2
@@ -1167,8 +1169,9 @@ class TestDatasetConfigValidation:
 
     def test_create_config_small_image_size(self, tmp_path):
         """Test create_config with small images keeps original size."""
-        from img_classifier_config.dataset_config import DatasetDetector
         import numpy as np
+
+        from img_classifier_config.dataset_config import DatasetDetector
 
         try:
             import cv2

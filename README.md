@@ -292,7 +292,11 @@ make test           # Run all tests with coverage
 make test-coverage  # Full coverage reports
 make lint           # Ruff lint
 make format         # Ruff format
-make typecheck      # Pyright
+make typecheck      # ty
+make spell          # codespell
+make audit          # pip-audit (dependency CVEs)
+make deadcode       # vulture (dead-code scan)
+make security       # audit + spell + deadcode
 make serve-api      # Start API
 make pre-commit     # Run all checks
 ```
@@ -358,9 +362,11 @@ alz-mri-neural-network/
 |-----------|------|---------|
 | **Task Runner** | Make + UV | Workspace orchestration |
 | **Package Manager** | UV | 10-100x faster than pip |
-| **Linter/Formatter** | Ruff | Replaces flake8, isort, autopep8 |
-| **Type Checker** | Pyright | Fast, accurate type inference |
+| **Linter/Formatter** | Ruff | Replaces flake8, isort, autopep8, bandit, pydocstyle |
+| **Type Checker** | ty | Fast, accurate type inference |
 | **Testing** | Pytest | With coverage reporting |
+| **Security** | pip-audit + gitleaks | Dependency CVE + secrets scanning |
+| **Spell/Dead-code** | codespell + vulture | Typo and unused-code detection |
 | **Deep Learning** | TensorFlow/Keras | Neural network training |
 | **Web Framework** | FastAPI | REST API |
 | **Data Processing** | NumPy, OpenCV, Pandas | Image and data manipulation |
@@ -486,7 +492,7 @@ uv run python -m pytest -c pyproject.toml --rootdir . --cov=packages --cov=apps 
 
 ### Standards
 - PEP 8 compliance (Ruff)
-- Type hints (Pyright)
+- Type hints (ty)
 - Line length: 100 characters
 - Automated formatting
 

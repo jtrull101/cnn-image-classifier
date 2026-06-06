@@ -24,10 +24,11 @@ from img_classifier_api.models.prediction import PredictionHistory
 from img_classifier_api.routers._constants import (
     _HTMX_REQUEST_HEADER,
     _HTMX_REQUEST_VALUE,
-    _MEDIA_TYPE_JSON,
     _MEDIA_TYPE_CSV,
+    _MEDIA_TYPE_JSON,
 )
 from img_classifier_api.schemas import ExportFormat, MessageResponse
+
 
 _TIMESTAMP_FORMAT = "%b %d, %Y %I:%M %p"
 _FILENAME_TIMESTAMP_FORMAT = "%Y%m%d_%H%M%S"
@@ -98,8 +99,7 @@ async def get_history(
     user_session: str | None = Query(None, description="Filter by user session"),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | PredictionHistoryResponse:
-    """
-    Get paginated prediction history with optional filters.
+    """Get paginated prediction history with optional filters.
 
     Returns HTML for HTMX requests, JSON for API requests.
 
@@ -191,8 +191,7 @@ async def export_history(
     end_date: datetime | None = Query(None, description="Filter end date"),
     db: Session = Depends(get_db),
 ) -> Response:
-    """
-    Export prediction history as CSV or JSON.
+    """Export prediction history as CSV or JSON.
 
     Args:
         export_format: Export format (json or csv)
@@ -231,8 +230,7 @@ async def sync_history(
     request: SyncRequest,
     db: Session = Depends(get_db),
 ) -> SyncResponse:
-    """
-    Sync local storage predictions with server database.
+    """Sync local storage predictions with server database.
 
     This endpoint accepts predictions from browser localStorage and
     saves them to the server database, avoiding duplicates based on
@@ -292,8 +290,7 @@ async def get_history_item(
     prediction_id: int,
     db: Session = Depends(get_db),
 ) -> PredictionHistoryItem:
-    """
-    Get a single prediction by ID.
+    """Get a single prediction by ID.
 
     Args:
         prediction_id: Prediction ID
@@ -328,8 +325,7 @@ async def delete_history_item(
     prediction_id: int,
     db: Session = Depends(get_db),
 ) -> MessageResponse:
-    """
-    Delete a prediction by ID.
+    """Delete a prediction by ID.
 
     Args:
         prediction_id: Prediction ID

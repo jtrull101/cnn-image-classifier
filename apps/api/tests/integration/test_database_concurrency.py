@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+
 # Mark all tests in this module as integration and serial
 # Serial prevents pytest-xdist from running these in parallel with other tests
 pytestmark = [pytest.mark.integration, pytest.mark.serial]
@@ -58,7 +59,7 @@ def test_concurrent_database_initialization():
             assert db_file.exists(), "Database file should exist"
 
             # Verify table was created
-            from sqlalchemy import inspect, create_engine
+            from sqlalchemy import create_engine, inspect
 
             engine = create_engine(db_url)
             try:
@@ -83,9 +84,11 @@ def test_concurrent_database_initialization():
 @pytest.mark.timeout(10)
 def test_worker_database_isolation(tmp_path):
     """Test that the fixture creates isolated databases for each worker."""
-    from img_classifier_api.database import init_db, reset_db_state
-    from sqlalchemy import create_engine, inspect
     from unittest.mock import patch
+
+    from sqlalchemy import create_engine, inspect
+
+    from img_classifier_api.database import init_db, reset_db_state
 
     worker_id = "test_worker_1"
     db_file = tmp_path / f"predictions_worker_{worker_id}.db"

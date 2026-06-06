@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
-
 from img_classifier_cli.main import cli, main
+
 
 pytestmark = pytest.mark.unit
 

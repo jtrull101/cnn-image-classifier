@@ -5,10 +5,11 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+import tensorflow as tf
+
 from img_classifier_config import BaseConfig, DatasetConfig, DatasetDetector
 from img_classifier_data import BaseDataLoader, ImageDataLoader
 from img_classifier_models import ArchitectureFactory, BaseModel
-
 from img_classifier_training.optimizer import (
     HyperparameterOptimizer,
     HyperparameterSpace,
@@ -18,7 +19,6 @@ from img_classifier_training.optimizer import (
 )
 from img_classifier_training.trainer import Trainer
 
-import tensorflow as tf
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class _DynamicModel(BaseModel):
         self.model = keras_model
 
     def build(self) -> tf.keras.Model:
-        return self.model  # type: ignore[return-value]
+        return self.model
 
 
 class TrainingOrchestrator:
@@ -144,11 +144,11 @@ class TrainingOrchestrator:
 
         # Download if needed
         if hasattr(self.data_loader, "download_dataset"):
-            self.data_loader.download_dataset()  # type: ignore
+            self.data_loader.download_dataset()
 
         # Prepare/extract if needed
         if hasattr(self.data_loader, "prepare_dataset"):
-            return self.data_loader.prepare_dataset()  # type: ignore
+            return self.data_loader.prepare_dataset()
 
         return True
 
@@ -268,8 +268,7 @@ class TrainingOrchestrator:
         # Create new config instance
         if isinstance(self.config, DatasetConfig):
             return DatasetConfig(**config_dict)
-        else:
-            return BaseConfig(**config_dict)
+        return BaseConfig(**config_dict)
 
     def _run_trial(
         self,
@@ -338,7 +337,7 @@ class TrainingOrchestrator:
                     "dropout_rate": trial_config.dropout_rate,
                     "architecture": trial_config.architecture_complexity
                     if hasattr(trial_config, "architecture_complexity")
-                    else "unknown",  # type: ignore
+                    else "unknown",
                     "num_epochs": trial_config.num_epochs,
                 },
                 train_accuracy=float(train_acc),
@@ -362,7 +361,7 @@ class TrainingOrchestrator:
                     "dropout_rate": trial_config.dropout_rate,
                     "architecture": trial_config.architecture_complexity
                     if hasattr(trial_config, "architecture_complexity")
-                    else "unknown",  # type: ignore
+                    else "unknown",
                     "num_epochs": trial_config.num_epochs,
                 },
                 train_accuracy=0.0,

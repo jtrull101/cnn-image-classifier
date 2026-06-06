@@ -1,9 +1,10 @@
-"""
-Simple startup script for the FastAPI server.
-Run with: python run_api.py
+"""Simple startup script for the FastAPI server.
+
+Run with: python run_api.py.
 """
 
 import uvicorn
+
 
 if __name__ == "__main__":
     uvicorn.run(

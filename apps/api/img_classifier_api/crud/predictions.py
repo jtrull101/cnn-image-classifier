@@ -145,7 +145,7 @@ def export_predictions(
 
     Args:
         db: Database session
-        format: Export format ("json" or "csv")
+        export_format: Export format ("json" or "csv")
         model_name: Filter by model name (optional)
         start_date: Filter by start date (optional)
         end_date: Filter by end date (optional)
@@ -192,8 +192,8 @@ def export_predictions(
                 }
             )
         return output.getvalue()
-    else:  # ExportFormat.JSON
-        return json.dumps([pred.to_dict() for pred in predictions], indent=2)
+    # ExportFormat.JSON
+    return json.dumps([pred.to_dict() for pred in predictions], indent=2)
 
 
 def get_analytics_summary(
@@ -257,8 +257,8 @@ def get_analytics_summary(
 
     return {
         "total_predictions": total_predictions,
-        "predictions_by_model": {model: count for model, count in predictions_by_model},
-        "predictions_by_class": {cls: count for cls, count in predictions_by_class},
+        "predictions_by_model": dict(predictions_by_model),
+        "predictions_by_class": dict(predictions_by_class),
         "average_confidence": float(avg_confidence),
         "average_confidence_by_model": {
             model: float(conf) for model, conf in avg_confidence_by_model

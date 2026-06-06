@@ -12,9 +12,10 @@ from typing import Any, Literal
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
 
-from img_classifier_config import ArchitectureComplexity, DatasetDetector
-from img_classifier_training import TrainingOrchestrator, HyperparameterSpace, OptimizerType
 from img_classifier_api.schemas import MessageResponse
+from img_classifier_config import ArchitectureComplexity, DatasetDetector
+from img_classifier_training import HyperparameterSpace, OptimizerType, TrainingOrchestrator
+
 
 logger = logging.getLogger(__name__)
 
@@ -140,8 +141,7 @@ training_jobs: dict[str, dict[str, Any]] = {}
 
 @router.post("/training/dataset-info", response_model=DatasetInfoResponse)
 async def get_dataset_info(request: DatasetInfoRequest) -> DatasetInfoResponse:
-    """
-    Get information about a dataset.
+    """Get information about a dataset.
 
     Analyzes the dataset structure and returns metadata including
     number of classes, class distribution, recommended architecture, etc.
@@ -179,15 +179,14 @@ async def get_dataset_info(request: DatasetInfoRequest) -> DatasetInfoResponse:
             is_balanced=info["is_balanced"],
         )
     except Exception as e:
-        raise HTTPException(500, f"Failed to analyze dataset: {str(e)}")
+        raise HTTPException(500, f"Failed to analyze dataset: {e!s}") from e
 
 
 @router.post("/training/start", response_model=TrainingJobResponse)
 async def start_training_job(
     request: TrainingJobRequest, background_tasks: BackgroundTasks
 ) -> TrainingJobResponse:
-    """
-    Start a new training job.
+    """Start a new training job.
 
     Creates a training job that runs in the background. The job can be
     monitored using the job_id returned in the response.
@@ -240,8 +239,7 @@ async def start_training_job(
 
 @router.get("/training/status/{job_id}", response_model=TrainingStatusResponse)
 async def get_training_status(job_id: str) -> TrainingStatusResponse:
-    """
-    Get status of a training job.
+    """Get status of a training job.
 
     Args:
         job_id: Training job ID
@@ -274,8 +272,7 @@ async def get_training_status(job_id: str) -> TrainingStatusResponse:
 
 @router.get("/training/jobs", response_model=TrainingJobsListResponse)
 async def list_training_jobs(limit: int = 50, skip: int = 0) -> TrainingJobsListResponse:
-    """
-    List all training jobs.
+    """List all training jobs.
 
     Args:
         limit: Maximum number of jobs to return
@@ -311,8 +308,7 @@ async def list_training_jobs(limit: int = 50, skip: int = 0) -> TrainingJobsList
 
 @router.delete("/training/jobs/{job_id}", response_model=MessageResponse)
 async def cancel_training_job(job_id: str) -> MessageResponse:
-    """
-    Cancel a training job.
+    """Cancel a training job.
 
     Note: This only removes the job from the list. Active training
     cannot be stopped once started in the current implementation.
@@ -334,8 +330,7 @@ async def cancel_training_job(job_id: str) -> MessageResponse:
 
 
 async def run_training_job(job_id: str, request: TrainingJobRequest) -> None:
-    """
-    Background task to run training job.
+    """Background task to run training job.
 
     Args:
         job_id: Training job ID

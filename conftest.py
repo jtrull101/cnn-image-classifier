@@ -75,15 +75,15 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture(scope="session")
-def test_data_dir(tmp_path_factory) -> Generator[Path]:
+def test_data_dir(tmp_path_factory) -> Path:
     """Provide a temporary directory for test data that persists across the session.
 
     Uses tmp_path_factory (xdist-aware) to avoid race conditions under -n auto.
     """
-    yield tmp_path_factory.mktemp("test_data")
+    return tmp_path_factory.mktemp("test_data")
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def isolated_tmp_dir(tmp_path_factory, worker_id) -> Generator[Path]:
     """
     Provide an isolated temporary directory for each test, safe for parallel execution.
@@ -214,13 +214,11 @@ def setup_test_environment():
     # Set any environment variables needed for testing
     os.environ["IMG_CLASSIFIER_ENV"] = "test"
 
-    yield
-
-    # Cleanup after all tests
-    # (Optional - you might want to keep logs)
+    # No teardown needed (logs are intentionally kept after the run).
+    return
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def mock_config_paths(isolated_tmp_dir):
     """Provide mock configuration paths for testing."""
     paths = {

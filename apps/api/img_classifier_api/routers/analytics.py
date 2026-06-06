@@ -45,8 +45,7 @@ async def get_summary(
     end_date: datetime | None = Query(None, description="Filter end date"),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | AnalyticsSummaryResponse:
-    """
-    Get overall analytics summary.
+    """Get overall analytics summary.
 
     Returns HTML for HTMX requests, JSON for API requests.
 
@@ -131,8 +130,7 @@ async def get_performance(
     end_date: datetime | None = Query(None, description="Filter end date"),
     db: Session = Depends(get_db),
 ) -> ModelPerformanceResponse:
-    """
-    Get detailed model performance comparison.
+    """Get detailed model performance comparison.
 
     Provides per-model statistics for performance analysis and comparison.
 

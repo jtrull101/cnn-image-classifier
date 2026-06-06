@@ -18,6 +18,7 @@ from img_classifier_api.crud.predictions import create_prediction
 from img_classifier_api.database import get_db
 from img_classifier_api.schemas import PredictionResponse
 
+
 logger = logging.getLogger(__name__)
 
 # Maximum accepted upload size in bytes.  Override with IMG_CLASSIFIER_MAX_UPLOAD_BYTES.
@@ -53,7 +54,7 @@ async def _run_prediction(
     request: Request,
     file: UploadFile,
     model_name: str | None,
-) -> tuple[PredictionResponse, bytes, "np.ndarray"]:  # type: ignore[name-defined]
+) -> tuple[PredictionResponse, bytes, np.ndarray]:
     """Run inference on *file* and return the response plus raw bytes and image array.
 
     Returns:
@@ -82,7 +83,7 @@ async def _run_prediction(
         model = model_manager.get_model(model_name)
         info = model_manager.get_info(model_name)
     except ValueError as e:
-        raise HTTPException(404, str(e))
+        raise HTTPException(404, str(e)) from e
 
     # Decode image (validates actual file headers, not just MIME)
     nparr = np.frombuffer(contents, np.uint8)
@@ -104,7 +105,8 @@ async def _run_prediction(
     predicted_class = info.class_names[predicted_idx]
     confidence = float(probabilities[predicted_idx])
     prob_dict = {
-        class_name: float(prob) for class_name, prob in zip(info.class_names, probabilities)
+        class_name: float(prob)
+        for class_name, prob in zip(info.class_names, probabilities, strict=False)
     }
 
     response = PredictionResponse(
@@ -148,7 +150,7 @@ async def predict_image(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Prediction error: {str(e)}")
+        raise HTTPException(500, f"Prediction error: {e!s}") from e
 
     if save_to_history:
         info = request.app.state.model_manager.get_info(model_name)

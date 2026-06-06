@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 
 from img_classifier_api.schemas import MessageResponse
 
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -71,12 +72,14 @@ def _safe_dataset_path(datasets_dir: Path, dataset_name: str) -> Path:
 
 def _download_file(url: str, destination: Path, headers: dict[str, str]) -> None:
     """Download a file from *url* to *destination* (run in a thread)."""
-    with httpx.Client(follow_redirects=True, timeout=300.0) as client:
-        with client.stream("GET", url, headers=headers) as response:
-            response.raise_for_status()
-            with open(destination, "wb") as fh:
-                for chunk in response.iter_bytes(chunk_size=8192):
-                    fh.write(chunk)
+    with (
+        httpx.Client(follow_redirects=True, timeout=300.0) as client,
+        client.stream("GET", url, headers=headers) as response,
+    ):
+        response.raise_for_status()
+        with destination.open("wb") as fh:
+            for chunk in response.iter_bytes(chunk_size=8192):
+                fh.write(chunk)
 
 
 def _extract_zip(zip_path: Path, extract_to: Path) -> None:

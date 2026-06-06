@@ -4,6 +4,7 @@ import logging
 
 import tensorflow as tf
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,4 +42,28 @@ class AccuracyThresholdCallback(tf.keras.callbacks.Callback):
                 "Reached %.1f%% accuracy. Stopping training to prevent overfitting.",
                 self.threshold * 100,
             )
+            self.model.stop_training = True
+
+
+class ValTargetStop(tf.keras.callbacks.Callback):
+    """Stop training once *validation* accuracy reaches a target.
+
+    Unlike :class:`AccuracyThresholdCallback` (which also stops on training accuracy), this
+    keys solely off ``val_accuracy`` — used when the goal is generalization rather than
+    fitting the training set.
+    """
+
+    def __init__(self, target: float):
+        """Initialize the callback.
+
+        Args:
+            target: Validation-accuracy target at which to stop.
+        """
+        super().__init__()
+        self.target = target
+
+    def on_epoch_end(self, epoch, logs=None) -> None:
+        """Stop when validation accuracy meets the target."""
+        if logs and logs.get("val_accuracy", 0.0) >= self.target:
+            logger.info("Reached target val accuracy %.4f. Stopping.", self.target)
             self.model.stop_training = True

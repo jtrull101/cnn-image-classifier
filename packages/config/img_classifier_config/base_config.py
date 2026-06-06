@@ -60,6 +60,46 @@ class BaseConfig(BaseSettings):
     use_early_stopping: bool = True
     use_checkpointing: bool = True
 
+    # Early-stopping tuning (defaults preserve the historical val_loss/min behaviour)
+    early_stopping_monitor: str = "val_loss"
+    early_stopping_mode: str = "min"
+    restore_best_weights: bool = False
+
+    # Learning-rate scheduling (off by default)
+    use_reduce_lr: bool = False
+    reduce_lr_factor: float = Field(default=0.5, gt=0, lt=1)
+    reduce_lr_patience: int = Field(default=4, ge=1)
+    min_lr: float = Field(default=1e-6, ge=0)
+
+    # Stop once validation accuracy reaches this target (None disables)
+    target_val_accuracy: float | None = Field(default=None, ge=0, le=1)
+
+    # Generalization knobs (all opt-in; defaults keep prior behaviour)
+    use_data_augmentation: bool = False
+    aug_rotation: float = Field(default=0.06, ge=0)
+    aug_translation: float = Field(default=0.08, ge=0)
+    aug_zoom: float = Field(default=0.10, ge=0)
+    aug_horizontal_flip: bool = True
+    use_class_weights: bool = False
+    label_smoothing: float = Field(default=0.0, ge=0, lt=1)
+
+    # Force a Global Average Pooling head on the from-scratch CNN (instead of Flatten). GAP
+    # collapses the spatial dims before the dense head, so the parameter count no longer explodes
+    # with image size — from-scratch can train at 224px without the huge Flatten->Dense head OOM.
+    # Default False preserves the per-complexity head choice (Simple/Medium=Flatten, Deep=GAP).
+    use_global_pooling_head: bool = False
+
+    # Transfer learning. backbone: None (from-scratch) | "mobilenetv2" | "efficientnetb0".
+    backbone: str | None = None
+    finetune_epochs: int = Field(default=0, ge=0)
+    finetune_lr_divisor: float = Field(default=100.0, gt=0)
+
+    # Evaluation-split determinism. A fixed seed makes the val/test partition identical across
+    # runs/attempts (so model selection is apples-to-apples); stratification keeps class
+    # balance in both halves. seed=None preserves the legacy unseeded random split.
+    eval_split_seed: int | None = None
+    stratify_eval_split: bool = False
+
     def model_post_init(self, __context) -> None:
         """Initialize paths after model creation."""
         # Create derived paths if not set

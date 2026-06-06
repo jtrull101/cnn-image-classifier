@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from img_classifier_api.app import ModelManager, app
 from img_classifier_api.schemas import PredictionResponse
 
+
 pytestmark = pytest.mark.unit
 
 
@@ -19,6 +20,7 @@ class TestSmoke:
     def test_app_starts(self):
         """Ensure the FastAPI application can be instantiated."""
         from fastapi.testclient import TestClient
+
         from img_classifier_api.app import app
 
         client = TestClient(app)

@@ -9,15 +9,15 @@ import random
 from unittest.mock import patch
 
 import pytest
-from img_classifier_config import BaseConfig
 
+from img_classifier_config import BaseConfig
 from img_classifier_training.optimizer import (
-    HyperparameterSpace,
-    TrialResult,
-    HyperparameterOptimizer,
-    GridSearchOptimizer,
-    RandomSearchOptimizer,
     BayesianOptimizer,
+    GridSearchOptimizer,
+    HyperparameterOptimizer,
+    HyperparameterSpace,
+    RandomSearchOptimizer,
+    TrialResult,
     create_optimizer,
 )
 
@@ -192,7 +192,7 @@ class TestGridSearchOptimizer:
             architectures=["simple"],
             num_epochs=[20],
         )
-        yield
+        return
 
     def test_initialization(self):
         """Test GridSearchOptimizer initialization."""
@@ -280,7 +280,7 @@ class TestRandomSearchOptimizer:
             architectures=["simple", "medium"],
             num_epochs=[20, 30],
         )
-        yield
+        return
 
     def test_initialization(self):
         """Test RandomSearchOptimizer initialization."""
@@ -345,7 +345,7 @@ class TestBayesianOptimizer:
         self.temp_dir = isolated_tmp_dir
         self.config = BaseConfig(working_dir=self.temp_dir)
         self.search_space = HyperparameterSpace.quick()
-        yield
+        return
 
     def test_initialization_without_optuna(self):
         """Test BayesianOptimizer initialization without optuna."""
@@ -420,7 +420,7 @@ class TestHyperparameterOptimizer:
                 }
 
         self.optimizer_class = TestOptimizer
-        yield
+        return
 
     def test_initialization(self):
         """Test optimizer initialization."""
@@ -673,7 +673,7 @@ class TestCreateOptimizer:
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
         self.config = BaseConfig(working_dir=self.temp_dir)
-        yield
+        return
 
     def test_create_grid_optimizer(self):
         """Test creating grid search optimizer."""
@@ -751,7 +751,7 @@ class TestOptimizerEdgeCases:
         """Set up test fixtures."""
         self.temp_dir = isolated_tmp_dir
         self.config = BaseConfig(working_dir=self.temp_dir)
-        yield
+        return
 
     def test_zero_max_trials(self):
         """Test with zero max trials."""

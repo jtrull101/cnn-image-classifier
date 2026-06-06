@@ -30,7 +30,7 @@ updates:
       dev-dependencies:
         patterns:
           - "ruff"
-          - "pyright"
+          - "ty"
           - "pytest*"
         update-types:
           - "minor"

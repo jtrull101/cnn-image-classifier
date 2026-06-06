@@ -10,14 +10,16 @@
 - `make sync` / `uv sync --dev` — install workspace deps.
 - `make build` — build all Python packages/apps (`uv build` in each).
 - `make test` — run pytest suite with coverage (TensorFlow-dependent tests are skipped unless TF is installed).
-- `make lint` / `make format` / `make typecheck` — Ruff lint/format and Pyright; `make pre-commit` runs format, lint, typecheck, and tests together.
+- `make lint` / `make format` / `make typecheck` — Ruff lint/format and ty; `make pre-commit` runs format, lint, typecheck, spell, and tests together.
+- `make spell` / `make audit` / `make deadcode` — codespell, pip-audit (dependency CVEs), and vulture; `make security` runs all three.
 - `make serve-api` — launch FastAPI locally; `python apps/api/run_api.py` also works.
 
 ## Coding Style & Naming Conventions
 - Python: 4-space indent, line length <=100, type hints required. Prefer explicit imports and absolute module paths.
-- Run `make format` (Ruff formatter) before committing; `make lint` enforces PEP 8-ish style, import order, and misc rules.
+- Run `make format` (Ruff formatter) before committing; `make lint` enforces PEP 8-ish style, import order, security (`S`), docstrings (`D`, Google convention), and misc rules.
 - Naming: modules/functions `snake_case`, classes `PascalCase`, constants `ALL_CAPS`, branches `feat/<summary>` or `fix/<issue>`.
-- Type checking: `pyright` (via UV) for static analysis; keep public APIs typed.
+- Type checking: `ty` (via UV) for static analysis; keep public APIs typed.
+- Imports must be absolute (ruff `TID` bans relative imports); public functions need Google-style docstrings.
 
 ## Testing Guidelines
 - Primary framework: `pytest`; test files named `test_*.py` or `*_test.py` under `tests/`.
@@ -29,7 +31,7 @@
 - Commands: `make test` for full run; `uv run pytest --cov` for coverage reports; use `scripts/run_tests.ps1` for parallel/filtered runs.
 
 ## Commit & Pull Request Guidelines
-- Commit messages: imperative mood, ~50 chars summary (e.g., `Add training checkpointing`). Group related changes per commit.
+- Commit messages: imperative mood, ~50 chars summary (e.g., `Add training checkpointing`). Group related changes per commit. A `commit-msg` hook enforces this (subject length, capitalization, no trailing period, blank line before body).
 - Before opening a PR: run `make pre-commit`, ensure docs updated (e.g., `docs/ARCHITECTURE.md`, `docs/TESTING.md` if affected), and add/adjust tests.
 - PRs should include a concise description of changes, rationale, verification steps (commands run), and linked issues. Add screenshots or sample outputs when altering API responses or visual assets.
 

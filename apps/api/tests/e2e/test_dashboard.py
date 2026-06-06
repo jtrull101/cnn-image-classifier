@@ -3,13 +3,12 @@
 import json
 
 import pytest
-from playwright.sync_api import Page, expect
-
 from fixtures.api_responses import (
     ANALYTICS_SUMMARY_EMPTY,
     MODELS_EMPTY,
     MODELS_ONE_LOADED,
 )
+from playwright.sync_api import Page, expect
 
 
 pytestmark = [pytest.mark.e2e, pytest.mark.serial]

@@ -1,12 +1,12 @@
 from logging.config import fileConfig
 
+from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from alembic import context
+# Import models to ensure they're registered with Base
+import img_classifier_api.models.prediction
 from img_classifier_api.database import Base
 
-# Import models to ensure they're registered with Base
-import img_classifier_api.models.prediction  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

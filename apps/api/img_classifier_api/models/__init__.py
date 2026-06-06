@@ -2,4 +2,5 @@
 
 from img_classifier_api.models.prediction import PredictionHistory
 
+
 __all__ = ["PredictionHistory"]

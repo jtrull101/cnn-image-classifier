@@ -30,15 +30,21 @@ members = [
 [dependency-groups]
 dev = [
     "ruff>=0.15.10",
-    "pyright>=1.1.408",
+    "ty>=0.0.44",
     "pydantic>=2.13.0",
     "pydantic-settings>=2.1.0",
+    "pip-audit>=2.10.0",
+    "codespell>=2.4.2",
+    "vulture>=2.16",
 ]
 
 e2e = [
     "pytest-playwright>=0.4.4",
     "playwright>=1.58.0",
     "pytest-timeout>=2.2.0",
+]
+optimize = [
+    "optuna>=4.0.0",
 ]
 
 test = [
@@ -186,6 +192,7 @@ fail_under = 80
 target-version = "py313"
 line-length = 100
 src = ["src", "tests"]
+extend-exclude = ["vulture_allowlist.py"]  # Bare names for vulture; not real code
 
 [tool.ruff.lint]
 select = [
@@ -202,27 +209,131 @@ select = [
     "ARG",    # flake8-unused-arguments
     "PTH",    # flake8-use-pathlib
     "RUF",    # Ruff-specific rules
+    "S",      # flake8-bandit (security)
+    "D",      # pydocstyle (docstrings)
+    "PT",     # flake8-pytest-style
+    "RET",    # flake8-return
+    "PERF",   # Perflint
+    "LOG",    # flake8-logging
+    "G",      # flake8-logging-format
+    "ASYNC",  # flake8-async
+    "TID",    # flake8-tidy-imports
+    "FA",     # flake8-future-annotations
+]
+ignore = [
+    "E501",    # Line length handled by the formatter; long strings/URLs are intentional
+    "ARG001",  # Unused function args OK for ML/framework callbacks (see CLAUDE.md)
+    "ARG002",  # Unused method args OK for ML/framework callbacks (see CLAUDE.md)
+    "RUF001",  # Em-dash / unicode typography is intentional house style
+    "RUF002",  # Em-dash / unicode typography is intentional in docstrings
+    "RUF003",  # Em-dash / unicode typography is intentional in comments
+    "DTZ005",  # Naive local timestamps are intentional for run IDs / filenames / logs
+    "DTZ001",  # Naive datetimes are intentional in this codebase
+    "ARG004",  # Unused static-method args OK for uniform ML builder signatures
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "conftest.py" = [
     "ARG001",  # Unused arguments OK in pytest hooks (required signatures)
     "N806",    # Uppercase variable names OK in ML test fixtures (X_train, etc.)
+    "D",       # Docstrings not required in test infrastructure
+]
+"**/tests/**/*.py" = [
+    "ARG",     # Unused arguments OK in tests
+    "S",       # assert / tmp paths / pickle OK in tests
+    "N806",    # Uppercase variable names OK in ML tests (X, X_train, etc.)
+    "N817",    # CamelCase-as-acronym imports OK in tests (PredictionHistory as PH)
+    "D",       # Docstrings not required in tests
+    "PT011",   # Broad pytest.raises OK in tests
+    "B017",    # Blind pytest.raises(Exception) OK in tests
+    "SIM117",  # Nested with statements OK in tests
+    "PTH",     # open()/os.chmod OK in test file I/O
+    "E402",    # Imports after pytest.importorskip() guard are intentional
+    "F401",    # Imports for SQLAlchemy model/table registration side effects
 ]
 "tests/**/*.py" = [
     "ARG",     # Unused arguments OK in tests
-    "S101",    # Assert use is OK in tests
+    "S",       # assert / tmp paths / pickle OK in tests
     "N806",    # Uppercase variable names OK in ML tests (X, X_train, etc.)
+    "N817",    # CamelCase-as-acronym imports OK in tests
+    "D",       # Docstrings not required in tests
+    "PT011",   # Broad pytest.raises OK in tests
+    "B017",    # Blind pytest.raises(Exception) OK in tests
+    "SIM117",  # Nested with statements OK in tests
+    "PTH",     # open()/os.chmod OK in test file I/O
+    "E402",    # Imports after pytest.importorskip() guard are intentional
+    "F401",    # Imports for SQLAlchemy model/table registration side effects
 ]
 "apps/api/tests/e2e/**/*.py" = [
     "ARG",     # Unused arguments OK in tests (route handler lambdas)
-    "S101",    # Assert use is OK in tests
+    "S",       # Assert / subprocess OK in tests
+    "D",       # Docstrings not required in tests
+    "B017",    # Blind pytest.raises(Exception) OK in tests
+    "SIM117",  # Nested with statements OK in tests
+    "PTH",     # open()/os.chmod OK in test file I/O
+]
+"**/scripts/**/*.py" = [
+    "S",       # subprocess / CLI orchestration OK in scripts
+    "D",       # Docstrings not required in operational scripts
+]
+"scripts/**/*.py" = [
+    "S",       # subprocess / CLI orchestration OK in scripts
+    "D",       # Docstrings not required in operational scripts
+]
+"examples_*.py" = [
+    "S108",    # Demo /tmp paths are intentional in examples
+    "D",       # Relaxed docstrings in example scripts
+]
+# ML compute packages use math/tensor naming conventions (X, y, X_train, K, ET).
+"packages/training/**/*.py" = ["N803", "N806", "N812", "N817"]
+"packages/models/**/*.py" = ["N803", "N806", "N812", "N817"]
+"packages/data/**/*.py" = ["N803", "N806", "N812", "N817"]
+"packages/training/img_classifier_training/optimizer.py" = [
+    "S311",    # Non-crypto RNG is correct for hyperparameter sampling
+]
+"packages/data/img_classifier_data/image_loader.py" = [
+    "S301",    # pickle is used only for a trusted, locally-generated feature cache
+]
+"apps/api/img_classifier_api/app.py" = [
+    "S104",    # Binding 0.0.0.0 is intended for the containerized API
+]
+"apps/api/run_api.py" = [
+    "S104",    # Binding 0.0.0.0 is intended for the containerized API
+]
+# Lightweight local-disk metadata ops; negligible blocking, not worth offloading.
+"apps/api/img_classifier_api/routers/models.py" = ["ASYNC240"]
+"apps/api/img_classifier_api/routers/training.py" = ["ASYNC240"]
+"**/alembic/**/*.py" = [
+    "D",       # Generated migration files
+    "S",       # Generated migration files
+    "F401",    # Models imported so Alembic autogenerate sees their metadata
 ]
 "tests/test_models.py" = [
     "F401",    # Unused imports OK for conditional TensorFlow availability check
 ]
 "__init__.py" = [
     "F401",    # Unused imports OK in __init__.py
+    "D104",    # Package docstring optional
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"  # Matches existing Args:/Returns:/Raises: docstrings
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"  # Enforce absolute imports (see CLAUDE.md)
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI dependency-injection markers are evaluated once at import — idiomatic, not B008 bugs.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Header",
+    "fastapi.Cookie",
+    "fastapi.Body",
+    "fastapi.Form",
+    "fastapi.File",
+    "fastapi.Security",
 ]
 
 [tool.ruff.lint.isort]
@@ -243,8 +354,13 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 
-# Pyright Configuration (modern, faster alternative to mypy)
-[tool.pyright]
+# ty Configuration (Astral's fast type checker, written in Rust)
+[tool.ty.environment]
+python = ".venv"
+python-version = "3.11"
+python-platform = "all"
+
+[tool.ty.src]
 include = [
     "packages/config/img_classifier_config",
     "packages/utils/img_classifier_utils",
@@ -260,13 +376,32 @@ exclude = [
     "**/.venv",
     "**/node_modules",
 ]
-venvPath = "."
-venv = ".venv"
-pythonVersion = "3.11"
-pythonPlatform = "All"
-typeCheckingMode = "basic"
 
-# Type checking settings
-reportMissingImports = true
-reportAttributeAccessIssue = false  # Disable for TensorFlow keras attributes
-reportPrivateImportUsage = false  # Pydantic v2 and pytest use private-looking exports
+[tool.ty.rules]
+unresolved-import = "error"
+# Disable for TensorFlow/Keras dynamic attributes
+unresolved-attribute = "ignore"
+possibly-missing-attribute = "ignore"
+invalid-attribute-access = "ignore"
+
+# Codespell Configuration (spell checking for code, comments, and docs)
+[tool.codespell]
+skip = "uv.lock,*.keras,*.svg,*.lock,*.min.js,*.pdf,*.png,*.jpg,*.csv,htmlcov,.git,.venv,.ruff_cache,.ty_cache,*.ipynb,research_papers,*/research_papers"
+ignore-words-list = "nd,arange,te,hist,fpr,tpr,ba,fo,nin,som,anull"  # ML/array + nginx cipher terms
+check-filenames = true
+
+# Vulture Configuration (dead-code detection — informational, see `make deadcode`)
+[tool.vulture]
+min_confidence = 80
+paths = ["packages", "apps", "vulture_allowlist.py"]
+exclude = ["*/tests/*", "*/deprecated_*", "*/alembic/*"]
+ignore_decorators = [
+    "@app.*",
+    "@router.*",
+    "@pytest.fixture",
+    "@field_validator",
+    "@model_validator",
+    "@property",
+]
+# Keras callback hooks and framework-driven names are invoked dynamically
+ignore_names = ["on_epoch_end", "on_train_*", "on_batch_*", "logs", "exc_*"]

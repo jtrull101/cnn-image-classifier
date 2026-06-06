@@ -25,7 +25,7 @@
     "validation_commands": {
       "lint": "uv run ruff check apps/api",
       "format": "uv run ruff format apps/api",
-      "typecheck": "uv run pyright apps/api",
+      "typecheck": "uv run ty check apps/api",
       "test_unit": "uv run pytest apps/api/tests/unit -v",
       "test_integration": "uv run pytest apps/api/tests/integration -v",
       "test_all": "make test-api",

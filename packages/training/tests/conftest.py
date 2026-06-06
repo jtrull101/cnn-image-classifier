@@ -2,13 +2,13 @@
 
 import os
 import shutil
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 import pytest
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def isolated_tmp_dir(tmp_path_factory, worker_id) -> Iterator[Path]:
     """
     Provide an isolated temporary directory for each test, safe for parallel execution.

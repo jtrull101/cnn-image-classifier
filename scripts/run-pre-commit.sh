@@ -31,8 +31,8 @@ fi
 echo ""
 
 # Type check
-echo "[3/4] Running type checks with pyright..."
-if uv run pyright; then
+echo "[3/5] Running type checks with ty..."
+if uv run ty check; then
     echo "[OK] Type checking passed"
 else
     echo "[ERROR] Type checking failed"
@@ -40,8 +40,28 @@ else
 fi
 echo ""
 
+# Spell check
+echo "[4/6] Spell checking with codespell..."
+if uv run codespell; then
+    echo "[OK] Spell checking passed"
+else
+    echo "[ERROR] Spell checking failed"
+    ((ERROR_COUNT++))
+fi
+echo ""
+
+# Suppression guard
+echo "[5/6] Checking for banned inline suppressions..."
+if bash scripts/check-no-suppressions.sh; then
+    echo "[OK] No inline suppressions"
+else
+    echo "[ERROR] Inline suppressions found"
+    ((ERROR_COUNT++))
+fi
+echo ""
+
 # Run tests
-echo "[4/4] Running tests..."
+echo "[6/6] Running tests..."
 if uv run python -m pytest -c pyproject.toml --rootdir . -v --maxfail=3 --cov=packages --cov=apps --cov-report=term-missing; then
     echo "[OK] Tests passed"
 else

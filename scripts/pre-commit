@@ -37,6 +37,7 @@ TEMP_DIR=$(mktemp -d)
 FORMAT_STATUS="$TEMP_DIR/format_status"
 LINT_STATUS="$TEMP_DIR/lint_status"
 TYPECHECK_STATUS="$TEMP_DIR/typecheck_status"
+SPELL_STATUS="$TEMP_DIR/spell_status"
 
 # Run tasks in parallel
 (
@@ -62,13 +63,24 @@ TYPECHECK_STATUS="$TEMP_DIR/typecheck_status"
 ) &
 
 (
-    echo "[3/3] Running type checks with pyright..."
-    "$UV_CMD" run pyright
+    echo "[3/4] Running type checks with ty..."
+    "$UV_CMD" run ty check
     echo $? > "$TYPECHECK_STATUS"
     if [ $? -ne 0 ]; then
         echo "[ERROR] Type checking failed"
     else
         echo "[OK] Type checking passed"
+    fi
+) &
+
+(
+    echo "[4/4] Spell checking with codespell..."
+    "$UV_CMD" run codespell
+    echo $? > "$SPELL_STATUS"
+    if [ $? -ne 0 ]; then
+        echo "[ERROR] Spell checking failed"
+    else
+        echo "[OK] Spell checking passed"
     fi
 ) &
 
@@ -89,12 +101,37 @@ if [ $(cat "$TYPECHECK_STATUS") -ne 0 ]; then
     ERROR_COUNT=$((ERROR_COUNT + 1))
 fi
 
+if [ $(cat "$SPELL_STATUS") -ne 0 ]; then
+    ERROR_COUNT=$((ERROR_COUNT + 1))
+fi
+
 # Cleanup
 rm -rf "$TEMP_DIR"
 echo ""
 
+# Ban inline linter/type-checker suppressions
+echo "Checking for banned inline suppressions..."
+if sh scripts/check-no-suppressions.sh; then
+    :
+else
+    ERROR_COUNT=$((ERROR_COUNT + 1))
+fi
+echo ""
+
+# Secrets scan (only if gitleaks is installed locally; CI always enforces it)
+if command -v gitleaks >/dev/null 2>&1; then
+    echo "Scanning staged changes for secrets with gitleaks..."
+    if gitleaks protect --staged --redact --config .gitleaks.toml; then
+        echo "[OK] No secrets detected"
+    else
+        echo "[ERROR] Potential secret detected"
+        ERROR_COUNT=$((ERROR_COUNT + 1))
+    fi
+    echo ""
+fi
+
 # Run tests
-echo "[4/4] Running smoke tests..."
+echo "Running smoke tests..."
 "$UV_CMD" run python -m pytest -c pyproject.toml --rootdir . -v -m smoke --maxfail=3
 if [ $? -ne 0 ]; then
     echo "[ERROR] Smoke tests failed"
