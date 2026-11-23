@@ -1,7 +1,7 @@
 # Stage 1: Builder - Install dependencies
 # Pin to specific image digest for reproducible builds
 # This is python:3.11.9-slim-bookworm as of the build date
-FROM python@sha256:250e5c97be05e1eb2272fbdbd810dfd638f9012e1e6f65c99390ad3239943a08 AS builder
+FROM python@sha256:46837ed3105db0029b6d656816185c6258e3b39690532fb782428e0a5fd76182 AS builder
 
 # OpenCV + TensorFlow system dependencies
 # Package versions are pinned via the base image digest above
@@ -31,7 +31,7 @@ RUN uv sync --no-dev --frozen
 
 # Stage 2: Runtime - Minimal final image
 # Pin to same image digest for consistency
-FROM python@sha256:250e5c97be05e1eb2272fbdbd810dfd638f9012e1e6f65c99390ad3239943a08
+FROM python@sha256:46837ed3105db0029b6d656816185c6258e3b39690532fb782428e0a5fd76182
 
 # Runtime dependencies only (smaller set)
 # Package versions are pinned via the base image digest above
